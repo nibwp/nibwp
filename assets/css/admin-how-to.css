@@ -1,0 +1,783 @@
+/* NIBWP — How-To styles. Extracted from inline <style>; enqueued via includes/admin-styles.php. */
+
+/* ── Progress bar ── */
+        .nw-howto-progress {
+            background: var(--nw-surface);
+            border: 1px solid var(--nw-border);
+            border-radius: var(--nw-radius);
+            padding: 14px 18px;
+            margin-bottom: 18px;
+            box-shadow: var(--nw-shadow-sm);
+        }
+        .nw-howto-progress__bar {
+            height: 8px;
+            background: var(--nw-surface-3);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .nw-howto-progress__fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--nw-brand), var(--nw-ok));
+            border-radius: 99px;
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .nw-howto-progress__text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--nw-text-muted);
+        }
+        .nw-howto-progress__percent { font-weight: 700; color: var(--nw-text); }
+
+        /* ── Two-column grid ── */
+        .nw-howto-grid {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        @media (max-width: 900px) {
+            .nw-howto-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ── Chapter nav ── */
+        .nw-howto-nav {
+            position: sticky;
+            top: 76px;
+            background: var(--nw-surface);
+            border: 1px solid var(--nw-border);
+            border-radius: var(--nw-radius);
+            padding: 12px;
+            box-shadow: var(--nw-shadow-sm);
+        }
+        .nw-howto-nav__title {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--nw-text-muted-2);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 8px 10px 4px;
+        }
+        .nw-howto-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: var(--nw-radius-sm);
+            text-decoration: none;
+            color: var(--nw-text-2);
+            transition: background 0.1s;
+            margin-bottom: 2px;
+        }
+        .nw-howto-nav-item:hover { background: var(--nw-surface-3); text-decoration: none; }
+        .nw-howto-nav-item.is-active {
+            background: var(--nw-brand-soft);
+            color: var(--nw-brand);
+        }
+        .nw-howto-nav-item.is-active .nw-howto-nav-num {
+            background: var(--nw-brand);
+            color: #fff;
+        }
+        .nw-howto-nav-item.is-complete .nw-howto-nav-num {
+            background: var(--nw-ok);
+            color: #fff;
+        }
+        .nw-howto-nav-item.is-complete .nw-howto-nav-num::after { content: '\2713'; }
+        .nw-howto-nav-item.is-complete .nw-howto-nav-num span { display: none; }
+        .nw-howto-nav-num {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: var(--nw-surface-3);
+            color: var(--nw-text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .nw-howto-nav-item div:last-child strong { display: block; font-size: 13px; font-weight: 600; }
+        .nw-howto-nav-item div:last-child span { font-size: 11px; color: var(--nw-text-muted); }
+        .nw-howto-nav-item.is-active div:last-child span { color: var(--nw-brand); opacity: 0.7; }
+
+        /* ── Chapter content ── */
+        .nw-howto-content {
+            background: var(--nw-surface);
+            border: 1px solid var(--nw-border);
+            border-radius: var(--nw-radius);
+            padding: 28px 32px;
+            box-shadow: var(--nw-shadow-sm);
+            min-height: 500px;
+        }
+        .nw-chapter { display: none; animation: nw-chapter-in 0.3s ease; }
+        .nw-chapter.is-active { display: block; }
+        @keyframes nw-chapter-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .nw-chapter__badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--nw-brand);
+            background: var(--nw-brand-soft);
+            padding: 4px 10px;
+            border-radius: 99px;
+            letter-spacing: 0.6px;
+            margin-bottom: 12px;
+        }
+        .nw-chapter h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--nw-text);
+            margin: 0 0 10px;
+            letter-spacing: -0.015em;
+        }
+        .nw-chapter h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--nw-text);
+            margin: 24px 0 10px;
+        }
+        .nw-chapter h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--nw-text);
+            margin: 18px 0 8px;
+        }
+        .nw-chapter__lead {
+            font-size: 14px;
+            line-height: 1.65;
+            color: var(--nw-text-2);
+            margin: 0 0 16px;
+        }
+        .nw-text-muted { font-size: 12px; color: var(--nw-text-muted); margin: 8px 0; }
+
+        /* ── Feature cards ── */
+        .nw-howto-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 700px) {
+            .nw-howto-cards { grid-template-columns: 1fr; }
+        }
+        .nw-howto-card {
+            padding: 14px;
+            background: var(--nw-surface-2);
+            border: 1px solid var(--nw-border-2);
+            border-radius: var(--nw-radius-sm);
+        }
+        .nw-howto-card__icon {
+            width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: var(--nw-radius-sm);
+            margin-bottom: 8px;
+        }
+        .nw-howto-card__icon svg { width: 18px; height: 18px; }
+        .nw-howto-card strong { display: block; font-size: 13px; color: var(--nw-text); margin-bottom: 3px; }
+        .nw-howto-card span { font-size: 12px; color: var(--nw-text-muted); line-height: 1.5; }
+
+        /* ── Callout boxes ── */
+        .nw-callout {
+            display: flex;
+            gap: 12px;
+            padding: 14px;
+            border-radius: var(--nw-radius);
+            margin: 14px 0;
+            border-left: 3px solid;
+        }
+        .nw-callout svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
+        .nw-callout strong { display: block; font-size: 13px; margin-bottom: 4px; }
+        .nw-callout p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--nw-text-2); }
+        .nw-callout--info { background: var(--nw-brand-soft); border-color: var(--nw-brand); color: var(--nw-brand); }
+        .nw-callout--warn { background: var(--nw-warn-soft); border-color: var(--nw-warn); color: var(--nw-warn); }
+
+        /* ── Step list (ordered) ── */
+        .nw-step-list { padding-left: 0; list-style: none; margin: 12px 0; counter-reset: step; }
+        .nw-step-list li {
+            counter-increment: step;
+            padding: 12px 14px 12px 48px;
+            border: 1px solid var(--nw-border-2);
+            border-radius: var(--nw-radius-sm);
+            margin-bottom: 8px;
+            background: var(--nw-surface);
+            position: relative;
+        }
+        .nw-step-list li::before {
+            content: counter(step);
+            position: absolute;
+            left: 14px; top: 50%;
+            transform: translateY(-50%);
+            width: 24px; height: 24px;
+            background: var(--nw-brand);
+            color: #fff;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700;
+        }
+        .nw-step-list strong { display: block; font-size: 13px; color: var(--nw-text); margin-bottom: 2px; }
+        .nw-step-list span { font-size: 12px; color: var(--nw-text-muted); }
+
+        /* ── Code block with copy ── */
+        .nw-code-block {
+            position: relative;
+            margin: 10px 0 14px;
+            border-radius: var(--nw-radius-sm);
+            overflow: hidden;
+        }
+        .nw-code-block pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 14px 16px;
+            margin: 0;
+            font-family: var(--nw-mono);
+            font-size: 12.5px;
+            line-height: 1.65;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .nw-code-block code { color: inherit; background: transparent; padding: 0; }
+        .nw-copy-btn {
+            position: absolute;
+            top: 8px; right: 8px;
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #e2e8f0;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.12s;
+        }
+        .nw-copy-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+        .nw-copy-btn.is-copied { background: var(--nw-ok); border-color: var(--nw-ok); color: #fff; }
+
+        /* ── Path list (IDE configs) ── */
+        .nw-path-list { list-style: none; padding: 0; margin: 8px 0 12px; }
+        .nw-path-list li {
+            font-size: 12px;
+            color: var(--nw-text-2);
+            padding: 6px 0;
+            border-bottom: 1px solid var(--nw-border-2);
+        }
+        .nw-path-list li:last-child { border-bottom: none; }
+        .nw-path-list strong {
+            display: inline-block;
+            min-width: 70px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--nw-text-muted);
+            font-weight: 600;
+        }
+        .nw-path-list code {
+            font-family: var(--nw-mono);
+            font-size: 11.5px;
+            background: var(--nw-surface-3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: var(--nw-text);
+        }
+
+        /* ── IDE tabs ── */
+        .nw-ide-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px;
+            background: var(--nw-surface-3);
+            border-radius: var(--nw-radius);
+            margin: 12px 0;
+        }
+        .nw-ide-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 12px;
+            border: none;
+            background: transparent;
+            border-radius: var(--nw-radius-sm);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--nw-text-muted);
+            font-family: var(--nw-font);
+            transition: all 0.12s;
+        }
+        .nw-ide-tab:hover { color: var(--nw-text); }
+        .nw-ide-tab.is-active {
+            background: var(--nw-surface);
+            color: var(--nw-brand);
+            box-shadow: var(--nw-shadow-sm);
+        }
+        .nw-ide-tab svg { width: 14px; height: 14px; }
+        .nw-ide-panel { display: none; animation: nw-fade-in 0.2s ease; }
+        .nw-ide-panel.is-active { display: block; }
+
+        /* ── Prompts grid ── */
+        .nw-prompts {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin: 14px 0;
+        }
+        .nw-prompt {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: var(--nw-surface);
+            border: 1px solid var(--nw-border);
+            border-radius: var(--nw-radius);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.12s;
+            font-family: var(--nw-font);
+        }
+        .nw-prompt:hover {
+            border-color: var(--nw-brand);
+            background: var(--nw-brand-soft);
+        }
+        .nw-prompt__icon {
+            width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--nw-surface-3);
+            color: var(--nw-text-muted);
+            border-radius: var(--nw-radius-sm);
+            flex-shrink: 0;
+        }
+        .nw-prompt:hover .nw-prompt__icon { background: var(--nw-brand); color: #fff; }
+        .nw-prompt__icon svg { width: 16px; height: 16px; }
+        .nw-prompt > div:nth-child(2) { flex: 1; min-width: 0; }
+        .nw-prompt strong { display: block; font-size: 13px; color: var(--nw-text); margin-bottom: 2px; }
+        .nw-prompt span { font-size: 12px; color: var(--nw-text-muted); }
+        .nw-prompt__copy {
+            font-size: 11px;
+            color: var(--nw-text-muted-2);
+            white-space: nowrap;
+        }
+        .nw-prompt.is-copied { background: var(--nw-ok-soft); border-color: var(--nw-ok); }
+        .nw-prompt.is-copied .nw-prompt__copy { color: var(--nw-ok); font-weight: 600; }
+
+        /* ── Tips Do/Don't grid ── */
+        .nw-howto-content .nw-tip-grid {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 14px !important;
+            margin: 16px 0 !important;
+        }
+        @media (max-width: 700px) {
+            .nw-howto-content .nw-tip-grid { grid-template-columns: 1fr !important; }
+        }
+        .nw-howto-content .nw-tip {
+            padding: 18px !important;
+            border: 1px solid var(--nw-border) !important;
+            border-radius: 10px !important;
+            background: var(--nw-surface) !important;
+            box-shadow: var(--nw-shadow-sm);
+        }
+        .nw-howto-content .nw-tip--do { border-left: 3px solid var(--nw-ok) !important; }
+        .nw-howto-content .nw-tip--dont { border-left: 3px solid var(--nw-danger) !important; }
+        .nw-howto-content .nw-tip__head {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            margin-bottom: 14px !important;
+            padding-bottom: 12px !important;
+            border-bottom: 1px solid var(--nw-border-2) !important;
+        }
+        .nw-howto-content .nw-tip__icon {
+            width: 32px !important;
+            height: 32px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 6px !important;
+            flex-shrink: 0 !important;
+            margin: 0 !important;
+        }
+        .nw-howto-content .nw-tip__icon svg { width: 18px !important; height: 18px !important; }
+        .nw-howto-content .nw-tip strong {
+            display: block !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            color: var(--nw-text) !important;
+            margin: 0 !important;
+            line-height: 1.2 !important;
+        }
+        .nw-howto-content .nw-tip ul {
+            margin: 0 !important;
+            padding: 0 !important;
+            list-style: none !important;
+        }
+        .nw-howto-content .nw-tip li {
+            font-size: 13px !important;
+            color: var(--nw-text-2) !important;
+            margin: 0 0 10px !important;
+            line-height: 1.55 !important;
+            padding: 0 0 0 24px !important;
+            position: relative !important;
+            list-style: none !important;
+        }
+        .nw-howto-content .nw-tip li:last-child { margin-bottom: 0 !important; }
+        .nw-howto-content .nw-tip li::before {
+            content: '' !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 3px !important;
+            width: 16px !important;
+            height: 16px !important;
+            border-radius: 50% !important;
+            display: block !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            background-size: 10px 10px !important;
+        }
+        .nw-howto-content .nw-tip--do li::before {
+            background-color: var(--nw-ok-soft) !important;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>") !important;
+        }
+        .nw-howto-content .nw-tip--dont li::before {
+            background-color: var(--nw-danger-soft) !important;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg>") !important;
+        }
+        .nw-tip-list { padding-left: 0; list-style: none; }
+        .nw-tip-list li { padding: 8px 0; border-bottom: 1px solid var(--nw-border-2); font-size: 13px; color: var(--nw-text-2); line-height: 1.6; }
+        .nw-tip-list li:last-child { border-bottom: none; }
+
+        /* ── FAQ ── */
+        .nw-faq {
+            border: 1px solid var(--nw-border);
+            border-radius: var(--nw-radius);
+            margin-bottom: 8px;
+            background: var(--nw-surface);
+        }
+        .nw-faq summary {
+            padding: 12px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--nw-text);
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .nw-faq summary::-webkit-details-marker { display: none; }
+        .nw-faq summary::after {
+            content: '+';
+            font-size: 18px;
+            color: var(--nw-text-muted);
+            font-weight: 300;
+            transition: transform 0.2s;
+        }
+        .nw-faq[open] summary::after { transform: rotate(45deg); }
+        .nw-faq > div { padding: 0 14px 12px; font-size: 13px; line-height: 1.6; color: var(--nw-text-2); }
+        .nw-faq ul { padding-left: 18px; margin: 6px 0; }
+        .nw-faq li { margin-bottom: 4px; }
+
+        /* ── Step footer ── */
+        .nw-step-foot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid var(--nw-border-2);
+            flex-wrap: wrap;
+        }
+        .nw-step-check {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            color: var(--nw-text-2);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 14px;
+            background: var(--nw-surface-2);
+            border: 1px solid var(--nw-border);
+            border-radius: var(--nw-radius);
+            transition: all 0.15s;
+        }
+        .nw-step-check:hover {
+            border-color: var(--nw-ok);
+            background: var(--nw-ok-soft);
+        }
+        /* Hard override of global toggle styling */
+        .nw-step-check > input[type="checkbox"],
+        .nw-howto-content input[type="checkbox"][data-step] {
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px !important;
+            max-width: 20px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: var(--nw-surface) !important;
+            border: 2px solid var(--nw-border-strong) !important;
+            border-radius: 5px !important;
+            position: relative !important;
+            cursor: pointer !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            transition: all 0.15s !important;
+            flex-shrink: 0;
+            box-shadow: none !important;
+        }
+        /* Kill the global toggle thumb */
+        .nw-step-check > input[type="checkbox"]::after,
+        .nw-howto-content input[type="checkbox"][data-step]::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 5px !important;
+            height: 9px !important;
+            border: solid #fff !important;
+            border-width: 0 2px 2px 0 !important;
+            transform: translate(-50%, -60%) rotate(45deg) !important;
+            background: transparent !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .nw-step-check > input[type="checkbox"]:checked,
+        .nw-howto-content input[type="checkbox"][data-step]:checked {
+            background: var(--nw-ok) !important;
+            border-color: var(--nw-ok) !important;
+        }
+        .nw-step-check > input[type="checkbox"]:checked::after,
+        .nw-howto-content input[type="checkbox"][data-step]:checked::after {
+            opacity: 1;
+        }
+        .nw-step-check > input[type="checkbox"]:disabled {
+            cursor: not-allowed !important;
+            opacity: 0.7;
+        }
+        .nw-step-check:has(input:checked) {
+            border-color: var(--nw-ok);
+            background: var(--nw-ok-soft);
+            color: var(--nw-ok);
+        }
+
+        /* ── Status row ── */
+        .nw-status-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: var(--nw-surface-2);
+            border-radius: var(--nw-radius-sm);
+            font-size: 13px;
+            margin: 12px 0;
+        }
+        .nw-status-row > span:first-child { color: var(--nw-text-muted); font-weight: 500; }
+
+        @keyframes nw-fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ── Support Modal (reusable, same as Request Custom Skill) ── */
+        .nw-req-modal {
+            position: fixed; inset: 0; z-index: 100000;
+            display: none; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .nw-req-modal.is-open { display: flex; }
+        .nw-req-modal__backdrop {
+            position: absolute; inset: 0;
+            background: rgba(15,23,42,0.55);
+            backdrop-filter: blur(4px);
+            animation: nw-fade-in 0.2s ease;
+        }
+        .nw-req-modal__panel {
+            position: relative;
+            width: 100%; max-width: 540px; max-height: 90vh;
+            background: var(--nw-surface);
+            border-radius: 16px;
+            box-shadow: 0 25px 60px -12px rgba(15,23,42,0.4);
+            display: flex; flex-direction: column;
+            animation: nw-modal-in 0.25s cubic-bezier(0.2,0.8,0.2,1);
+            overflow: hidden;
+        }
+        @keyframes nw-modal-in {
+            from { opacity: 0; transform: translateY(20px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .nw-req-modal__close {
+            position: absolute; top: 14px; right: 14px;
+            width: 32px; height: 32px;
+            border: 1px solid var(--nw-border);
+            background: var(--nw-surface);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--nw-text-muted);
+            transition: all 0.12s;
+            z-index: 2;
+        }
+        .nw-req-modal__close:hover { background: var(--nw-surface-3); color: var(--nw-text); }
+        .nw-req-modal__head {
+            display: flex; gap: 14px;
+            padding: 24px 24px 18px;
+            border-bottom: 1px solid var(--nw-border-2);
+        }
+        .nw-req-modal__icon {
+            width: 44px; height: 44px;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 12px;
+        }
+        .nw-req-modal__icon svg { width: 22px; height: 22px; }
+        .nw-req-modal__head strong { display: block; font-size: 16px; font-weight: 700; color: var(--nw-text); margin-bottom: 3px; }
+        .nw-req-modal__head span { font-size: 13px; color: var(--nw-text-muted); line-height: 1.5; }
+        .nw-req-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+        .nw-req-pane {
+            display: none;
+            padding: 22px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .nw-req-pane.is-active { display: block; animation: nw-fade-in 0.2s ease; }
+        .nw-req-field { margin-bottom: 14px; }
+        .nw-req-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--nw-text);
+            margin-bottom: 6px;
+        }
+        .nw-req-field input[type="text"],
+        .nw-req-field input[type="email"],
+        .nw-req-field textarea,
+        .nw-req-field select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--nw-border);
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            color: var(--nw-text);
+            background: var(--nw-surface);
+            box-sizing: border-box;
+            transition: border-color 0.12s, box-shadow 0.12s;
+        }
+        .nw-req-field input:focus,
+        .nw-req-field textarea:focus,
+        .nw-req-field select:focus {
+            outline: none;
+            border-color: var(--nw-brand);
+            box-shadow: 0 0 0 3px var(--nw-brand-soft);
+        }
+        .nw-req-field textarea { resize: vertical; min-height: 100px; }
+        .nw-req-checkbox-row {
+            display: flex !important;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 500 !important;
+            color: var(--nw-text-2) !important;
+        }
+        .nw-req-checkbox-row span { font-size: 13px; }
+        .nw-req-checkbox-row input[type="checkbox"] {
+            width: 18px !important;
+            height: 18px !important;
+            min-width: 18px;
+            margin: 0 !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            background: var(--nw-surface) !important;
+            border: 2px solid var(--nw-border-strong) !important;
+            border-radius: 4px !important;
+            position: relative;
+            cursor: pointer;
+        }
+        .nw-req-checkbox-row input[type="checkbox"]::after {
+            content: '' !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 4px !important;
+            height: 8px !important;
+            border: solid #fff !important;
+            border-width: 0 2px 2px 0 !important;
+            transform: translate(-50%, -60%) rotate(45deg) !important;
+            background: transparent !important;
+            border-radius: 0 !important;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .nw-req-checkbox-row input[type="checkbox"]:checked {
+            background: var(--nw-brand) !important;
+            border-color: var(--nw-brand) !important;
+        }
+        .nw-req-checkbox-row input[type="checkbox"]:checked::after { opacity: 1; }
+
+        .nw-req-pane-success { text-align: center; padding: 40px 24px; }
+        .nw-req-success-icon {
+            width: 64px; height: 64px;
+            margin: 0 auto 16px;
+            background: var(--nw-ok-soft);
+            color: var(--nw-ok);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            animation: nw-pulse 0.5s ease-out;
+        }
+        @keyframes nw-pulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .nw-req-success-icon svg { width: 32px; height: 32px; }
+        .nw-req-pane-success strong { display: block; font-size: 18px; font-weight: 700; color: var(--nw-text); margin-bottom: 8px; }
+        .nw-req-pane-success p { font-size: 13px; color: var(--nw-text-2); margin: 0 0 8px; line-height: 1.6; }
+
+        .nw-req-foot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 24px;
+            background: var(--nw-surface-2);
+            border-top: 1px solid var(--nw-border-2);
+        }
+        .nw-req-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 18px;
+            border: 1px solid var(--nw-border);
+            background: var(--nw-surface);
+            color: var(--nw-text);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.12s;
+        }
+        .nw-req-btn:hover:not(:disabled) { background: var(--nw-surface-3); }
+        .nw-req-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .nw-req-btn-primary {
+            background: var(--nw-brand);
+            color: #fff;
+            border-color: var(--nw-brand);
+            margin-left: auto;
+        }
+        .nw-req-btn-primary:hover:not(:disabled) {
+            background: var(--nw-brand-hover) !important;
+            color: #fff;
+        }
+        .nw-req-btn-primary svg { width: 14px; height: 14px; }
+        .nw-spin { animation: nw-spin 0.7s linear infinite; }
+        @keyframes nw-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

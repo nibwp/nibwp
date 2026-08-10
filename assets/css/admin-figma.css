@@ -1,0 +1,1019 @@
+/**
+ * NIBWP — Figma workspace (STUDIO).
+ *
+ * Connection / Pull / Library tabs, method accordions, and the pulled-frame
+ * library grid. Uses the shared --nw-* tokens from admin.css so it follows the
+ * app theme (incl. dark) instead of hardcoding colors. The tab pills themselves
+ * come from admin-integrations.css (.nw-int-tab*), which this page also loads.
+ */
+
+/* An explicit display value in author CSS beats the UA's [hidden] rule, so any
+   element we toggle with the hidden attribute must opt back out here. */
+.nw-figma [hidden],
+.nw-figma-search[hidden],
+.nw-figma-more[hidden],
+.nw-figma-progress[hidden] { display: none !important; }
+
+/* ── layout ─────────────────────────────────────────────────────────────── */
+.nw-figma {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+}
+
+.nw-figma__beta {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    background: linear-gradient(135deg, var(--nw-accent, #f59e0b), var(--nw-accent-strong, #d97706));
+    color: #fff;
+    padding: 2px 9px;
+    border-radius: 999px;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+/* ── tab panels ─────────────────────────────────────────────────────────── */
+.nw-figma-panel { display: none; }
+
+.nw-figma-panel.is-active {
+    display: block;
+    animation: nw-figma-in .18s ease;
+}
+
+@keyframes nw-figma-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Connection dot — in the tab and in the status strip. */
+.nw-figma-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    border-radius: 50%;
+    background: #c3c7cb;
+    display: inline-block;
+}
+
+.nw-figma-dot.is-on {
+    background: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, .18);
+}
+
+.nw-int-tab .nw-figma-dot { margin-right: 7px; }
+
+/* ── cards ──────────────────────────────────────────────────────────────── */
+.nw-figma-card.is-disabled {
+    opacity: .55;
+    pointer-events: none;
+}
+
+.nw-figma-card__sub {
+    color: var(--nw-text-muted, #787c82);
+    font-size: 13px;
+    margin: 0 0 12px;
+}
+
+.nw-figma-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--nw-surface-2, #f6f7f9);
+    border: 1px solid var(--nw-border, #e2e4e7);
+    color: var(--nw-text-2, #3c434a);
+    font-size: 12px;
+    font-weight: 600;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+/* ── connection status strip ────────────────────────────────────────────── */
+.nw-figma-status {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 13px 15px;
+    margin-bottom: 16px;
+    border: 1px solid var(--nw-border, #e2e4e7);
+    border-radius: 11px;
+    background: var(--nw-surface-2, #f6f7f9);
+}
+
+.nw-figma-status.is-on {
+    border-color: #b7e0c4;
+    background: rgba(34, 197, 94, .07);
+}
+
+.nw-figma-status strong {
+    display: block;
+    font-size: 13.5px;
+    color: var(--nw-text, #1d2327);
+}
+
+.nw-figma-status span:not(.nw-figma-dot) {
+    display: block;
+    margin-top: 1px;
+    font-size: 12.5px;
+    color: var(--nw-text-muted, #787c82);
+}
+
+.nw-figma-status__act { margin: 0 0 0 auto; }
+
+/* Masked credential fingerprint — identifies the saved secret, never reveals it. */
+.nw-figma-mask {
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: var(--nw-surface, #fff);
+    border: 1px solid var(--nw-border, #e2e4e7);
+    font-size: 11.5px;
+    letter-spacing: .04em;
+    color: var(--nw-text-2, #3c434a);
+}
+
+/* ── "pick one" hint above the method accordions ────────────────────────── */
+.nw-figma-choose {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--nw-text-2, #3c434a);
+}
+
+.nw-figma-choose::before {
+    content: "";
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    box-shadow: inset 0 0 0 3px var(--nw-surface, #fff), inset 0 0 0 9px var(--nw-accent, #f59e0b);
+}
+
+/* ── method accordions ──────────────────────────────────────────────────── */
+.nw-figma-acc {
+    margin-bottom: 10px;
+    border: 1px solid var(--nw-border, #e2e4e7);
+    border-radius: 11px;
+    background: var(--nw-surface, #fff);
+    overflow: hidden;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.nw-figma-acc[open] {
+    border-color: #f0b25a;
+    box-shadow: 0 4px 14px rgba(217, 119, 6, .08);
+}
+
+.nw-figma-acc > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 15px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--nw-text, #1d2327);
+}
+
+.nw-figma-acc > summary:hover { background: var(--nw-surface-2, #f6f7f9); }
+.nw-figma-acc > summary::-webkit-details-marker { display: none; }
+
+.nw-figma-acc > summary::after {
+    content: "";
+    margin-left: auto;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--nw-text-muted, #787c82);
+    border-bottom: 2px solid var(--nw-text-muted, #787c82);
+    transform: rotate(45deg);
+    transition: transform .18s;
+}
+
+.nw-figma-acc[open] > summary::after { transform: rotate(-135deg); }
+
+.nw-figma-acc__n {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #b45309;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+}
+
+.nw-figma-acc[open] .nw-figma-acc__n {
+    background: linear-gradient(135deg, var(--nw-accent, #f59e0b), var(--nw-accent-strong, #d97706));
+    border-color: var(--nw-accent-strong, #d97706);
+    color: #fff;
+}
+
+.nw-figma-acc__tag {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #b45309;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    padding: 1px 8px;
+}
+
+/* "Connected" flag on whichever method is actually in use. */
+.nw-figma-acc__tag--on {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #137333;
+    background: rgba(34, 197, 94, .1);
+    border-color: #b7e0c4;
+}
+
+.nw-figma-acc__tag--on .nw-figma-dot {
+    width: 6px;
+    height: 6px;
+    flex: 0 0 6px;
+    box-shadow: none;
+}
+
+.nw-figma-acc.is-connected { border-color: #b7e0c4; }
+
+.nw-figma-acc.is-connected[open] {
+    border-color: #86ceA0;
+    box-shadow: 0 4px 14px rgba(34, 197, 94, .1);
+}
+
+.nw-figma-acc.is-connected[open] .nw-figma-acc__n {
+    background: linear-gradient(135deg, #22c55e, #15803d);
+    border-color: #15803d;
+}
+
+.nw-figma-acc__body {
+    padding: 0 15px 15px;
+    border-top: 1px solid var(--nw-border, #eceef1);
+}
+
+/* ── numbered steps ─────────────────────────────────────────────────────── */
+.nw-figma-steps {
+    margin: 12px 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: figstep;
+}
+
+.nw-figma-steps li {
+    counter-increment: figstep;
+    position: relative;
+    padding: 3px 0 3px 28px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--nw-text-2, #3c434a);
+}
+
+.nw-figma-steps li::before {
+    content: counter(figstep);
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #b45309;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+}
+
+.nw-figma-steps a { font-weight: 600; }
+
+/* ── pull form ──────────────────────────────────────────────────────────── */
+.nw-figma-pull {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.nw-figma-input,
+.nw-figma-acc__body .nw-figma-field {
+    flex: 1 1 340px;
+    min-width: 240px;
+    padding: 9px 12px;
+    border: 1px solid var(--nw-border, #d5d9de);
+    border-radius: 9px;
+    font-size: 13px;
+    background: var(--nw-surface, #fff);
+    color: var(--nw-text, #1d2327);
+}
+
+.nw-figma-input--sm {
+    flex: 0 1 200px;
+    min-width: 150px;
+}
+
+.nw-figma-input:focus,
+.nw-figma-field:focus {
+    outline: none;
+    border-color: var(--nw-accent, #f59e0b);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .18);
+}
+
+.nw-figma-btn {
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+    padding: 9px 18px;
+    border-radius: 9px;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, var(--nw-accent, #f59e0b), var(--nw-accent-strong, #d97706));
+}
+
+.nw-figma-btn:hover { filter: brightness(1.05); }
+
+/* Busy state — spinner appears in place, width stays put so nothing jumps. */
+.nw-figma-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.nw-figma-spin {
+    display: none;
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .45);
+    border-top-color: #fff;
+    animation: nw-figma-spin .6s linear infinite;
+}
+
+.nw-figma-btn.is-loading { cursor: progress; opacity: .9; }
+.nw-figma-btn.is-loading .nw-figma-spin { display: block; }
+.nw-figma-btn:disabled { opacity: .85; cursor: progress; }
+
+@keyframes nw-figma-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-figma-spin { animation-duration: 1.8s; }
+}
+
+.nw-figma-btn--ghost {
+    background: var(--nw-surface, #fff);
+    color: var(--nw-text-2, #374151);
+    border: 1px solid var(--nw-border, #d5d9de);
+}
+
+/* Full-width fields inside accordions, stacked. */
+.nw-figma-acc__body .nw-figma-field {
+    display: block;
+    width: 100%;
+    flex: none;
+    margin-bottom: 9px;
+}
+
+.nw-figma-code {
+    display: inline-block;
+    background: var(--nw-surface-2, #f6f7f9);
+    border: 1px solid var(--nw-border, #e5e7eb);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11.5px;
+    word-break: break-all;
+}
+
+.nw-figma-code--block {
+    display: block;
+    margin-top: 4px;
+}
+
+.nw-figma-muted {
+    color: var(--nw-text-muted, #6b7280);
+    font-size: 12.5px;
+    margin: 10px 0 0;
+}
+
+/* ── library grid ───────────────────────────────────────────────────────── */
+.nw-figma-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+}
+
+.nw-figma-item {
+    border: 1px solid var(--nw-border, #e6e8eb);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--nw-surface, #fff);
+    transition: box-shadow .15s, border-color .15s, transform .15s;
+}
+
+.nw-figma-item:hover {
+    border-color: #f0b25a;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .07);
+    transform: translateY(-2px);
+}
+
+.nw-figma-item__thumb {
+    aspect-ratio: 16 / 10;
+    background-color: var(--nw-surface-2, #f6f7f9);
+    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+    border-bottom: 1px solid var(--nw-border, #eee);
+}
+
+.nw-figma-item__body { padding: 11px 13px; }
+
+.nw-figma-item__name {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--nw-text, #1d2327);
+}
+
+.nw-figma-swatches {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.nw-figma-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, .12);
+}
+
+/* Handle chip — click to copy the name you use in a prompt. */
+.nw-figma-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    margin-bottom: 9px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: var(--nw-surface-2, #f6f7f9);
+    border: 1px solid var(--nw-border, #eee);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--nw-text-2, #3c434a);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color .15s, background .15s;
+}
+
+.nw-figma-hint:hover {
+    border-color: #f0b25a;
+    background: #fff7ed;
+}
+
+.nw-figma-copy__text {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nw-figma-copy__icon { flex: 0 0 13px; opacity: .55; }
+.nw-figma-copy:hover .nw-figma-copy__icon { opacity: 1; }
+
+.nw-figma-copy.is-copied {
+    border-color: #b7e0c4 !important;
+    background: rgba(34, 197, 94, .1) !important;
+    color: #137333;
+}
+
+.nw-figma-copy.is-copied .nw-figma-copy__text::after {
+    content: " ✓ copied";
+    font-weight: 700;
+}
+
+/* Card footer: open-in-Figma + icon delete. */
+/* Link left, delete pinned right. */
+.nw-figma-item__acts {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.nw-figma-item__form { margin: 0 0 0 auto; }
+
+.nw-figma-item__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.nw-figma-item__link svg { flex: 0 0 12px; }
+
+.nw-figma-iconbtn {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    padding: 0;
+    border: 1px solid var(--nw-border, #e2e4e7);
+    border-radius: 8px;
+    background: var(--nw-surface, #fff);
+    color: var(--nw-text-muted, #787c82);
+    cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+}
+
+.nw-figma-iconbtn:hover { background: var(--nw-surface-2, #f6f7f9); }
+
+.nw-figma-iconbtn--danger:hover {
+    color: #b32d2e;
+    border-color: #f3c2c2;
+    background: rgba(179, 45, 46, .07);
+}
+
+/* ── tabs row: tabs left, library search right ──────────────────────────── */
+.nw-figma-tabsrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.nw-figma-tabsrow .nw-int-tabs {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.nw-figma-search {
+    flex: 0 1 360px;
+    margin: 0 0 0 auto;
+    min-width: 260px;
+}
+
+/* The shared control reserves 230px for the input, which squeezes the x / y
+   counter out of a tab-row-sized box. Let the input shrink; pin the count. */
+.nw-figma-search .nw-page-search__input { min-width: 0; }
+
+.nw-figma-search .nw-page-search__count {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* ── bulk pull ──────────────────────────────────────────────────────────── */
+.nw-figma-batch {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--nw-border, #e2e4e7);
+}
+
+.nw-figma-batch__title {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--nw-text, #1d2327);
+}
+
+.nw-figma-batch__acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.nw-figma-batch__stop { color: #b32d2e; }
+
+.nw-figma-progress { margin-top: 14px; }
+
+.nw-figma-progress__bar {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--nw-surface-3, #eceef1);
+    overflow: hidden;
+}
+
+.nw-figma-progress__bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--nw-accent, #f59e0b), var(--nw-accent-strong, #d97706));
+    transition: width .25s ease;
+}
+
+.nw-figma-progress__txt {
+    margin: 7px 0 0;
+    font-size: 12.5px;
+    color: var(--nw-text-2, #3c434a);
+}
+
+/* ── load more ──────────────────────────────────────────────────────────── */
+.nw-figma-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.nw-figma-more__btn { min-width: 160px; }
+
+/* Spinner on a light button needs dark strokes. */
+.nw-figma-spin--dark {
+    border-color: rgba(0, 0, 0, .18);
+    border-top-color: var(--nw-text-2, #3c434a);
+}
+
+/* ── inline rename ──────────────────────────────────────────────────────── */
+.nw-figma-item__name { display: flex; align-items: center; gap: 6px; }
+
+.nw-figma-item__name .nw-figma-item__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nw-figma-rename {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--nw-text-muted, #787c82);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s, color .15s, background .15s;
+}
+
+.nw-figma-item:hover .nw-figma-rename,
+.nw-figma-rename:focus-visible { opacity: 1; }
+
+.nw-figma-rename:hover {
+    color: var(--nw-accent-strong, #d97706);
+    background: #fff7ed;
+}
+
+.nw-figma-renameform {
+    display: none;
+    gap: 6px;
+    margin-bottom: 7px;
+}
+
+.nw-figma-item.is-renaming .nw-figma-renameform { display: flex; }
+.nw-figma-item.is-renaming .nw-figma-item__name { display: none; }
+
+.nw-figma-renameform input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 5px 8px;
+    border: 1px solid var(--nw-accent, #f59e0b);
+    border-radius: 7px;
+    font-size: 12.5px;
+    background: var(--nw-surface, #fff);
+    color: var(--nw-text, #1d2327);
+}
+
+.nw-figma-renameform input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .18);
+}
+
+.nw-figma-item.is-busy { opacity: .55; pointer-events: none; }
+.nw-figma-item.is-removing { opacity: 0; transform: scale(.96); transition: opacity .2s, transform .2s; }
+
+.nw-figma-empty {
+    margin: 14px 0 0;
+    padding: 18px;
+    text-align: center;
+    border: 1px dashed var(--nw-border, #e2e4e7);
+    border-radius: 10px;
+    color: var(--nw-text-muted, #787c82);
+    font-size: 13px;
+}
+
+/* ── how-to ─────────────────────────────────────────────────────────────── */
+.nw-figma-how {
+    display: grid;
+    gap: 14px;
+}
+
+.nw-figma-how__step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.nw-figma-how__n {
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, var(--nw-accent, #f59e0b), var(--nw-accent-strong, #d97706));
+}
+
+.nw-figma-how__step strong {
+    display: block;
+    font-size: 13.5px;
+    color: var(--nw-text, #1d2327);
+    margin-bottom: 2px;
+}
+
+.nw-figma-how__step p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--nw-text-2, #3c434a);
+}
+
+/* ── copyable prompts ───────────────────────────────────────────────────── */
+.nw-figma-prompts {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+}
+
+.nw-figma-prompts li { display: grid; gap: 3px; }
+
+.nw-figma-prompt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--nw-border, #e2e4e7);
+    border-radius: 9px;
+    background: var(--nw-surface, #fff);
+    color: var(--nw-text, #1d2327);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+
+.nw-figma-prompt:hover {
+    border-color: #f0b25a;
+    background: #fff7ed;
+}
+
+.nw-figma-prompts__why {
+    font-size: 11.5px;
+    color: var(--nw-text-muted, #787c82);
+    padding-left: 2px;
+}
+
+/* Free-text note — these are examples, not a fixed command set. */
+.nw-figma-free {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--nw-border, #e2e4e7);
+    border-left: 3px solid var(--nw-accent, #f59e0b);
+    border-radius: 10px;
+    background: var(--nw-surface-2, #f6f7f9);
+}
+
+.nw-figma-free strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: var(--nw-text, #1d2327);
+}
+
+.nw-figma-free p {
+    margin: 0 0 7px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--nw-text-2, #3c434a);
+}
+
+.nw-figma-free p:last-child { margin-bottom: 0; }
+
+/* ── inline page notices ────────────────────────────────────────────────── */
+.nw-figma-note {
+    margin: 0 0 12px;
+    padding: 9px 13px;
+    border-radius: 9px;
+    font-size: 12.5px;
+}
+
+.nw-figma-note--ok {
+    background: rgba(34, 197, 94, .09);
+    border: 1px solid #b7e0c4;
+    color: #137333;
+}
+
+.nw-figma-note--err {
+    background: rgba(179, 45, 46, .07);
+    border: 1px solid #f3c2c2;
+    color: #b32d2e;
+}
+
+/* ── modal variant (connect-only render) ────────────────────────────────── */
+.nw-figma--modal { margin: 12px 16px 0 0; }
+
+@media (max-width: 782px) {
+    .nw-figma-pull { flex-direction: column; align-items: stretch; }
+    .nw-figma-input, .nw-figma-input--sm { flex: none; width: 100%; }
+    .nw-figma-status { flex-wrap: wrap; }
+    .nw-figma-status__act { margin: 8px 0 0; }
+}
+
+.nw-figma-note--info {
+    background: var(--nw-surface-2, #f6f7f9);
+    border: 1px solid var(--nw-border, #e2e4e7);
+    color: var(--nw-text-muted, #787c82);
+    margin-top: 12px;
+}
+
+/* ── Figma rate-limit explainer ──
+   A bare "try again in 329772 seconds" reads like NibWP failed. This frames it
+   as Figma's quota, states what still works, and links the three real fixes. */
+.nw-figma-limit {
+    margin: 0 0 18px;
+    padding: 16px 18px;
+    border: 1px solid #fed7aa;
+    border-left: 3px solid var(--nw-accent, #f59e0b);
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fffaf3 0%, #fff7ed 100%);
+}
+
+.nw-figma-limit__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.nw-figma-limit__icon {
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid #fed7aa;
+    color: #b45309;
+}
+
+.nw-figma-limit__head strong {
+    display: block;
+    font-size: 14px;
+    color: #7c2d12;
+}
+
+.nw-figma-limit__head span:not(.nw-figma-limit__icon):not(.nw-figma-limit__wait) {
+    display: block;
+    margin-top: 2px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #8a5a2b;
+}
+
+.nw-figma-limit__wait {
+    margin-left: auto;
+    flex: 0 0 auto;
+    align-self: center;
+    padding: 3px 11px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.nw-figma-limit__why {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: #8a5a2b;
+}
+
+.nw-figma-limit__fixes {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.nw-figma-limit__fixes li {
+    padding: 11px 13px;
+    border: 1px solid #fcd9a6;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .78);
+}
+
+.nw-figma-limit__fixes strong {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 12.5px;
+    color: #7c2d12;
+}
+
+.nw-figma-limit__fixes span {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: #8a5a2b;
+}
+
+.nw-figma-limit__fixes a {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #b45309;
+}
+
+.nw-figma-limit__ok {
+    margin: 12px 0 0;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: rgba(34, 197, 94, .09);
+    border: 1px solid #b7e0c4;
+    font-size: 12.5px;
+    color: #137333;
+}
+
+.nw-figma-limit__raw {
+    margin-top: 10px;
+    font-size: 11.5px;
+    color: #a16207;
+}
+
+.nw-figma-limit__raw summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.nw-figma-limit__raw code {
+    display: block;
+    margin-top: 6px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #f0e0c8;
+    word-break: break-word;
+}
+
+@media (max-width: 900px) {
+    .nw-figma-limit__fixes { grid-template-columns: 1fr; }
+}
+
+/* ── button icons ──
+   The icon and the spinner occupy the same slot: idle shows the icon, busy
+   swaps to the spinner, so the button never changes width mid-run. */
+.nw-figma-btn__icon {
+    flex: 0 0 14px;
+    opacity: .85;
+    transition: opacity .15s ease, transform .15s ease;
+}
+
+.nw-figma-btn:hover .nw-figma-btn__icon {
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+.nw-figma-btn.is-loading .nw-figma-btn__icon { display: none; }
+
+.nw-figma-batch__stop .nw-figma-btn__icon {
+    fill: currentColor;
+    opacity: 1;
+}
+
+.nw-figma-btn:disabled .nw-figma-btn__icon { opacity: .45; }

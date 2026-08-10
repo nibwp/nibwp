@@ -1,0 +1,119 @@
+/* NIBWP — Settings styles. Extracted from inline <style>; enqueued via includes/admin-styles.php. */
+
+#nw-abilities-table tr.is-disabled td { opacity: 0.55; }
+            #nw-abilities-table tr.is-disabled td:nth-child(4) { opacity: 1; }
+            #nw-abilities-table tr.is-disabled code { text-decoration: line-through; text-decoration-color: var(--nw-text-muted-2); }
+
+.nibwp-settings-card {
+                    background: var(--nw-surface);
+                    border: 1px solid var(--nw-border);
+                    border-radius: var(--nw-radius, 8px);
+                    padding: 20px 24px;
+                    margin: 0 0 16px;
+                    color: var(--nw-text);
+                }
+                .nibwp-settings-card h3 {
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: var(--nw-text);
+                    margin: 0 0 16px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid var(--nw-border-2);
+                }
+                .nibwp-settings-row {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 16px;
+                    padding: 12px 0;
+                    border-bottom: 1px solid var(--nw-border-2);
+                }
+                .nibwp-settings-row:last-child {
+                    border-bottom: none;
+                    padding-bottom: 0;
+                }
+                .nibwp-settings-label {
+                    flex: 0 0 200px;
+                    font-weight: 600;
+                    color: var(--nw-text);
+                    padding-top: 4px;
+                }
+                .nibwp-settings-field {
+                    flex: 1;
+                    color: var(--nw-text-2);
+                }
+                .nibwp-settings-field .description {
+                    margin-top: 4px;
+                    color: var(--nw-text-muted);
+                    font-size: 13px;
+                }
+                .nibwp-settings-field input[type="number"],
+                .nibwp-settings-field input[type="text"],
+                .nibwp-settings-field textarea {
+                    padding: 6px 10px;
+                    background: var(--nw-surface-2);
+                    border: 1px solid var(--nw-border-strong);
+                    border-radius: 4px;
+                    color: var(--nw-text);
+                    font-size: 14px;
+                }
+                .nibwp-settings-field input[type="number"] {
+                    width: 100px;
+                }
+                .nibwp-settings-field textarea {
+                    width: 100%;
+                    max-width: 400px;
+                    min-height: 60px;
+                    font-family: monospace;
+                    font-size: 13px;
+                }
+                .nibwp-tool-checklist {
+                    max-height: 300px;
+                    overflow-y: auto;
+                    border: 1px solid var(--nw-border);
+                    border-radius: 4px;
+                    padding: 8px 12px;
+                    background: var(--nw-surface-2);
+                }
+                .nibwp-tool-checklist label {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 4px 0;
+                    font-size: 13px;
+                    color: var(--nw-text);
+                    cursor: pointer;
+                }
+                .nibwp-tool-checklist label:hover {
+                    color: var(--nw-accent, #2271b1);
+                }
+                .nibwp-tool-checklist code {
+                    font-size: 12px;
+                    background: var(--nw-surface-3);
+                    color: var(--nw-text-2);
+                    padding: 1px 5px;
+                    border-radius: 3px;
+                }
+                .nibwp-settings-card #nibwp-disabled-tools-toggle {
+                    background: var(--nw-surface-2);
+                    border: 1px solid var(--nw-border-strong);
+                    color: var(--nw-text);
+                    border-radius: var(--nw-radius-sm, 6px);
+                    padding: 0px 12px;
+                    height: 32px;
+                    cursor: pointer;
+                    transition: background 0.12s, border-color 0.12s, color 0.12s;
+                }
+                .nibwp-settings-card #nibwp-disabled-tools-toggle:hover {
+                    background: var(--nw-surface-3);
+                    color: var(--nw-text);
+                    border-color: var(--nw-border-strong);
+                }
+                @media screen and (max-width: 782px) {
+                    .nibwp-settings-row {
+                        flex-direction: column;
+                        gap: 6px;
+                    }
+                    .nibwp-settings-label {
+                        flex: none;
+                    }
+                }

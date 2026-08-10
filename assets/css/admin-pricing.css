@@ -1,0 +1,124 @@
+/* ============================================================================
+   NIBWP — "Choose your plan" pricing grid.
+   Rendered by nibwp_render_pricing_grid() in nibwp.php on the License admin
+   page + Skills marketplace + any modal that surfaces the upsell.
+   Flat colors only — no gradients, no box-shadows.
+   ============================================================================ */
+
+.nw-pricing {
+    --nw-acc: #7c3aed;
+    --nw-acc-tint: #ede4ff;
+    --nw-acc-dark: #6d28d9;
+    --nw-gold: #f0b849;
+    --nw-gold-tint: #fdf2d6;
+    --nw-ink: #1d2327;
+    --nw-ink-2: #3c434a;
+    --nw-mute: #646970;
+    --nw-line: #dcdcde;
+    --nw-bg: #fff;
+    --nw-bg-2: #f6f7f7;
+    --nw-featured-bg: #1d2327;
+    background: var(--nw-bg-2);
+    border: 1px solid var(--nw-line);
+    border-radius: 14px;
+    padding: 32px 28px 24px;
+    margin: 24px 0;
+}
+
+.nw-pricing__head { text-align: center; margin-bottom: 24px; }
+.nw-pricing__title {
+    margin: 0 0 6px;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: var(--nw-ink) !important;
+    letter-spacing: -.01em;
+}
+.nw-pricing__sub { margin: 0 auto 20px; color: var(--nw-mute); font-size: 14px; max-width: 560px; line-height: 1.5; }
+.nw-pricing__controls { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; align-items: center; }
+
+.nw-pricing__seg { display: inline-flex; background: #fff; border: 1px solid var(--nw-line); border-radius: 99px; padding: 3px; gap: 2px; }
+.nw-pricing__seg-btn { background: transparent; border: none; padding: 10px 16px; font-size: 13px; font-weight: 600; color: var(--nw-mute); border-radius: 99px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background .12s, color .12s; }
+.nw-pricing__seg-btn.is-on { background: var(--nw-ink); color: #fff; }
+.nw-pricing__seg-chip {line-height: 12px; font-size: 10px; font-weight: 700; background: var(--nw-gold); color: #1d2327; padding: 2px 7px; border-radius: 99px; letter-spacing: .04em; }
+.nw-pricing__seg-btn.is-on .nw-pricing__seg-chip { background: var(--nw-gold); }
+
+.nw-pricing__sites { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px solid var(--nw-line); border-radius: 99px; padding: 4px 6px 4px 16px; }
+.nw-pricing__sites-label { font-size: 12px; font-weight: 600; color: var(--nw-mute); letter-spacing: .04em; text-transform: uppercase; margin-right: 6px; }
+.nw-pricing__sites-btn { background: transparent; border: none; color: var(--nw-ink-2); font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 99px; cursor: pointer; transition: background .12s, color .12s; font-feature-settings: "tnum"; min-width: 42px; line-height: 1; }
+.nw-pricing__sites-btn:hover { background: var(--nw-acc-tint); color: var(--nw-acc); }
+.nw-pricing__sites-btn.is-on { background: var(--nw-acc); color: #fff; }
+.nw-pricing__sites-btn.is-on:hover { background: var(--nw-acc); color: #fff; }
+
+.nw-pricing__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 8px; }
+.nw-pricing__grid.is-single { grid-template-columns: minmax(0, 440px); justify-content: center; }
+
+.nw-plan { position: relative; background: #fff; border: 1px solid var(--nw-line); border-radius: 12px; padding: 26px 24px; display: flex; flex-direction: column; transition: border-color .15s ease; }
+.nw-plan:hover { border-color: var(--nw-ink-2); }
+.nw-plan.is-featured { background: var(--nw-featured-bg); border-color: var(--nw-featured-bg); color: #e5e7e9; }
+.nw-plan.is-featured:hover { border-color: var(--nw-featured-bg); }
+.nw-plan__ribbon { position: absolute; top: -11px; left: 24px; background: var(--nw-gold); color: #1d2327; font-size: 10px; font-weight: 800; letter-spacing: .12em; padding: 5px 11px; border-radius: 99px; }
+.nw-plan__head { margin-bottom: 18px; }
+.nw-plan__tier { display: block; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--nw-acc); margin-bottom: 4px; }
+.nw-plan.is-featured .nw-plan__tier { color: var(--nw-gold); }
+.nw-plan__pitch { margin: 0; font-size: 13px; line-height: 1.5; color: var(--nw-mute); }
+.nw-plan.is-featured .nw-plan__pitch { color: #b8b8c0; }
+
+.nw-plan__price { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--nw-line); }
+.nw-plan.is-featured .nw-plan__price { border-bottom-color: #3c434a; }
+.nw-plan__amt { font-size: 38px; font-weight: 800; color: var(--nw-ink); line-height: 1; letter-spacing: -.02em; font-feature-settings: "tnum"; }
+.nw-plan.is-featured .nw-plan__amt { color: #fff; }
+.nw-plan__per { font-size: 11px; color: var(--nw-mute); line-height: 1.4; padding-bottom: 4px; }
+.nw-plan.is-featured .nw-plan__per { color: #9b9ba3; }
+.nw-plan__per-period { display: inline; }
+.nw-plan__per-sites { font-weight: 600; color: var(--nw-ink-2); font-feature-settings: "tnum"; }
+.nw-plan.is-featured .nw-plan__per-sites { color: #cfcfd6; }
+
+.nw-plan__per-site { margin: 0 0 18px; padding: 9px 12px; background: var(--nw-acc-tint); border: 1px solid var(--nw-acc-tint); border-radius: 8px; color: var(--nw-ink); font-size: 12.5px; line-height: 1.35; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.nw-plan__per-site strong { font-size: 16px; color: var(--nw-acc); font-weight: 800; letter-spacing: -.01em; font-feature-settings: "tnum"; }
+.nw-plan__per-site-label { color: var(--nw-mute); }
+.nw-plan__per-site-save { margin-left: auto; background: #d4f5d8; color: #0a6c1e; font-size: 10px; font-weight: 800; letter-spacing: .04em; padding: 3px 8px; border-radius: 99px; text-transform: uppercase; }
+.nw-plan.is-featured .nw-plan__per-site { background: var(--nw-gold-tint); border-color: var(--nw-gold-tint); color: var(--nw-ink); }
+.nw-plan.is-featured .nw-plan__per-site strong { color: var(--nw-ink); }
+.nw-plan.is-featured .nw-plan__per-site-label { color: var(--nw-mute); }
+.nw-plan.is-featured .nw-plan__per-site-save { background: #0a6c1e; color: #fff; }
+
+.nw-plan__features { list-style: none; padding: 0; margin: 0 0 22px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.nw-plan__features li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.45; color: var(--nw-ink-2); }
+.nw-plan.is-featured .nw-plan__features li { color: #dcdce0; }
+.nw-plan__check { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: var(--nw-acc-tint); color: var(--nw-acc); flex-shrink: 0; margin-top: 1px; }
+.nw-plan.is-featured .nw-plan__check { background: #3c434a; color: #fff; }
+.nw-plan__check.is-gold { background: var(--nw-gold-tint); color: var(--nw-acc-dark); }
+.nw-plan.is-featured .nw-plan__check.is-gold { background: var(--nw-gold); color: var(--nw-ink); }
+
+.nw-plan__cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: var(--nw-acc); border: 1.5px solid var(--nw-acc); font-size: 14px; font-weight: 600; padding: 11px 16px; border-radius: 8px; text-decoration: none; transition: background .12s, color .12s; }
+.nw-plan__cta:hover { background: var(--nw-acc); color: #fff !important; }
+.nw-plan__cta.is-featured { background: var(--nw-gold); color: #1d2327; border-color: var(--nw-gold); }
+.nw-plan__cta.is-featured:hover { background: #e6a934; border-color: #e6a934; color: #1d2327; }
+.nw-plan__cta svg { transition: transform .12s; }
+.nw-plan__cta:hover svg { transform: translateX(2px); }
+.nw-plan__foot { margin: 10px 0 0; font-size: 11px; text-align: center; color: var(--nw-mute); letter-spacing: .02em; }
+.nw-plan.is-featured .nw-plan__foot { color: #9b9ba3; }
+
+.nw-pricing__trust { list-style: none; padding: 18px 0 0; margin: 24px 0 0; border-top: 1px solid var(--nw-line); display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 28px; font-size: 12px; color: var(--nw-mute); }
+.nw-pricing__trust li { display: inline-flex; align-items: center; gap: 6px; }
+.nw-pricing__trust svg { color: var(--nw-acc); }
+
+@media (max-width: 780px) {
+    .nw-pricing { padding: 24px 18px 18px; }
+    .nw-pricing__grid { grid-template-columns: 1fr; }
+    .nw-pricing__controls { gap: 12px; }
+    .nw-plan.is-featured { order: -1; }
+}
+
+/* ============================================================================
+   Foreign-notice suppression on NIBWP admin pages.
+   Set body class .nibwp-suppress-foreign-notices to hide every third-party
+   admin notice that lacks .nibwp-pro-notice or .nibwp-keep — keeps NIBWP
+   UI uncluttered.
+   ============================================================================ */
+body.nibwp-suppress-foreign-notices .wrap > .notice:not(.nibwp-pro-notice):not(.nibwp-keep),
+body.nibwp-suppress-foreign-notices #wpbody-content > .notice:not(.nibwp-pro-notice):not(.nibwp-keep),
+body.nibwp-suppress-foreign-notices #wpbody-content > .updated:not(.nibwp-keep),
+body.nibwp-suppress-foreign-notices #wpbody-content > .error:not(.nibwp-keep) {
+    display: none !important;
+}

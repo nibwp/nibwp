@@ -1,0 +1,417 @@
+/* NIBWP — User access
+ *
+ * Cards, buttons and the copy row come from admin.css / admin-status.css; this
+ * file only describes the per-administrator rows and the mode switcher. */
+
+.nw-ua-lead {
+    margin: 0 0 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+}
+
+.nw-ua .nibwp-card-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.nw-ua .nibwp-card-title .nw-status-ico { color: var(--nw-text-muted); }
+
+/* ------------------------------------------------------- owner / claim -- */
+
+.nw-ua-locked,
+.nw-ua-claim {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.nw-ua-locked__icon {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-surface-2);
+    color: var(--nw-text-muted);
+}
+
+.nw-ua-claim .nw-ua-locked__icon {
+    background: var(--nw-brand-soft);
+    color: var(--nw-brand);
+}
+
+.nw-ua-locked .nibwp-card-title,
+.nw-ua-claim .nibwp-card-title { margin-bottom: 6px; }
+
+.nw-ua-locked .nw-ua-lead,
+.nw-ua-claim .nw-ua-lead { margin-bottom: 0; }
+
+/* ------------------------------------------------------------- switch -- */
+
+.nw-ua-switch {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--nw-text);
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.nw-ua-switch input { margin: 0; }
+
+/* --------------------------------------------------------------- facts -- */
+
+.nw-ua-facts {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    border-top: 1px solid var(--nw-border);
+    padding-top: 14px;
+}
+
+.nw-ua-facts li {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+}
+
+.nw-ua-facts .nw-status-ico {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--nw-text-muted);
+}
+
+/* ------------------------------------------------------- user rows -- */
+
+.nw-ua-user {
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-surface-2);
+    padding: 13px 15px;
+    margin-bottom: 10px;
+}
+
+.nw-ua-user:last-of-type { margin-bottom: 0; }
+
+/* Your own row leads the list and is tinted, because "what do I see" and "what
+   do they see" are different questions being answered in the same place. */
+.nw-ua-user.is-you {
+    background: var(--nw-brand-soft);
+    border-color: var(--nw-brand);
+}
+
+.nw-ua-you {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 7px;
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-brand);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.nw-ua-user__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.nw-ua-user__avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    line-height: 0;
+}
+
+.nw-ua-user__avatar img {
+    border-radius: var(--nw-radius-full);
+    width: 36px;
+    height: 36px;
+}
+
+.nw-ua-user__id {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    flex: 1 1 180px;
+}
+
+.nw-ua-user__id strong {
+    font-size: 13px;
+    color: var(--nw-text);
+    font-weight: 600;
+}
+
+/* Direct child only: this is the secondary line under the name. A descendant
+   selector here also caught the You badge nested inside <strong> and repainted
+   it muted grey on its own blue ground. */
+.nw-ua-user__id > span {
+    font-size: 12px;
+    color: var(--nw-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nw-ua-user__modes {
+    display: flex;
+    gap: 4px;
+    flex: 0 0 auto;
+    background: var(--nw-surface);
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius-full);
+    padding: 3px;
+}
+
+.nw-ua-mode {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--nw-radius-full);
+    cursor: pointer;
+}
+
+/* The radio itself is redundant once the label reads as a segmented control,
+   but it stays in the accessibility tree and drives :focus-visible. */
+.nw-ua-mode input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+}
+
+.nw-ua-mode span {
+    padding: 5px 12px;
+    border-radius: var(--nw-radius-full);
+    font-size: 12px;
+    font-weight: 550;
+    color: var(--nw-text-muted);
+    white-space: nowrap;
+}
+
+.nw-ua-mode:hover span { color: var(--nw-text); }
+
+.nw-ua-mode input:checked + span {
+    background: var(--nw-brand);
+    color: #fff;
+    font-weight: 600;
+}
+
+.nw-ua-mode input:focus-visible + span {
+    outline: 2px solid var(--nw-brand);
+    outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------- extras -- */
+
+.nw-ua-user__extras {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--nw-border);
+}
+
+.nw-ua-extra {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    color: var(--nw-text-2);
+    cursor: pointer;
+}
+
+.nw-ua-extra input { margin: 0; }
+
+.nw-ua-field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--nw-text-muted);
+    margin: 0 0 6px;
+}
+
+.nw-status-copyrow + .nw-ua-field-label { margin-top: 14px; }
+
+/* --------------------------------------------------------- page grid -- */
+
+.nw-ua-user__pages {
+    display: none;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px 14px;
+    margin-top: 13px;
+    padding-top: 13px;
+    border-top: 1px solid var(--nw-border);
+}
+
+.nw-ua-user.is-custom .nw-ua-user__pages { display: grid; }
+
+.nw-ua-page {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    color: var(--nw-text-2);
+    cursor: pointer;
+}
+
+.nw-ua-page input { margin: 0; }
+
+.nw-ua-page.is-locked {
+    color: var(--nw-text-muted);
+    cursor: default;
+}
+
+/* --------------------------------------------------------- save row -- */
+
+.nw-ua-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+#nw-ua-save.is-busy { opacity: .7; pointer-events: none; }
+.nw-ua-spin { display: inline-flex; }
+#nw-ua-save.is-busy .nw-ua-spin { animation: nw-ua-spin .9s linear infinite; }
+
+@keyframes nw-ua-spin { to { transform: rotate(360deg); } }
+
+.nw-ua-saved {
+    font-size: 13px;
+    font-weight: 550;
+}
+
+.nw-ua-saved.is-ok { color: var(--nw-ok); }
+.nw-ua-saved.is-error { color: var(--nw-danger); }
+
+@media (prefers-reduced-motion: reduce) {
+    #nw-ua-save.is-busy .nw-ua-spin { animation: none; }
+}
+
+@media (max-width: 1200px) {
+    .nw-ua-user__pages { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 782px) {
+    .nw-ua-user__pages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .nw-ua-user__modes { width: 100%; justify-content: space-between; }
+    .nw-ua-mode { flex: 1 1 auto; justify-content: center; }
+}
+
+/* ── Renaming ─────────────────────────────────────────────────────────────
+   The fields stay collapsed until the feature is switched on: an agency screen
+   that opens with eight empty inputs reads as work to do, not an option. */
+
+.nw-br-body {
+    display: none;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--nw-border);
+}
+
+.nw-br.is-on .nw-br-body { display: block; }
+
+.nw-br-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.nw-br-field { min-width: 0; }
+.nw-br-body .nw-oc-label { margin-top: 14px; }
+.nw-br-grid .nw-oc-label { margin-top: 0; }
+
+.nw-br-token {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    color: var(--nw-text-muted);
+}
+
+.nw-br-token code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--nw-surface-3);
+    font-size: 12px;
+}
+
+/* A copy of the Plugins row rather than a description of it, so what you read
+   here is what you will read there. */
+.nw-br-preview {
+    margin-top: 6px;
+    padding: 16px 18px;
+    border: 1px solid var(--nw-border);
+    border-left: 4px solid var(--nw-brand);
+    border-radius: var(--nw-radius);
+    background: var(--nw-surface);
+}
+
+.nw-br-preview__row strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--nw-text);
+}
+
+.nw-br-preview__links {
+    display: flex;
+    gap: 6px;
+    margin: 3px 0 8px;
+    font-size: 12.5px;
+    color: var(--nw-brand);
+}
+
+.nw-br-preview__links span[aria-hidden] { color: var(--nw-text-muted); }
+
+.nw-br-preview__row p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+    max-width: 78ch;
+}
+
+.nw-br-preview__meta {
+    margin-top: 8px !important;
+    font-size: 12px !important;
+    color: var(--nw-text-muted) !important;
+}
+
+.nw-br-facts { margin-top: 18px; }
+
+.nw-br-reset {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 18px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--nw-border);
+}
+
+.nw-br-seeit { font-size: 12.5px; }
+
+@media (max-width: 782px) {
+    .nw-br-grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,356 @@
+/* NibWP — Connect page: the two connection methods.
+ *
+ * Tabs come from admin-integrations.css (.nw-int-tab*), copy rows and buttons
+ * from admin-status.css and admin.css. Only what is unique to this screen. */
+
+/* Only the two method tabs run green — choosing how to connect is the decision
+ * this screen exists for. The client tabs below stay on the app blue, so the
+ * colour marks the one choice that matters rather than everything on the page. */
+.nw-oc,
+.nw-oc-conns {
+    --nw-oc-green: #00a32a;
+    --nw-oc-green-soft: #ecfdf5;
+    --nw-oc-green-ink: #0a4d17;
+    /* --nw-danger on --nw-danger-soft is 4.44:1 — a hair under the floor for
+       the 11px chip text, so the chip darkens its own red. */
+    --nw-oc-danger-ink: #b91c1c;
+}
+
+html.nw-dark .nw-oc,
+body.nw-dark .nw-oc,
+html.nw-dark .nw-oc-conns,
+body.nw-dark .nw-oc-conns {
+    --nw-oc-green-soft: #10291c;
+    --nw-oc-green-ink: #6ee7a8;
+    --nw-oc-danger-ink: #fca5a5;
+}
+
+.nw-oc-methods .nw-int-tab:hover {
+    background: var(--nw-oc-green-soft);
+    color: var(--nw-oc-green-ink);
+}
+
+.nw-oc-methods .nw-int-tab.is-active,
+.nw-oc-methods .nw-int-tab.is-active:hover {
+    background: var(--nw-oc-green);
+    color: #fff;
+}
+
+.nw-oc-methods { margin: 0 0 20px; }
+
+.nw-oc-method { display: none; }
+.nw-oc-method.is-active { display: block; }
+
+/* The recommended path is labelled rather than merely first. */
+.nw-oc-rec {
+    display: inline-block;
+    margin-left: 7px;
+    padding: 2px 7px;
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-oc-green-ink);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+/* Inverted on the active tab — a green pill on a green fill would vanish, and
+   translucent white over green lands well under the floor for 10px bold text. */
+.nw-oc-methods .nw-int-tab.is-active .nw-oc-rec {
+    background: #fff;
+    color: var(--nw-oc-green-ink);
+}
+
+/* ------------------------------------------------------------------ copy -- */
+
+/* Still used by the manual-client panel and the connections list — both places
+   where a line of explanation earns its space. The sign-in pane dropped its
+   lead because the numbered steps already said it. */
+.nw-oc-lead {
+    margin: 0 0 16px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--nw-text-2);
+    max-width: 68ch;
+}
+
+.nw-oc-label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--nw-text-muted);
+}
+
+.nw-oc-steps {
+    margin: 18px 0 22px;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-width: 68ch;
+}
+
+.nw-oc-steps li {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+}
+
+/* --------------------------------------------------------------- warning -- */
+
+.nw-oc-warn {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    margin: 0 0 18px;
+    border: 1px solid var(--nw-warn);
+    border-radius: var(--nw-radius);
+    background: var(--nw-warn-soft);
+}
+
+.nw-oc-warn strong { font-size: 13px; color: var(--nw-text); }
+.nw-oc-warn span { font-size: 12.5px; line-height: 1.6; color: var(--nw-text-2); }
+
+/* ----------------------------------------------------------- client panes -- */
+
+.nw-oc-tabs { margin: 0 0 14px; }
+
+.nw-oc-pane { display: none; }
+.nw-oc-pane.is-active { display: block; }
+
+.nw-oc-pane .nibwp-config-block { position: relative; }
+
+.nw-oc-pane .nw-status-copy {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.nw-oc-act { margin: 0 0 14px; }
+
+.nw-oc-act .nibwp-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.nw-oc-hint {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--nw-text-2);
+}
+
+.nw-oc-hint code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--nw-surface-3);
+    font-size: 12px;
+}
+
+.nw-oc-paths {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nw-oc-paths li {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    margin: 0;
+    font-size: 12px;
+}
+
+.nw-oc-paths span {
+    flex: 0 0 96px;
+    color: var(--nw-text-muted);
+}
+
+.nw-oc-paths code {
+    font-family: var(--nw-mono);
+    font-size: 11.5px;
+    color: var(--nw-text-2);
+    word-break: break-all;
+}
+
+/* -------------------------------------------------------- manual clients -- */
+
+.nw-oc-manual > .nw-oc-manual__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--nw-text);
+}
+
+.nw-oc-manual > .nw-oc-manual__summary::marker { content: ''; }
+.nw-oc-manual > .nw-oc-manual__summary::-webkit-details-marker { display: none; }
+
+.nw-oc-manual__chev {
+    display: inline-flex;
+    color: var(--nw-text-muted);
+    transition: transform .15s ease;
+}
+.nw-oc-manual[open] .nw-oc-manual__chev { transform: rotate(180deg); }
+.nw-oc-manual[open] > .nw-oc-manual__summary { margin-bottom: 14px; }
+
+.nw-oc-manual__form { margin: 18px 0 0; }
+.nw-oc-manual__form .nw-oc-label { margin-top: 14px; }
+.nw-oc-manual__form .nw-oc-label:first-child { margin-top: 0; }
+
+.nw-oc-manual .nw-oc-conns { margin-top: 18px; }
+.nw-oc-manual .nw-oc-conn__meta { font-family: var(--nw-mono); word-break: break-all; }
+
+/* ----------------------------------------------------------- connections -- */
+
+.nw-oc-conns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nw-oc-conn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    background: var(--nw-surface);
+}
+
+.nw-oc-conn__main {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    flex: 1 1 320px;
+}
+
+.nw-oc-conn__main strong { font-size: 13.5px; color: var(--nw-text); }
+
+.nw-oc-conn__meta { font-size: 12px; color: var(--nw-text-muted); }
+
+.nw-oc-conn__act { margin: 0; flex: 0 0 auto; }
+
+.nw-oc-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 2px;
+}
+
+.nw-oc-chip {
+    padding: 3px 9px;
+    border-radius: var(--nw-radius-full);
+    border: 1px solid var(--nw-border);
+    background: var(--nw-surface-2);
+    font-size: 11px;
+    color: var(--nw-text-2);
+}
+
+/* Dangerous grants stay visible in the list, not just at the moment of
+   approval — this is where someone audits what they handed over. */
+.nw-oc-chip.is-danger {
+    border-color: var(--nw-oc-danger-ink);
+    background: var(--nw-danger-soft);
+    color: var(--nw-oc-danger-ink);
+    font-weight: 600;
+}
+
+@media (max-width: 782px) {
+    .nw-oc-conn { flex-direction: column; align-items: stretch; }
+    .nw-oc-conn__act button { width: 100%; }
+    .nw-oc-paths li { flex-direction: column; gap: 2px; }
+    .nw-oc-paths span { flex: none; }
+}
+
+.nw-oc-extra { margin-top: 12px; }
+
+/* ---------------------------------------------------------- optional -- */
+
+/* Everything past the ready-made prompt: renaming the server, or setting a
+   client up by hand. Shut by default, because the prompt above already does
+   the job and a page that shows every path at once reads as a page with no
+   recommended one. */
+.nibwp-optional {
+    margin: 34px 0 0;
+    border: 1px solid var(--nw-border);
+    border-radius: 12px;
+    background: var(--nw-surface);
+}
+
+.nibwp-optional[open] {
+    padding-bottom: 18px;
+}
+
+.nibwp-optional__summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    list-style: none;
+    border-radius: 12px;
+    user-select: none;
+}
+
+/* Both markers, or the browser draws its own triangle beside our chevron and
+   the row carries two icons pointing different ways. */
+.nibwp-optional__summary::marker { content: ''; }
+.nibwp-optional__summary::-webkit-details-marker { display: none; }
+
+/* The whole row is the control, so every part of it says so on hover. */
+.nibwp-optional__summary,
+.nibwp-optional__summary * { cursor: pointer; }
+
+.nibwp-optional__summary:hover { background: var(--nw-surface-2); }
+
+.nibwp-optional__summary:focus-visible {
+    outline: 2px solid var(--nw-brand, #2563eb);
+    outline-offset: -2px;
+}
+
+.nibwp-optional__chev {
+    display: inline-flex;
+    color: var(--nw-text-muted);
+    transition: transform 140ms ease;
+}
+
+.nibwp-optional[open] .nibwp-optional__chev { transform: rotate(90deg); }
+
+.nibwp-optional__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--nw-text);
+}
+
+.nibwp-optional > *:not(.nibwp-optional__summary) {
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+/* A secondary way in, offered rather than urged: smaller than the primary
+   action it sits beside. */
+.nibwp-btn-ghost--small {
+    padding: 5px 11px;
+    font-size: 12px;
+    line-height: 1.4;
+}

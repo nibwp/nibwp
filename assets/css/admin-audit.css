@@ -1,0 +1,152 @@
+/* NIBWP — Audit Log styles. Extracted from inline <style>; enqueued via includes/admin-styles.php. */
+
+.nibwp-audit-stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 14px;
+                margin: 0 0 24px;
+            }
+            .nibwp-audit-stat {
+                background: var(--nw-surface);
+                border: 1px solid var(--nw-border);
+                border-radius: 8px;
+                padding: 16px 20px;
+                text-align: center;
+            }
+            .nibwp-audit-stat-number {
+                font-size: 28px;
+                font-weight: 700;
+                color: var(--nw-text);
+                line-height: 1.2;
+            }
+            .nibwp-audit-stat-number.is-error {
+                color: var(--nw-err, #d63638);
+            }
+            .nibwp-audit-stat-label {
+                font-size: 12px;
+                color: var(--nw-text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                margin-top: 4px;
+            }
+            .nibwp-audit-badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+            }
+            .nibwp-audit-badge.is-success {
+                background: var(--nw-ok-soft);
+                color: var(--nw-ok);
+            }
+            .nibwp-audit-badge.is-error {
+                background: var(--nw-err-soft, #fcecec);
+                color: var(--nw-err, #d63638);
+            }
+            .nibwp-audit-client {
+                display: block;
+                margin-top: 3px;
+                font-size: 11px;
+                color: var(--nw-text-muted);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .nibwp-audit-filters {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 0 0 16px;
+                flex-wrap: wrap;
+            }
+            .nibwp-audit-filters input[type="text"],
+            .nibwp-audit-filters select {
+                height: 42px !important;
+                padding: 0 12px;
+                background: var(--nw-surface-2);
+                color: var(--nw-text);
+                border: 1px solid var(--nw-border-strong);
+                border-radius: 6px;
+                font-size: 13px;
+                line-height: 1;
+                box-sizing: border-box;
+            }
+            .nibwp-audit-filters .button {
+                height: 36px;
+                padding: 0 16px;
+                line-height: 34px;
+                font-size: 13px;
+                box-sizing: border-box;
+                border-radius: 6px;
+            }
+            .nibwp-audit-cleanup-form {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 24px 0 0;
+                padding: 16px 20px;
+                background: var(--nw-surface);
+                border: 1px solid var(--nw-border);
+                border-radius: 8px;
+                flex-wrap: wrap;
+            }
+            .nibwp-audit-cleanup-form label {
+                font-weight: 600;
+                color: var(--nw-text);
+            }
+            .nibwp-audit-cleanup-form input[type="number"] {
+                width: 70px;
+                padding: 4px 8px;
+                background: var(--nw-surface-2);
+                color: var(--nw-text);
+                border: 1px solid var(--nw-border-strong);
+                border-radius: 4px;
+            }
+            .nibwp-pagination {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin: 16px 0 0;
+                font-size: 13px;
+                color: var(--nw-text-muted);
+            }
+            .nibwp-pagination-links {
+                display: flex;
+                gap: 4px;
+            }
+            .nibwp-pagination-links a,
+            .nibwp-pagination-links span {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 30px;
+                height: 30px;
+                padding: 0 8px;
+                border: 1px solid var(--nw-border-strong);
+                border-radius: 4px;
+                text-decoration: none;
+                font-size: 13px;
+                color: var(--nw-accent, #2271b1);
+                background: var(--nw-surface);
+            }
+            .nibwp-pagination-links span.current {
+                background: var(--nw-text);
+                color: var(--nw-surface);
+                border-color: var(--nw-text);
+                font-weight: 600;
+            }
+            .nibwp-pagination-links a:hover {
+                border-color: var(--nw-accent, #2271b1);
+                background: var(--nw-surface-3);
+            }
+            .nibwp-audit-tool-name {
+                font-family: var(--nw-mono, monospace);
+                font-size: 12px;
+                background: var(--nw-surface-3);
+                color: var(--nw-text-2);
+                padding: 2px 6px;
+                border-radius: 3px;
+            }

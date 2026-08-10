@@ -1,0 +1,298 @@
+/* NIBWP — Skills styles. Extracted from inline <style>; enqueued via includes/admin-styles.php. */
+
+.nw-bundle-hero{position:relative;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;background:linear-gradient(135deg,#1d2327 0%,#2c3338 100%);color:#fff;padding:24px 28px;border-radius:12px;margin:20px 0;box-shadow:0 4px 18px rgba(34,113,177,.18);}
+                .nw-bundle-hero__badge{position:absolute;top:-10px;left:24px;background:#f0b849;color:#1d2327;font-size:10px;font-weight:800;letter-spacing:.1em;padding:5px 10px;border-radius:99px;}
+                .nw-bundle-hero__title{margin:0 0 6px;color:#fff;font-size:20px;line-height:1.2;}
+                .nw-bundle-hero__sub{margin:0 0 14px;color:rgba(255,255,255,.75);font-size:14px;line-height:1.5;}
+                .nw-bundle-hero__features{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:13px;color:rgba(255,255,255,.9);}
+                .nw-bundle-hero__features li{padding:0;}
+                .nw-bundle-hero__cta{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+                .nw-bundle-hero__cta .button-hero{background:#2271b1;border-color:#2271b1;color:#fff;padding:10px 22px;font-size:14px;font-weight:600;}
+                .nw-bundle-hero__cta .button-hero:hover{background:#135e96;border-color:#135e96;color:#fff;}
+                .nw-bundle-hero a.nw-bundle-hero__alt{color:#fff;font-size:12px;text-decoration:underline;opacity:.85;}
+                .nw-bundle-hero a.nw-bundle-hero__alt:hover{color:#fff;opacity:1;}
+                @media (max-width:760px){.nw-bundle-hero{grid-template-columns:1fr;}.nw-bundle-hero__features{grid-template-columns:1fr;}.nw-bundle-hero__cta{align-items:flex-start;}}
+
+/* ── License status card ── */
+        .nw-license-card {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 20px 24px;
+            border-radius: var(--nw-radius);
+            background: var(--nw-surface);
+            border: 1px solid var(--nw-border);
+            box-shadow: var(--nw-shadow);
+            margin-bottom: 14px;
+        }
+        .nw-license-card--active {
+            border-left: 4px solid var(--nw-ok);
+            background: linear-gradient(to right, var(--nw-ok-soft) 0%, var(--nw-surface) 50%);
+        }
+        .nw-license-card--none, .nw-license-card--invalid {
+            border-left: 4px solid var(--nw-warn);
+            background: linear-gradient(to right, var(--nw-warn-soft) 0%, var(--nw-surface) 50%);
+        }
+        .nw-license-card__icon {
+            width: 52px; height: 52px;
+            border-radius: 12px;
+            background: var(--nw-surface);
+            color: var(--nw-brand);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid var(--nw-border);
+        }
+        .nw-license-card--active .nw-license-card__icon { color: var(--nw-ok); }
+        .nw-license-card--none .nw-license-card__icon, .nw-license-card--invalid .nw-license-card__icon { color: var(--nw-warn); }
+        .nw-license-card__icon svg { width: 26px; height: 26px; }
+        .nw-license-card__body { flex: 1; }
+        .nw-license-card__title { font-size: 16px; font-weight: 700; color: var(--nw-text); margin-bottom: 3px; }
+        .nw-license-card__sub { font-size: 13px; color: var(--nw-text-muted); line-height: 1.5; }
+        .nw-license-card__meta {
+            display: flex; gap: 16px; flex-wrap: wrap;
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--nw-text-muted);
+        }
+        .nw-license-card__meta strong { color: var(--nw-text); font-weight: 600; }
+        .nw-license-card__meta code { font-family: var(--nw-mono); background: var(--nw-surface-3); padding: 2px 6px; border-radius: 4px; font-size: 11.5px; }
+
+        /* Activation form */
+        .nw-license-form-wrap {
+            margin: 0 0 18px;
+            padding: 18px 22px;
+            background: var(--nw-surface);
+            border: 1px solid var(--nw-brand);
+            border-radius: var(--nw-radius);
+            animation: nw-fade-in 0.2s ease;
+        }
+        .nw-license-form label { font-size: 12px; font-weight: 700; color: var(--nw-text); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; display: block; }
+        .nw-license-form__row { display: flex; gap: 10px; align-items: center; }
+        .nw-license-form__row input { flex: 1; font-family: var(--nw-mono); }
+        .nw-license-form .description { font-size: 12px; color: var(--nw-text-muted); margin-top: 10px; }
+        .nw-license-form .description a { color: var(--nw-brand); font-weight: 600; }
+
+        /* ── Skill cards grid ── */
+/* ── Plan tabs + search, one bar ──
+   Uses the shared .nw-int-tab component from admin-integrations.css so this
+   screen matches Integrations rather than inventing a second tab look. Only the
+   layout of the bar itself belongs here. */
+        .nw-skill-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            /* nowrap on purpose: a wrapping flex line wraps BEFORE it shrinks,
+               so the search dropped to a second row on a laptop while both
+               items still had room to give. Below the breakpoint they stack
+               deliberately instead. */
+            flex-wrap: nowrap;
+            /* The wrap's own overflow:hidden would clip the search field's
+               focus ring, and the tab strip does its own scrolling anyway. */
+            overflow: visible;
+        }
+        .nw-skill-bar .nw-int-tabs {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        /* Search and sort travel together on the right; the sort keeps its own
+           width so a long option label cannot squeeze the field. */
+        .nw-skill-bar .nw-sort-select {
+            flex: 0 0 auto;
+            margin: 0;
+        }
+        .nw-skill-bar__search {
+            /* Shrinks before it wraps: a fixed width pushed itself onto a second
+               row on a laptop, which is a worse answer than a narrower field. */
+            flex: 0 1 340px;
+            width: 340px;
+            min-width: 210px;
+            max-width: 100%;
+            margin: 0;
+        }
+        /* The result count and the clear button are the last two things in the
+           field and the first two to be pushed out of it — the count appears
+           only once someone types, so the field has to have room for it before
+           it exists. Neither shrinks; the input gives up the space instead. */
+        .nw-skill-bar__search .nw-page-search__icon,
+        .nw-skill-bar__search .nw-page-search__clear,
+        .nw-skill-bar__search .nw-page-search__count {
+            flex: 0 0 auto;
+        }
+        .nw-skill-bar__search .nw-page-search__input {
+            flex: 1 1 40px;
+            min-width: 40px;
+        }
+        @media (max-width: 782px) {
+            .nw-skill-bar { align-items: stretch; flex-wrap: wrap; }
+            .nw-skill-bar__search { flex-basis: 100%; width: 100%; }
+            .nw-skill-bar .nw-sort-select { flex: 1 1 auto; }
+        }
+
+        .nw-skill-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .nw-skill-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 22px;
+            background: var(--nw-surface);
+            border: 1px solid var(--nw-border);
+            border-radius: var(--nw-radius);
+            box-shadow: var(--nw-shadow-sm);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .nw-skill-card:hover { box-shadow: var(--nw-shadow); border-color: var(--nw-border-strong); }
+        .nw-skill-card.is-premium {
+            border: 1px solid rgba(217, 119, 6, 0.4);
+            background: linear-gradient(180deg, rgba(254, 243, 199, 0.4) 0%, var(--nw-surface) 30%);
+        }
+        .nw-skill-card.is-active { border-left: 3px solid var(--nw-ok); }
+        .nw-skill-card.is-locked { opacity: 0.95; }
+        .nw-skill-card__premium-tag {
+            position: absolute;
+            top: 12px; right: 12px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            padding: 3px 9px;
+            border-radius: 99px;
+    
+        }
+        .nw-skill-card__head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            padding-right: 60px;
+        }
+        .nw-skill-card__icon {
+            width: 44px; height: 44px;
+            background: var(--nw-brand-soft);
+            color: var(--nw-brand);
+            border-radius: var(--nw-radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .nw-skill-card.is-premium .nw-skill-card__icon {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #d97706;
+        }
+        .nw-skill-card__icon svg { width: 22px; height: 22px; }
+        .nw-skill-card__title strong {
+            display: block;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--nw-text);
+            margin-bottom: 2px;
+        }
+        .nw-skill-card__title span {
+            font-size: 12.5px;
+            color: var(--nw-text-muted);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;        /* clamp tagline to 2 lines */
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.8em;            /* reserve 2 lines → uniform head height */
+        }
+        .nw-skill-card__features {
+            list-style: none;
+            padding: 0 8px 0 0;          /* room for the scrollbar */
+            margin: 0 0 14px;
+            flex: none;
+            height: 160px;               /* fixed → every card is the same height */
+            overflow-y: auto;
+            scrollbar-width: thin;       /* Firefox: tiny scrollbar */
+            scrollbar-color: var(--nw-border-strong) transparent;
+            overscroll-behavior: contain;
+        }
+        /* WebKit: tiny scrollbar, only visible when there's overflow to read */
+        .nw-skill-card__features::-webkit-scrollbar { width: 6px; }
+        .nw-skill-card__features::-webkit-scrollbar-track { background: transparent; }
+        .nw-skill-card__features::-webkit-scrollbar-thumb { background: var(--nw-border-strong); border-radius: 99px; }
+        .nw-skill-card__features:hover::-webkit-scrollbar-thumb { background: var(--nw-text-muted-2); }
+        .nw-skill-card__features li {
+            font-size: 12.5px;
+            color: var(--nw-text-2);
+            padding: 4px 0 4px 22px;
+            position: relative;
+            line-height: 1.55;
+        }
+        .nw-skill-card__features li::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 6px;
+            width: 14px; height: 14px;
+            background-color: var(--nw-ok-soft);
+            border-radius: 50%;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 9px 9px;
+        }
+        .nw-skill-card__foot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding-top: 12px;
+            border-top: 1px solid var(--nw-border-2);
+        }
+        .nw-skill-card__status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 11px;
+            color: var(--nw-text-muted);
+        }
+        .nw-skill-card__abil-count {
+            font-size: 11px;
+            color: var(--nw-text-muted-2);
+            font-family: var(--nw-mono);
+        }
+
+        /* Mini toggle pill */
+        .nw-toggle-pill {
+            width: 38px;
+            height: 22px;
+            border-radius: 99px;
+            background: var(--nw-border-strong);
+            border: none;
+            position: relative;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.18s;
+        }
+        .nw-toggle-pill span {
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 18px; height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+            transition: transform 0.18s, left 0.18s;
+        }
+        .nw-toggle-pill.is-on { background: var(--nw-ok); }
+        .nw-toggle-pill.is-on span { left: 18px; }
+        .nw-toggle-pill.is-loading { pointer-events: none; }
+        .nw-toggle-pill.is-loading span { opacity: 0; }
+        .nw-toggle-pill.is-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 12px; height: 12px;
+            margin: -6px 0 0 -6px;
+            border: 2px solid rgba(255,255,255,.55);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: nw-skill-spin .6s linear infinite;
+        }
+        @keyframes nw-skill-spin { to { transform: rotate(360deg); } }

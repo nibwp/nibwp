@@ -1,0 +1,442 @@
+/* NIBWP — Status & Diagnostics
+ *
+ * Chrome comes from the shared sheets, so this file deliberately does NOT
+ * restyle tabs, buttons or cards:
+ *   .nw-int-tab*     → admin-integrations.css (also loaded on this page)
+ *   .nibwp-btn-*     → admin.css
+ *   .nibwp-card(-title) → admin.css
+ * Everything below is unique to the diagnostics screen. */
+
+/* Icons sit on the text baseline everywhere they appear. */
+.nw-status .nw-status-ico { flex-shrink: 0; }
+
+.nw-status .nibwp-card-title,
+.nw-status .nw-status-group,
+.nw-status .nw-status-note,
+.nw-status .nw-status-field-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.nw-status .nibwp-card-title .nw-status-ico { color: var(--nw-text-muted); }
+
+/* ------------------------------------------------------------------- tabs -- */
+
+/* The shared tab row is built for a scrolling strip inside a page body; here it
+   is the page's primary nav, so it just needs breathing room beneath it. */
+.nw-status-tabs-wrap { margin: 0 0 20px; }
+.nw-status .nw-int-tabs { gap: 6px; }
+.nw-status .nw-int-tab .nw-status-ico { opacity: .85; }
+
+.nw-status-panel { display: none; }
+.nw-status-panel.is-active { display: block; }
+
+/* ---------------------------------------------------------------- verdict -- */
+
+.nw-status-verdict {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 20px 22px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    background: var(--nw-surface);
+    box-shadow: var(--nw-shadow-sm);
+    margin: 0 0 16px;
+}
+
+.nw-status-verdict.is-ready { border-color: var(--nw-ok); background: var(--nw-ok-soft); }
+.nw-status-verdict.is-degraded { border-color: var(--nw-warn); background: var(--nw-warn-soft); }
+.nw-status-verdict.is-blocked { border-color: var(--nw-danger); background: var(--nw-danger-soft); }
+
+.nw-status-verdict__icon {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-surface);
+}
+
+.nw-status-verdict.is-ready .nw-status-verdict__icon { color: var(--nw-ok); }
+.nw-status-verdict.is-degraded .nw-status-verdict__icon { color: var(--nw-warn); }
+.nw-status-verdict.is-blocked .nw-status-verdict__icon { color: var(--nw-danger); }
+
+.nw-status-verdict__body { flex: 1 1 auto; min-width: 0; }
+
+.nw-status-verdict__body h2 {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--nw-text);
+    padding: 0;
+}
+
+.nw-status-verdict__body > p {
+    margin: 0;
+    color: var(--nw-text-2);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------- culprit -- */
+
+.nw-status-culprit {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-surface);
+    border: 1px solid var(--nw-border);
+}
+
+.nw-status-culprit__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.nw-status-culprit__tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-danger);
+    color: #fff;
+}
+
+.nw-status-culprit__head strong { font-size: 14px; color: var(--nw-text); }
+
+.nw-status-culprit__detail {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+    white-space: pre-line;
+}
+
+/* ------------------------------------------------------------------ steps -- */
+
+.nw-status-steps,
+.nw-status-fix {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nw-status-steps { list-style: decimal; }
+.nw-status-fix { list-style: disc; }
+
+.nw-status-steps li,
+.nw-status-fix li {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+    margin: 0;
+}
+
+/* ----------------------------------------------------------------- counts -- */
+
+.nw-status-counts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.nw-status-count {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    background: var(--nw-surface);
+    box-shadow: var(--nw-shadow-sm);
+}
+
+.nw-status-count__icon {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--nw-radius-full);
+}
+
+.nw-status-count__meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.nw-status-count.is-ok .nw-status-count__icon { background: var(--nw-ok-soft); color: var(--nw-ok); }
+.nw-status-count.is-warn .nw-status-count__icon { background: var(--nw-warn-soft); color: var(--nw-warn); }
+.nw-status-count.is-fail .nw-status-count__icon { background: var(--nw-danger-soft); color: var(--nw-danger); }
+
+.nw-status-count__value { font-size: 20px; font-weight: 650; color: var(--nw-text); line-height: 1.15; }
+.nw-status-count__label { font-size: 12px; color: var(--nw-text-muted); }
+
+/* ------------------------------------------------------------- check list -- */
+
+.nw-status-group {
+    margin: 24px 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--nw-text-muted);
+}
+
+.nw-status-list {
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    background: var(--nw-surface);
+    box-shadow: var(--nw-shadow-sm);
+    overflow: hidden;
+}
+
+.nw-status-item + .nw-status-item { border-top: 1px solid var(--nw-border); }
+
+.nw-status-item__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px 16px;
+}
+
+.nw-status-item.has-more > .nw-status-item__head { cursor: pointer; }
+.nw-status-item.has-more > .nw-status-item__head:hover { background: var(--nw-surface-2); }
+.nw-status-item.has-more > .nw-status-item__head:focus-visible { outline: 2px solid var(--nw-brand); outline-offset: -2px; }
+
+.nw-status-item__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.nw-status-item__text strong { font-size: 13px; color: var(--nw-text); font-weight: 600; }
+.nw-status-item__text > span { font-size: 12.5px; color: var(--nw-text-2); line-height: 1.5; }
+
+.nw-status-item__chevron {
+    display: inline-flex;
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--nw-text-muted);
+    transition: transform .15s ease;
+}
+
+.nw-status-item.is-open .nw-status-item__chevron { transform: rotate(180deg); }
+
+.nw-status-item__body { display: none; padding: 0 16px 16px 62px; }
+.nw-status-item.is-open .nw-status-item__body { display: block; }
+
+.nw-status-item__body p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--nw-text-2);
+}
+
+/* ----------------------------------------------------------------- badges -- */
+
+.nw-status-badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 88px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 5px 9px;
+    border-radius: var(--nw-radius-full);
+    border: 1px solid transparent;
+    line-height: 1;
+}
+
+.nw-status-badge.is-ok { background: var(--nw-ok-soft); color: var(--nw-ok); border-color: var(--nw-ok); }
+.nw-status-badge.is-warn { background: var(--nw-warn-soft); color: var(--nw-warn); border-color: var(--nw-warn); }
+.nw-status-badge.is-fail { background: var(--nw-danger-soft); color: var(--nw-danger); border-color: var(--nw-danger); }
+.nw-status-badge.is-info { background: var(--nw-surface-2); color: var(--nw-text-muted); border-color: var(--nw-border); }
+.nw-status-badge.is-knock { background: var(--nw-surface-2); color: var(--nw-text-muted); border-color: var(--nw-border-strong); }
+
+/* Knock-on rows are evidence, not a second job — muted so the eye skips to
+   the real cause. */
+.nw-status-item.is-knock { background: var(--nw-surface-2); }
+.nw-status-item.is-knock .nw-status-item__text strong { color: var(--nw-text-2); font-weight: 550; }
+
+.nw-status-item__because {
+    font-size: 12px;
+    color: var(--nw-text-muted);
+    font-style: italic;
+    line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ cards -- */
+
+.nw-status-card__lead {
+    margin: 0 0 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+}
+
+.nw-status-note {
+    margin: 14px 0 0;
+    font-size: 12.5px;
+    color: var(--nw-text-muted);
+    line-height: 1.6;
+}
+
+.nw-status-note .nw-status-ico { color: var(--nw-text-muted); }
+
+.nw-status-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--nw-text-muted);
+    margin: 0 0 6px;
+}
+
+.nw-status-field-label + .nw-status-copyrow { margin-bottom: 14px; }
+
+/* -------------------------------------------------------------- copy rows -- */
+
+.nw-status-copyrow { display: flex; gap: 8px; align-items: stretch; }
+
+.nw-status-copyrow__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 34px;
+    font-family: var(--nw-mono);
+    font-size: 12.5px;
+    padding: 0 11px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-surface-2);
+    color: var(--nw-text);
+}
+
+/* Confirmation swaps the icon rather than the text colour. The same button
+   markup is used on the ghost and the accent variant, and the success green on
+   the accent's orange ground lands around 1.6:1 — unreadable. The tick reads on
+   both, and the label already says "Copied". */
+.nw-status-copy__icon { display: inline-flex; }
+.nw-status-copy__icon--done { display: none; }
+.nw-status-copy.is-copied .nw-status-copy__icon--idle { display: none; }
+.nw-status-copy.is-copied .nw-status-copy__icon--done { display: inline-flex; }
+
+/* The ghost button sits on a light surface, so it can carry the success colour
+   too; the accent button keeps its own foreground. */
+.nibwp-btn-ghost.nw-status-copy.is-copied {
+    color: var(--nw-ok);
+    border-color: var(--nw-ok);
+}
+
+/* ---------------------------------------------------------------- methods -- */
+
+.nw-status-methods {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.nw-status-method {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    text-align: left;
+    padding: 13px 15px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-surface-2);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color .12s ease, background .12s ease;
+}
+
+.nw-status-method:hover { border-color: var(--nw-border-strong); }
+
+.nw-status-method.is-active {
+    border-color: var(--nw-brand);
+    background: var(--nw-brand-soft);
+}
+
+.nw-status-method__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    margin-top: 1px;
+    color: var(--nw-text-muted);
+}
+
+.nw-status-method.is-active .nw-status-method__icon { color: var(--nw-brand); }
+
+.nw-status-method__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.nw-status-method__text strong { font-size: 13px; color: var(--nw-text); }
+.nw-status-method__text span { font-size: 12px; color: var(--nw-text-muted); line-height: 1.5; }
+
+.nw-status-method-notes { display: none; }
+.nw-status-method-notes.is-active { display: block; }
+
+/* ----------------------------------------------------------------- report -- */
+
+.nw-status-report-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.nw-status-report {
+    width: 100%;
+    margin-top: 6px;
+    font-family: var(--nw-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 14px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-surface-2);
+    color: var(--nw-text-2);
+    resize: vertical;
+}
+
+/* ---------------------------------------------------------------- re-run -- */
+
+#nw-status-rerun.is-busy { opacity: .7; pointer-events: none; }
+#nw-status-rerun .nw-status-spin-target { display: inline-flex; }
+#nw-status-rerun.is-busy .nw-status-spin-target { animation: nw-status-spin .9s linear infinite; }
+
+@keyframes nw-status-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #nw-status-rerun.is-busy .nw-status-spin-target { animation: none; }
+    .nw-status-item__chevron,
+    .nw-status-method { transition: none; }
+}
+
+@media (max-width: 782px) {
+    .nw-status-verdict { flex-direction: column; }
+    .nw-status-item__body { padding-left: 16px; }
+    .nw-status-badge { min-width: 0; }
+    .nw-status-report-head { flex-direction: column; }
+}

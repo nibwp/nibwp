@@ -1,0 +1,341 @@
+/* NibWP — OAuth consent screen.
+ *
+ * This page renders outside the admin shell, so it carries its own tokens
+ * rather than inheriting admin.css. Kept deliberately plain: the only thing on
+ * screen should be the decision being asked for. */
+
+:root {
+    --nw-oa-bg: #f4f5f7;
+    --nw-oa-surface: #ffffff;
+    --nw-oa-text: #1d2327;
+    --nw-oa-text-2: #3c434a;
+    --nw-oa-muted: #646970;
+    --nw-oa-border: #e5e7eb;
+    --nw-oa-brand: #2563eb;
+    --nw-oa-danger: #c2410c;
+    --nw-oa-danger-soft: #fff4ec;
+    --nw-oa-danger-edge: #edc0a4;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --nw-oa-bg: #12141a;
+        --nw-oa-surface: #181b22;
+        --nw-oa-text: #f1f2f4;
+        --nw-oa-text-2: #d1d5db;
+        --nw-oa-muted: #9ca3af;
+        --nw-oa-border: #2a2f3a;
+        --nw-oa-brand: #3b82f6;
+        --nw-oa-danger: #ff904d;
+        --nw-oa-danger-soft: #271a12;
+        --nw-oa-danger-edge: #88482e;
+    }
+}
+
+body.nw-oa-body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--nw-oa-bg);
+    color: var(--nw-oa-text-2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.nw-oa {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 32px 16px;
+    box-sizing: border-box;
+}
+
+.nw-oa-card {
+    width: 100%;
+    max-width: 600px;
+    background: var(--nw-oa-surface);
+    border: 1px solid var(--nw-oa-border);
+    border-radius: 14px;
+    padding: 30px 30px 24px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .07);
+    box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------------ head -- */
+
+.nw-oa-head { text-align: center; margin-bottom: 24px; }
+
+/* Both ends of the connection, joined — the client's mark, a link, this site.
+   Decorative: the same information is in the heading text below it. */
+.nw-oa-marks {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.nw-oa-mark {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    object-fit: contain;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background: var(--nw-oa-surface);
+    border: 1px solid var(--nw-oa-border);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .06);
+}
+
+.nw-oa-mark img { width: 34px; height: 34px; border-radius: 8px; object-fit: contain; }
+
+.nw-oa-mark--letter {
+    background: var(--nw-oa-brand);
+    border-color: transparent;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+/* The icon is a tall portrait shape, so it is sized by height and left to keep
+   its own aspect ratio rather than being squared off like a favicon. */
+.nw-oa-mark--site img { width: auto; height: 30px; border-radius: 0; }
+
+.nw-oa-link { color: var(--nw-oa-muted); display: inline-flex; flex: 0 0 auto; }
+
+.nw-oa-head h1 {
+    margin: 0 0 4px;
+    font-size: 20px;
+    line-height: 1.35;
+    font-weight: 600;
+    color: var(--nw-oa-text);
+    text-wrap: balance;
+}
+
+.nw-oa-site {
+    margin: 0;
+    font-size: 13px;
+    color: var(--nw-oa-muted);
+}
+
+/* ---------------------------------------------------------------- scopes -- */
+
+.nw-oa-lead {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--nw-oa-text);
+}
+
+.nw-oa-lead--risk {
+    margin-top: 22px;
+    color: var(--nw-oa-danger);
+}
+
+.nw-oa-scopes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* The checkbox is drawn here rather than left to the browser.
+   This page loads only WordPress's login stylesheet, which carries no checkbox
+   rules at all — so the tick was whatever the browser happened to draw, and on
+   the screen that matters most it was not obviously a tick. A permission screen
+   cannot be ambiguous about what is ticked. */
+.nw-oa-scope {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.nw-oa-scope:hover { background: var(--nw-oa-bg); }
+
+/* Kept in the accessibility tree and focusable — only its painting is ours. */
+.nw-oa-scope input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.nw-oa-box {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    border: 2px solid var(--nw-oa-muted);
+    border-radius: 6px;
+    background: var(--nw-oa-surface);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: background .12s ease, border-color .12s ease;
+}
+
+.nw-oa-box svg { width: 14px; height: 14px; opacity: 0; transform: scale(.7); transition: opacity .12s ease, transform .12s ease; }
+
+.nw-oa-scope input:checked + .nw-oa-box {
+    background: var(--nw-oa-brand);
+    border-color: var(--nw-oa-brand);
+}
+
+.nw-oa-scope input:checked + .nw-oa-box svg { opacity: 1; transform: none; }
+
+/* Keyboard focus has to be visible on a screen that grants permissions. */
+.nw-oa-scope input:focus-visible + .nw-oa-box {
+    outline: 2px solid var(--nw-oa-brand);
+    outline-offset: 3px;
+}
+
+.nw-oa-scope__text { display: block; min-width: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-oa-box, .nw-oa-box svg { transition: none; }
+}
+
+.nw-oa-scopes strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--nw-oa-text);
+}
+
+.nw-oa-scopes strong + span {
+    font-size: 12.5px;
+    color: var(--nw-oa-muted);
+    line-height: 1.5;
+}
+
+/* Risky permissions are visually separated so approving one cannot be a
+   momentum click through a uniform list. */
+.nw-oa-scopes--risk label {
+    background: var(--nw-oa-danger-soft);
+    border-color: var(--nw-oa-danger-edge);
+}
+
+.nw-oa-scopes--risk label:hover { border-color: var(--nw-oa-danger); }
+.nw-oa-scopes--risk strong { color: var(--nw-oa-danger); }
+
+/* A dangerous permission that has been ticked says so in its own colour, so the
+   list still reads correctly at a glance after the decision is made. */
+.nw-oa-scopes--risk .nw-oa-box { border-color: var(--nw-oa-danger); }
+
+.nw-oa-scopes--risk input:checked + .nw-oa-box {
+    background: var(--nw-oa-danger);
+    border-color: var(--nw-oa-danger);
+}
+
+.nw-oa-scopes--risk input:focus-visible + .nw-oa-box { outline-color: var(--nw-oa-danger); }
+
+/* --------------------------------------------------------------- footer -- */
+
+.nw-oa-as {
+    margin: 22px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--nw-oa-border);
+    font-size: 12.5px;
+    color: var(--nw-oa-muted);
+}
+
+.nw-oa-actions {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.nw-oa-btn {
+    flex: 1 1 auto;
+    appearance: none;
+    padding: 11px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--nw-oa-border);
+    background: var(--nw-oa-surface);
+    color: var(--nw-oa-text);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Excludes the primary deliberately. `.nw-oa-btn:hover` is two selectors and
+   `.nw-oa-btn--go` only one, so the neutral hover used to outrank the primary's
+   fill — leaving white text on a near-white background at 1.08:1, on the button
+   that grants access. */
+.nw-oa-btn:not(.nw-oa-btn--go):hover { background: var(--nw-oa-bg); }
+
+.nw-oa-btn--go {
+    background: var(--nw-oa-brand);
+    border-color: var(--nw-oa-brand);
+    color: #fff;
+}
+
+.nw-oa-btn--go:hover,
+.nw-oa-btn--go:focus,
+.nw-oa-btn--go:active {
+    background: var(--nw-oa-brand);
+    border-color: var(--nw-oa-brand);
+    color: #fff;
+    filter: brightness(1.06);
+}
+
+.nw-oa-btn:focus-visible {
+    outline: 2px solid var(--nw-oa-brand);
+    outline-offset: 2px;
+}
+
+.nw-oa-foot {
+    margin: 16px 0 0;
+    font-size: 12px;
+    color: var(--nw-oa-muted);
+    text-align: center;
+}
+
+@media (max-width: 480px) {
+    .nw-oa-card { padding: 24px 20px 20px; }
+    .nw-oa-actions { flex-direction: column-reverse; }
+}
+
+/* Why a permission left off now is not a permission granted quietly later. */
+.nw-oa-note {
+    margin: 0 0 10px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--nw-oa-muted);
+}
+
+/* Said before the checkboxes, because approving a connection to a site whose
+   abilities are off grants a key to a locked door. */
+.nw-oa-warn--block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--nw-oa-border, #e5e7eb);
+    border-left: 3px solid #d97706;
+    background: rgba(217, 119, 6, .08);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.nw-oa-warn--block strong { color: var(--nw-oa-text); }
+.nw-oa-warn--block span { color: var(--nw-oa-muted); }

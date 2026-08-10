@@ -1,0 +1,3110 @@
+/* The same tokens the NibWP dashboard uses, under this screen's own names.
+   Two products that share a menu should not disagree about what grey is. */
+:root {
+    --nw-vs-bg: #12141a;
+    --nw-vs-chrome: #181b22;
+    --nw-vs-raise: #1e2129;
+    --nw-vs-line: #2a2f3a;
+    --nw-vs-line-2: #242832;
+    --nw-vs-text: #f1f2f4;
+    --nw-vs-text-2: #d1d5db;
+    --nw-vs-muted: #9ca3af;
+    --nw-vs-muted-2: #6b7280;
+    --nw-vs-hover: #252935;
+    --nw-vs-brand: #3b82f6;
+    --nw-vs-brand-hover: #60a5fa;
+    --nw-vs-brand-soft: #1a2744;
+    --nw-vs-go: #16a34a;
+    --nw-vs-go-soft: rgba(34, 197, 94, .16);
+    --nw-vs-bad: #f87171;
+    --nw-vs-accent: #3b82f6;
+    --nw-vs-shadow: rgba(0, 0, 0, .45);
+    --nw-vs-veil: rgba(6, 8, 12, .72);
+
+    --nw-vs-mark: #ff9148;
+    --nw-vs-mark-soft: rgba(255, 145, 72, .16);
+    --nw-vs-solid: #f1f2f4;
+    --nw-vs-solid-ink: #12141a;
+    --nw-vs-solid-hover: #ffffff;
+
+    --nw-vs-r-sm: 6px;
+    --nw-vs-r: 10px;
+    --nw-vs-r-lg: 14px;
+}
+
+/* Dark is the default, system preference or not: this screen is a frame around
+   somebody else's website, and a dark frame is the one that does not compete
+   with whatever is inside it. Light is a deliberate choice, and it sticks. */
+:root[data-theme="light"] {
+    --nw-vs-bg: #f4f5f7;
+    --nw-vs-chrome: #ffffff;
+    --nw-vs-raise: #fafbfc;
+    --nw-vs-line: #e5e7eb;
+    --nw-vs-line-2: #eceef0;
+    --nw-vs-text: #1d2327;
+    --nw-vs-text-2: #3c434a;
+    --nw-vs-muted: #646970;
+    --nw-vs-muted-2: #8c8f94;
+    --nw-vs-hover: #f0f1f3;
+    --nw-vs-brand: #2563eb;
+    --nw-vs-brand-hover: #1d4ed8;
+    --nw-vs-brand-soft: #eff4ff;
+    --nw-vs-go: #16a34a;
+    --nw-vs-go-soft: rgba(22, 163, 74, .12);
+    --nw-vs-bad: #dc2626;
+    --nw-vs-accent: #2563eb;
+    --nw-vs-shadow: rgba(15, 23, 42, .1);
+    --nw-vs-veil: rgba(15, 23, 42, .38);
+    --nw-vs-mark: #d9600f;
+    --nw-vs-mark-soft: rgba(255, 145, 72, .18);
+    --nw-vs-solid: #1d2327;
+    --nw-vs-solid-ink: #ffffff;
+    --nw-vs-solid-hover: #000000;
+}
+
+* { box-sizing: border-box; }
+
+/* The hidden attribute only sets display:none through the user-agent
+   stylesheet, so any rule of ours that sets display at all silently defeats it.
+   The Back button was the one that caught this: given display:inline-block, it
+   stayed on screen while every check that asked the DOM was told it was
+   hidden. Stated once here rather than per component. */
+[hidden] { display: none !important; }
+
+body.nw-vs-body {
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--nw-vs-bg);
+    color: var(--nw-vs-text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.nw-vs {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+}
+
+/* Panel and stage side by side. The panel is where you work; the stage is
+   what you are working on, and it gets the room. */
+.nw-vs-split {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: 0;
+}
+
+.nw-vs-main {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* ------------------------------------------------------------------ bar -- */
+
+.nw-vs-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 16px;
+    height: 52px;
+    background: var(--nw-vs-chrome);
+    border-bottom: 1px solid var(--nw-vs-line);
+}
+
+.nw-vs-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 600;
+    letter-spacing: .01em;
+}
+
+.nw-vs-brand img { height: 22px; width: auto; }
+
+.nw-vs-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-status__text { white-space: nowrap; }
+
+.nw-vs-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--nw-vs-muted);
+    flex: 0 0 auto;
+}
+
+/* Pulses only while something is actually happening — a permanently animated
+   dot stops meaning anything. */
+.nw-vs-status.is-busy .nw-vs-dot {
+    background: var(--nw-vs-go);
+    animation: nw-vs-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes nw-vs-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .45; transform: scale(1.35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-vs-status.is-busy .nw-vs-dot { animation: none; }
+}
+
+.nw-vs-widths { display: flex; gap: 4px; margin-left: auto; }
+
+.nw-vs-width {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font: inherit;
+    font-size: 12.5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.nw-vs-width:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+.nw-vs-width.is-active { background: var(--nw-vs-hover); color: var(--nw-vs-text); border-color: var(--nw-vs-line); }
+.nw-vs-width:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+
+.nw-vs-approval {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    font-size: 12.5px;
+    color: var(--nw-vs-muted);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.nw-vs-exit {
+    color: var(--nw-vs-muted);
+    text-decoration: none;
+    font-size: 12.5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--nw-vs-line);
+}
+
+.nw-vs-exit:hover { color: var(--nw-vs-text); background: var(--nw-vs-hover); }
+
+/* ----------------------------------------------------------------- tabs -- */
+
+.nw-vs-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 6px 10px 0;
+    background: var(--nw-vs-chrome);
+    border-bottom: 1px solid var(--nw-vs-line);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.nw-vs-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 240px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 7px 7px 0 0;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.nw-vs-tab:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+
+.nw-vs-tab.is-active {
+    background: var(--nw-vs-bg);
+    border-color: var(--nw-vs-line);
+    color: var(--nw-vs-text);
+}
+
+.nw-vs-tab__label { overflow: hidden; text-overflow: ellipsis; }
+.nw-vs-tab__x { opacity: .5; font-size: 15px; line-height: 1; }
+.nw-vs-tab__x:hover { opacity: 1; }
+
+/* ---------------------------------------------------------------- stage -- */
+
+.nw-vs-stage {
+    position: relative;
+    overflow: hidden;
+    background: var(--nw-vs-bg);
+    display: flex;
+    justify-content: center;
+}
+
+.nw-vs-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+    display: none;
+}
+
+/* A phone-width viewport gets a frame around it, so it reads as a device
+   rather than a broken layout. */
+.nw-vs-stage.is-constrained .nw-vs-frame {
+    width: var(--nw-vs-width, 100%);
+    max-width: 100%;
+    box-shadow: 0 0 0 1px var(--nw-vs-line), 0 18px 50px var(--nw-vs-shadow);
+}
+
+.nw-vs-empty {
+    align-self: center;
+    text-align: center;
+    max-width: 44ch;
+    padding: 40px 20px;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-empty h1 { margin: 14px 0 8px; font-size: 19px; color: var(--nw-vs-text); font-weight: 600; }
+.nw-vs-empty p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.65; }
+.nw-vs-empty__hint { color: var(--nw-vs-accent); font-style: italic; }
+
+/* ------------------------------------------------------------- approval -- */
+
+.nw-vs-ask {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--nw-vs-veil);
+    backdrop-filter: blur(2px);
+}
+
+.nw-vs-ask[hidden] { display: none; }
+
+.nw-vs-ask__card {
+    width: min(480px, calc(100vw - 40px));
+    padding: 24px;
+    border-radius: 14px;
+    background: var(--nw-vs-chrome);
+    border: 1px solid var(--nw-vs-line);
+    box-shadow: 0 24px 70px var(--nw-vs-shadow);
+}
+
+.nw-vs-ask__card h2 { margin: 0 0 10px; font-size: 16px; }
+.nw-vs-ask__what { margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: var(--nw-vs-muted); word-break: break-word; }
+.nw-vs-ask__actions { display: flex; gap: 10px; }
+
+.nw-vs-btn {
+    flex: 1;
+    appearance: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--nw-vs-line);
+    background: transparent;
+    color: var(--nw-vs-text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.nw-vs-btn:hover { background: var(--nw-vs-hover); }
+
+.nw-vs-btn--go,
+.nw-vs-btn--go:hover {
+    background: var(--nw-vs-go);
+    border-color: var(--nw-vs-go);
+    color: #fff;
+}
+
+.nw-vs-btn:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+
+/* ------------------------------------------------------------------ log -- */
+
+.nw-vs-log {
+    flex: 1;
+    min-height: 90px;
+    overflow-y: auto;
+    padding: 2px 0;
+    background: transparent;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+}
+
+.nw-vs-log__row { display: flex; gap: 10px; color: var(--nw-vs-muted); }
+.nw-vs-log__time { flex: 0 0 58px; opacity: .6; }
+.nw-vs-log__act { flex: 0 0 76px; color: var(--nw-vs-text); }
+.nw-vs-log__det { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nw-vs-log__row.is-ok .nw-vs-log__act { color: var(--nw-vs-go); }
+.nw-vs-log__row.is-bad .nw-vs-log__act { color: var(--nw-vs-bad); }
+
+@media (max-width: 900px) {
+    .nw-vs-widths, .nw-vs-approval { display: none; }
+    .nw-vs-log { height: 76px; }
+}
+
+/* A refused frame explains itself in place of the blank tab it would be. */
+.nw-vs-blocked {
+    display: none;
+    align-self: center;
+    max-width: 52ch;
+    padding: 30px 26px;
+    margin: auto;
+    border: 1px solid var(--nw-vs-line);
+    border-left: 4px solid var(--nw-vs-bad);
+    border-radius: 12px;
+    background: var(--nw-vs-chrome);
+}
+
+.nw-vs-blocked h2 { margin: 0 0 10px; font-size: 16px; color: var(--nw-vs-text); }
+.nw-vs-blocked p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.65; color: var(--nw-vs-muted); }
+
+.nw-vs-blocked__url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    word-break: break-all;
+    color: var(--nw-vs-accent) !important;
+}
+
+.nw-vs-tab.is-blocked .nw-vs-tab__label { text-decoration: line-through; opacity: .7; }
+
+/* ── The panel ────────────────────────────────────────────────────────────
+   Connect, start something, watch it happen — in that order, and all of it
+   still on screen once work begins. The first version was a full-page splash
+   that vanished the moment a page opened, taking the workflows with it. */
+
+.nw-vs-side {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--nw-vs-line);
+    border-right: 1px solid var(--nw-vs-line);
+}
+
+.nw-vs-panel { padding: 16px 16px 18px; background: var(--nw-vs-chrome); }
+.nw-vs-panel--grow { flex: 1; display: flex; flex-direction: column; min-height: 120px; }
+
+.nw-vs-panel__h {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-panel__note { margin: 0 0 10px; font-size: 12.5px; line-height: 1.55; color: var(--nw-vs-muted); }
+
+/* Connection ------------------------------------------------------------- */
+
+.nw-vs-conn__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--nw-vs-bad);
+    flex: 0 0 auto;
+}
+
+.nw-vs-conn.is-on .nw-vs-conn__dot { background: var(--nw-vs-go); }
+.nw-vs-conn.is-on .nw-vs-panel__h { color: var(--nw-vs-go); }
+
+.nw-vs-clients { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.nw-vs-clients li {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--nw-vs-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nw-vs-cta {
+    display: block;
+    text-align: center;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: var(--nw-vs-go);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.nw-vs-cta:hover { filter: brightness(1.08); color: #fff; }
+.nw-vs-cta:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+
+.nw-vs-warn {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    border-left: 3px solid var(--nw-vs-accent);
+    background: rgba(255, 144, 77, .1);
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--nw-vs-text);
+}
+
+/* Things to start -------------------------------------------------------- */
+
+.nw-vs-jobs { display: flex; flex-direction: column; gap: 6px; }
+
+.nw-vs-job {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 9px 11px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 8px;
+    background: var(--nw-vs-bg);
+    font: inherit;
+    cursor: pointer;
+}
+
+.nw-vs-job:hover { border-color: var(--nw-vs-go); }
+.nw-vs-job:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+.nw-vs-job.is-copied { border-color: var(--nw-vs-go); background: rgba(0, 163, 42, .12); }
+
+.nw-vs-job__label { display: block; font-size: 12.5px; font-weight: 600; color: var(--nw-vs-text); }
+
+.nw-vs-job__note {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--nw-vs-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.nw-vs-more { display: inline-block; margin-top: 10px; font-size: 12px; color: var(--nw-vs-accent); text-decoration: none; }
+.nw-vs-more:hover { text-decoration: underline; }
+
+.nw-vs-detected { margin-top: 12px; margin-bottom: 0; }
+
+.nw-vs-chip {
+    display: inline-block;
+    margin: 2px 3px 0 0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--nw-vs-bg);
+    border: 1px solid var(--nw-vs-line);
+    font-size: 11px;
+    color: var(--nw-vs-text);
+}
+
+/* Stage empty state ------------------------------------------------------ */
+
+.nw-vs-empty {
+    align-self: center;
+    margin: auto;
+    text-align: center;
+    max-width: 40ch;
+    padding: 30px 20px;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-empty h1 { margin: 12px 0 8px; font-size: 17px; font-weight: 600; color: var(--nw-vs-text); }
+.nw-vs-empty p { margin: 0; font-size: 13px; line-height: 1.6; }
+
+@media (max-width: 1000px) {
+    .nw-vs-split { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .nw-vs-side { border-right: 0; border-bottom: 1px solid var(--nw-vs-line); max-height: 44vh; }
+}
+
+/* Narrower now that the log sits in the panel: the detail wraps under rather
+   than being clipped to a few characters. */
+.nw-vs-log__row { flex-wrap: wrap; gap: 6px; margin-bottom: 3px; }
+.nw-vs-log__time { flex: 0 0 auto; }
+.nw-vs-log__act { flex: 0 0 auto; }
+.nw-vs-log__det { flex: 1 0 100%; padding-left: 2px; }
+
+/* Connection check — three separate answers, because a single verdict hides
+   which of the three things is actually missing. */
+
+.nw-vs-howto { margin-top: 10px; }
+
+.nw-vs-check {
+    width: 100%;
+    margin-top: 10px;
+    padding: 7px 12px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 7px;
+    background: var(--nw-vs-bg);
+    color: var(--nw-vs-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.nw-vs-check:hover { border-color: var(--nw-vs-go); }
+.nw-vs-check:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+
+.nw-vs-checkout { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--nw-vs-muted); }
+.nw-vs-checkout.is-bad { color: var(--nw-vs-bad); }
+.nw-vs-checkrow { display: block; margin-bottom: 3px; }
+.nw-vs-checkrow.is-ok { color: var(--nw-vs-go); }
+.nw-vs-checkrow.is-bad { color: var(--nw-vs-bad); }
+
+/* Command box ------------------------------------------------------------
+   Type to filter, or use a slash command. The list below it is the answer. */
+
+.nw-vs-cmd {
+    position: relative;
+    padding: 12px 16px;
+    background: var(--nw-vs-chrome);
+}
+
+.nw-vs-cmd__input {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 8px;
+    background: var(--nw-vs-bg);
+    color: var(--nw-vs-text);
+    font: inherit;
+    font-size: 13px;
+}
+
+.nw-vs-cmd__input::placeholder { color: var(--nw-vs-muted); }
+.nw-vs-cmd__input:focus { outline: none; border-color: var(--nw-vs-go); }
+
+.nw-vs-cmd__hint { margin: 7px 0 0; font-size: 11.5px; color: var(--nw-vs-muted); }
+.nw-vs-cmd__hint code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--nw-vs-bg);
+    border: 1px solid var(--nw-vs-line);
+    font-size: 11px;
+}
+
+/* A locked job is visible but plainly out of reach — hiding it would leave a
+   Pro feature undiscoverable, and pretending it works would be worse. */
+.nw-vs-job.is-locked { opacity: .55; cursor: default; }
+.nw-vs-job.is-locked:hover { border-color: var(--nw-vs-line); }
+
+.nw-vs-lock {
+    float: right;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--nw-vs-accent);
+}
+
+.nw-vs-none { font-size: 12.5px; color: var(--nw-vs-muted); padding: 4px 0; }
+
+/* The bundle link wears the same shape as the check button beside it. */
+a.nw-vs-check { display: block; text-align: center; text-decoration: none; }
+
+/* ── Panel toggle ─────────────────────────────────────────────────────────
+   The panel is for getting started. Once a page is open the site is the
+   point, so the first page puts the panel away — unless the person has
+   already said which they prefer, in which case that wins. */
+
+.nw-vs-toggle {
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 7px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.nw-vs-toggle:hover { background: var(--nw-vs-hover); }
+.nw-vs-toggle:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+
+.nw-vs-toggle__bars,
+.nw-vs-toggle__bars::before,
+.nw-vs-toggle__bars::after {
+    display: block;
+    width: 14px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--nw-vs-muted);
+}
+
+.nw-vs-toggle__bars { position: relative; }
+.nw-vs-toggle__bars::before,
+.nw-vs-toggle__bars::after { content: ''; position: absolute; left: 0; }
+.nw-vs-toggle__bars::before { top: -5px; }
+.nw-vs-toggle__bars::after { top: 5px; }
+.nw-vs-toggle:hover .nw-vs-toggle__bars,
+.nw-vs-toggle:hover .nw-vs-toggle__bars::before,
+.nw-vs-toggle:hover .nw-vs-toggle__bars::after { background: var(--nw-vs-text); }
+
+.nw-vs.is-collapsed .nw-vs-split { grid-template-columns: 1fr; }
+.nw-vs.is-collapsed .nw-vs-side { display: none; }
+
+.screen-reader-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* Resting colour says whether anything can reach the site; busy overrides it
+   while something is actually happening. */
+.nw-vs-status.is-ready .nw-vs-dot { background: var(--nw-vs-go); }
+.nw-vs-status.is-off .nw-vs-dot { background: var(--nw-vs-bad); }
+.nw-vs-status.is-off .nw-vs-status__text { color: var(--nw-vs-bad); }
+.nw-vs-bar .nw-vs-exit + .nw-vs-exit { margin-left: 6px; }
+
+/* Recent requests — the only place a cross-account mismatch becomes visible. */
+.nw-vs-tries { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+
+.nw-vs-try {
+    padding: 7px 9px;
+    border-radius: 7px;
+    border-left: 3px solid var(--nw-vs-line);
+    background: var(--nw-vs-bg);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.nw-vs-try.is-ok { border-left-color: var(--nw-vs-go); }
+.nw-vs-try.is-bad { border-left-color: var(--nw-vs-bad); }
+.nw-vs-try__cmd { display: block; font-weight: 600; color: var(--nw-vs-text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.nw-vs-try__who { display: block; color: var(--nw-vs-muted); }
+.nw-vs-try__who strong { color: var(--nw-vs-bad); font-weight: 600; }
+.nw-vs-try__out { display: block; color: var(--nw-vs-muted); }
+.nw-vs-try.is-bad .nw-vs-try__out { color: var(--nw-vs-bad); }
+
+/* Third choice, set apart from Allow/Refuse because it changes a setting
+   rather than answering one question. */
+.nw-vs-ask__more { margin-top: 12px; text-align: center; }
+
+.nw-vs-ask__all {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font: inherit;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.nw-vs-ask__all:hover { color: var(--nw-vs-text); }
+.nw-vs-ask__all:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+
+/* ── Bar controls ─────────────────────────────────────────────────────────
+   One shape for every icon button in the bar, so the row reads as a row
+   rather than as five things that happen to sit beside each other. */
+
+.nw-vs-ibtn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 8px;
+    flex: 0 0 auto;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font: inherit;
+    font-size: 12.5px;
+    text-decoration: none;
+    cursor: pointer;
+    position: relative;
+}
+
+.nw-vs-ibtn:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+.nw-vs-ibtn:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+.nw-vs-ibtn.is-on { background: var(--nw-vs-hover); color: var(--nw-vs-text); border-color: var(--nw-vs-accent); }
+.nw-vs-i { display: block; flex: 0 0 auto; }
+
+/* Unread activity while the dock is shut. Small, and gone the moment it is
+   opened — a badge that never clears is a badge nobody reads. */
+.nw-vs-ibtn__count {
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: var(--nw-vs-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+.nw-vs-ibtn__count[hidden] { display: none; }
+
+/* The widths keep their group, and push everything after them to the right. */
+.nw-vs-widths { margin-left: auto; gap: 2px; }
+
+.nw-vs-width {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+}
+
+/* Sun in dark, moon in light: the icon shows what pressing it gives you. */
+.nw-vs-theme__moon { display: none; }
+:root[data-theme="light"] .nw-vs-theme__sun { display: none; }
+:root[data-theme="light"] .nw-vs-theme__moon { display: block; }
+
+/* ── Go to ────────────────────────────────────────────────────────────────
+   Shortcuts that open inside the workspace. Leaving to look at the Pages
+   list and coming back is three navigations for one glance. */
+
+.nw-vs-menu { position: relative; flex: 0 0 auto; }
+
+.nw-vs-menu__list {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    width: 232px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 10px;
+    background: var(--nw-vs-chrome);
+    box-shadow: 0 18px 46px var(--nw-vs-shadow);
+}
+
+.nw-vs-menu__list[hidden] { display: none; }
+
+.nw-vs-menu__h {
+    margin: 8px 0 4px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-menu__h:first-child { margin-top: 2px; }
+
+.nw-vs-menu__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--nw-vs-text);
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.nw-vs-menu__item:hover { background: var(--nw-vs-hover); }
+.nw-vs-menu__item:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: -2px; }
+
+/* ── Activity dock ────────────────────────────────────────────────────────
+   Along the bottom, full width, like an inspector. It was a column in the
+   panel, where every line was clipped to a few characters and the panel it
+   sat in had to stay open to read it. */
+
+.nw-vs { grid-template-rows: auto 1fr auto; }
+
+.nw-vs-dock {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: var(--nw-vs-dock-h, 220px);
+    background: var(--nw-vs-chrome);
+    border-top: 1px solid var(--nw-vs-line);
+}
+
+.nw-vs-dock[hidden] { display: none; }
+
+.nw-vs-dock__grip {
+    height: 6px;
+    margin-top: -3px;
+    cursor: ns-resize;
+    flex: 0 0 auto;
+}
+
+.nw-vs-dock__grip:hover, .nw-vs-dock__grip:focus-visible { background: var(--nw-vs-accent); outline: none; }
+
+.nw-vs-dock__bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--nw-vs-line);
+    flex: 0 0 auto;
+}
+
+.nw-vs-dock__h {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-dock__who { flex: 1; font-size: 11.5px; color: var(--nw-vs-muted); }
+
+.nw-vs-dock__act {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+}
+
+.nw-vs-dock__act:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+.nw-vs-dock__act:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 1px; }
+
+/* Wide again: the detail is the useful part and it now has the room to be a
+   single readable line instead of wrapping under its own timestamp. */
+.nw-vs-dock .nw-vs-log { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 12px 10px; }
+.nw-vs-dock .nw-vs-log__row { flex-wrap: nowrap; gap: 12px; margin-bottom: 0; }
+.nw-vs-dock .nw-vs-log__time { flex: 0 0 62px; }
+.nw-vs-dock .nw-vs-log__act { flex: 0 0 110px; }
+.nw-vs-dock .nw-vs-log__det { flex: 1 1 auto; padding-left: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Connect, on the stage ────────────────────────────────────────────────
+   Connecting is the only thing worth doing before there is a connection, so
+   it happens in the middle of the screen rather than in a sidebar column
+   beside a stage explaining that it is empty. */
+
+.nw-vs-start {
+    align-self: stretch;
+    width: 100%;
+    overflow-y: auto;
+    padding: 34px 24px 44px;
+    text-align: center;
+}
+
+.nw-vs-start__inner { max-width: 720px; margin: 0 auto; }
+
+.nw-vs-start h1 {
+    margin: 14px 0 8px;
+    font-size: 23px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    color: var(--nw-vs-text);
+}
+
+.nw-vs-start__lead {
+    margin: 0 auto 22px;
+    max-width: 60ch;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-start__url {
+    display: flex;
+    gap: 6px;
+    max-width: 560px;
+    margin: 0 auto 26px;
+}
+
+.nw-vs-start__url input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 8px;
+    background: var(--nw-vs-chrome);
+    color: var(--nw-vs-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+}
+
+.nw-vs-start__copy {
+    appearance: none;
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 8px;
+    background: var(--nw-vs-chrome);
+    color: var(--nw-vs-text);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.nw-vs-start__copy:hover { border-color: var(--nw-vs-go); }
+.nw-vs-start__copy.is-copied { border-color: var(--nw-vs-go); color: var(--nw-vs-go); }
+
+.nw-vs-start__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.nw-vs-client {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 13px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 11px;
+    background: var(--nw-vs-chrome);
+}
+
+.nw-vs-client.is-off { opacity: .6; }
+
+.nw-vs-client__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.nw-vs-client__name { font-size: 13px; font-weight: 600; color: var(--nw-vs-text); }
+.nw-vs-client__note { font-size: 11.5px; line-height: 1.45; color: var(--nw-vs-muted); }
+
+.nw-vs-client__go {
+    appearance: none;
+    display: block;
+    width: 100%;
+    margin-top: auto;
+    padding: 7px 10px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 7px;
+    background: var(--nw-vs-bg);
+    color: var(--nw-vs-text);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.nw-vs-client__go:hover { border-color: var(--nw-vs-go); color: var(--nw-vs-text); }
+.nw-vs-client__go:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+.nw-vs-client__go.is-copied { border-color: var(--nw-vs-go); color: var(--nw-vs-go); }
+
+.nw-vs-start__foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    justify-content: center;
+}
+
+.nw-vs-start__link {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--nw-vs-accent);
+    font: inherit;
+    font-size: 12.5px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.nw-vs-start__link:hover { text-decoration: underline; }
+.nw-vs-start__said { margin: 14px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--nw-vs-muted); }
+.nw-vs-start__said.is-ok { color: var(--nw-vs-go); }
+.nw-vs-start__said.is-bad { color: var(--nw-vs-bad); }
+.nw-vs-start__warn { max-width: 52ch; margin: 18px auto 0; text-align: left; }
+
+/* ── Locked ───────────────────────────────────────────────────────────────
+   Named, at the moment of reaching for it, with what it would do on this
+   site. Not a banner that sits there being ignored. */
+
+.nw-vs-job--locked { border-style: dashed; }
+.nw-vs-job--locked:hover { border-color: var(--nw-vs-accent); border-style: solid; }
+
+.nw-vs-more--btn {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.nw-vs-up {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--nw-vs-veil);
+    backdrop-filter: blur(2px);
+}
+
+.nw-vs-up[hidden] { display: none; }
+
+.nw-vs-up__card {
+    position: relative;
+    width: min(520px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    padding: 26px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 16px;
+    background: var(--nw-vs-chrome);
+    box-shadow: 0 30px 80px var(--nw-vs-shadow);
+    text-align: left;
+}
+
+.nw-vs-up__x {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.nw-vs-up__x:hover { color: var(--nw-vs-text); }
+.nw-vs-up__head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+
+.nw-vs-up__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-accent);
+}
+
+.nw-vs-up__icon svg { width: 22px; height: 22px; }
+
+.nw-vs-up__eyebrow {
+    margin: 0 0 3px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--nw-vs-accent);
+}
+
+.nw-vs-up__card h2 { margin: 0; font-size: 18px; font-weight: 650; color: var(--nw-vs-text); }
+.nw-vs-up__line { margin: 0 0 16px; font-size: 13.5px; line-height: 1.65; color: var(--nw-vs-muted); }
+
+.nw-vs-up__list { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.nw-vs-up__list li {
+    display: flex;
+    gap: 9px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--nw-vs-text);
+}
+
+.nw-vs-up__tick {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--nw-vs-go);
+}
+
+.nw-vs-up__actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+.nw-vs-up__go {
+    flex: 1 1 auto;
+    min-width: 180px;
+    padding: 11px 18px;
+    border-radius: 9px;
+    background: var(--nw-vs-go);
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 650;
+    text-align: center;
+    text-decoration: none;
+}
+
+.nw-vs-up__go:link, .nw-vs-up__go:visited, .nw-vs-up__go:hover, .nw-vs-up__go:active { color: #fff; }
+.nw-vs-up__go:hover { filter: brightness(1.08); }
+.nw-vs-up__go:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+
+.nw-vs-up__alt { font-size: 12.5px; color: var(--nw-vs-accent); text-decoration: none; }
+.nw-vs-up__alt:hover { text-decoration: underline; }
+
+.nw-vs-up__not {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 0;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.nw-vs-up__not:hover { color: var(--nw-vs-text); text-decoration: underline; }
+
+/* At this width the bar has to give something up. The word beside the Go to
+   icon goes first: the icon carries it, and the label is still on the button. */
+@media (max-width: 900px) {
+    .nw-vs-ibtn__text { display: none; }
+    .nw-vs-start__grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}
+
+/* ── The first screen, restyled ───────────────────────────────────────────
+   It was a row of look-alike tiles with a name and a button. The question
+   someone is answering here is "where do I work?", not "which of these
+   sixteen products do I recognise", so each card leads with that. */
+
+.nw-vs-start__inner { max-width: 860px; }
+
+.nw-vs-start h1 { font-size: 26px; letter-spacing: -.02em; }
+
+/* Three steps, numbered, so the grid below is a choice rather than a wall. */
+.nw-vs-steps {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 26px;
+    list-style: none;
+    margin: 0 0 26px;
+    padding: 0;
+    counter-reset: nw-vs-step;
+}
+
+.nw-vs-steps li {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    counter-increment: nw-vs-step;
+    font-size: 12.5px;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-steps li::before {
+    content: counter(nw-vs-step);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    border: 1px solid var(--nw-vs-line);
+    background: var(--nw-vs-chrome);
+    color: var(--nw-vs-text);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.nw-vs-start__grid {
+    grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.nw-vs-client {
+    gap: 10px;
+    padding: 16px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, var(--nw-vs-chrome), var(--nw-vs-bg));
+    transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+
+.nw-vs-client:hover {
+    transform: translateY(-2px);
+    border-color: var(--nw-vs-muted);
+    box-shadow: 0 12px 28px var(--nw-vs-shadow);
+}
+
+/* The one that will actually work on this site, first and marked. On a local
+   address that is never a browser assistant, so the badge is placed by what is
+   reachable rather than by a favourite hard-coded in a template. */
+.nw-vs-client.is-lead { border-color: var(--nw-vs-go); }
+.nw-vs-client.is-off:hover { transform: none; box-shadow: none; border-color: var(--nw-vs-line); }
+
+.nw-vs-client__top { display: flex; align-items: center; gap: 11px; }
+.nw-vs-client__id { display: flex; flex-direction: column; min-width: 0; }
+
+.nw-vs-client__mark {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: 10px;
+    border: 1px solid var(--nw-vs-line);
+    /* Two letters, so 13px rather than the 15px a single initial wanted. */
+    font-size: 13px;
+    letter-spacing: .02em;
+}
+
+.nw-vs-client__name { font-size: 13.5px; font-weight: 650; letter-spacing: -.01em; }
+
+.nw-vs-client__where {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-client__badge {
+    margin-left: auto;
+    align-self: flex-start;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--nw-vs-go);
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.nw-vs-client__note { min-height: 2.9em; }
+
+.nw-vs-client__go {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 12.5px;
+}
+
+/* The lead card's action is the only filled button on the screen, so there is
+   one obvious thing to press rather than seven equal ones. */
+.nw-vs-client.is-lead .nw-vs-client__go {
+    background: var(--nw-vs-go);
+    border-color: var(--nw-vs-go);
+    color: #fff;
+}
+
+.nw-vs-client.is-lead .nw-vs-client__go:link,
+.nw-vs-client.is-lead .nw-vs-client__go:visited,
+.nw-vs-client.is-lead .nw-vs-client__go:hover,
+.nw-vs-client.is-lead .nw-vs-client__go:active { color: #fff; }
+
+.nw-vs-client.is-lead .nw-vs-client__go:hover { filter: brightness(1.08); }
+.nw-vs-client.is-lead .nw-vs-client__go.is-copied { background: transparent; color: var(--nw-vs-go); }
+
+.nw-vs-client__go.is-dead { opacity: .55; cursor: not-allowed; }
+.nw-vs-client__go.is-dead:hover { border-color: var(--nw-vs-line); }
+
+.nw-vs-start__foot { padding-top: 4px; border-top: 1px solid var(--nw-vs-line); margin-top: 4px; }
+.nw-vs-start__foot .nw-vs-start__link { padding: 10px 0; }
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-vs-client, .nw-vs-client:hover { transition: none; transform: none; }
+}
+
+/* ── Ask first ────────────────────────────────────────────────────────────
+   Wears the same shape as every other control in the bar. A bare checkbox
+   beside five bordered 30px buttons read as something the browser had left
+   behind rather than a setting of ours. */
+
+.nw-vs-approval {
+    gap: 8px;
+    height: 30px;
+    padding: 0 10px 0 8px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 7px;
+}
+
+.nw-vs-approval:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+
+/* The real control stays in the page, on top of the track, invisible: it keeps
+   the label click, the keyboard, and the checked state the whole workspace
+   reads — none of which a div can be given back. */
+.nw-vs-approval input {
+    position: absolute;
+    width: 30px;
+    height: 18px;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.nw-vs-approval__track {
+    position: relative;
+    display: inline-block;
+    width: 30px;
+    height: 18px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: var(--nw-vs-hover);
+    border: 1px solid var(--nw-vs-line);
+    transition: background .14s ease, border-color .14s ease;
+}
+
+.nw-vs-approval__knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--nw-vs-muted);
+    transition: transform .14s ease, background .14s ease;
+}
+
+.nw-vs-approval input:checked + .nw-vs-approval__track {
+    background: var(--nw-vs-go);
+    border-color: var(--nw-vs-go);
+}
+
+.nw-vs-approval input:checked + .nw-vs-approval__track .nw-vs-approval__knob {
+    transform: translateX(12px);
+    background: #fff;
+}
+
+.nw-vs-approval input:focus-visible + .nw-vs-approval__track {
+    outline: 2px solid var(--nw-vs-accent);
+    outline-offset: 2px;
+}
+
+.nw-vs-approval__text { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-vs-approval__track, .nw-vs-approval__knob { transition: none; }
+}
+
+/* ── Plans ────────────────────────────────────────────────────────────────
+   What each one lets you build, side by side, inside the card that just
+   explained why you are reading it. A single "Get Pro" button does not say
+   what Pro is, and finding out meant leaving for the website. */
+
+.nw-vs-up__card { width: min(680px, 100%); }
+
+.nw-vs-up__plans {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 0 0 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--nw-vs-line);
+}
+
+.nw-vs-plan {
+    padding: 12px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 11px;
+    background: var(--nw-vs-bg);
+}
+
+.nw-vs-plan.is-best { border-color: var(--nw-vs-go); }
+.nw-vs-plan.is-current { border-style: dashed; opacity: .75; }
+
+.nw-vs-plan__h {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin: 0 0 8px;
+}
+
+.nw-vs-plan__name { font-size: 13px; font-weight: 700; color: var(--nw-vs-text); }
+.nw-vs-plan__price { font-size: 12.5px; font-weight: 650; color: var(--nw-vs-go); white-space: nowrap; }
+.nw-vs-plan__price small { font-size: 10px; font-weight: 500; color: var(--nw-vs-muted); }
+
+.nw-vs-plan__tag {
+    padding: 1px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--nw-vs-line);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--nw-vs-muted);
+    white-space: nowrap;
+}
+
+.nw-vs-plan__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+.nw-vs-plan__list li {
+    position: relative;
+    padding-left: 13px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-plan__list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--nw-vs-line);
+}
+
+.nw-vs-plan.is-best .nw-vs-plan__list li::before { background: var(--nw-vs-go); }
+
+@media (max-width: 620px) {
+    .nw-vs-up__plans { grid-template-columns: 1fr; }
+}
+
+/* ── The lead card leads ──────────────────────────────────────────────────
+   Seven equally-weighted cards is seven decisions. The one that will work
+   here takes the width of two and says a little more. */
+
+@media (min-width: 720px) {
+    .nw-vs-client.is-lead { grid-column: span 2; }
+
+    .nw-vs-client.is-lead .nw-vs-client__mark { width: 40px; height: 40px; font-size: 15px; }
+    .nw-vs-client.is-lead .nw-vs-client__name { font-size: 15px; }
+    .nw-vs-client.is-lead .nw-vs-client__note { min-height: 0; font-size: 12.5px; }
+    .nw-vs-client.is-lead .nw-vs-client__go { padding: 11px 16px; font-size: 13px; }
+}
+
+/* A hairline of the accent along the top edge, so the grid has a shape rather
+   than being a field of identical rectangles. */
+.nw-vs-client { position: relative; overflow: hidden; }
+
+.nw-vs-client::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: var(--nw-vs-line);
+}
+
+.nw-vs-client.is-lead::before { background: var(--nw-vs-go); }
+.nw-vs-client.is-off::before { background: transparent; }
+
+/* The Go to list is the site's real admin menu now, which on a busy install is
+   two hundred entries. It gets a filter and a taller box. */
+
+.nw-vs-menu__list { width: 268px; max-height: min(70vh, 520px); }
+
+.nw-vs-menu__find {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    margin: 0 0 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 7px;
+    background: var(--nw-vs-bg);
+    color: var(--nw-vs-text);
+    font: inherit;
+    font-size: 12.5px;
+}
+
+.nw-vs-menu__find::placeholder { color: var(--nw-vs-muted); }
+.nw-vs-menu__find:focus { outline: none; border-color: var(--nw-vs-go); }
+
+.nw-vs-menu__none {
+    margin: 10px 8px;
+    font-size: 12px;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-menu__none[hidden], .nw-vs-menu__item[hidden], .nw-vs-menu__h[hidden] { display: none; }
+
+/* Submenu entries sit under their plugin's heading, so they read as a tree
+   rather than one flat list of two hundred equal things. */
+.nw-vs-menu__item { padding-left: 14px; }
+.nw-vs-menu__h { position: sticky; top: 38px; background: var(--nw-vs-chrome); }
+
+/* ── Reconnect ────────────────────────────────────────────────────────────
+   The connect screen, brought back over whatever is open. It is the first
+   thing anyone sees and then never again, which is exactly wrong the moment
+   a connection breaks or a second assistant turns up. */
+
+.nw-vs-start[hidden] { display: none; }
+
+.nw-vs-stage.is-connecting .nw-vs-frame { display: none !important; }
+.nw-vs-stage.is-connecting .nw-vs-empty { display: none; }
+
+/* In flow, exactly as it sits on a site with nothing connected — not floated
+   over the stage. As an absolute overlay it resolved four pixels above the
+   stage's top edge, which put its own Back button underneath the bar, where
+   the bar swallowed every click aimed at it. There is no reason for it to be
+   an overlay: the things it would cover are hidden anyway. */
+.nw-vs-stage.is-connecting .nw-vs-start {
+    position: static;
+    background: var(--nw-vs-bg);
+}
+
+.nw-vs-start__back {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 6px 12px;
+    appearance: none;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.nw-vs-start__back:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+.nw-vs-start__back:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; }
+
+.nw-vs-start__already { margin: 0 0 20px; font-size: 12.5px; color: var(--nw-vs-muted); }
+.nw-vs-start__already .nw-vs-chip { margin-left: 4px; }
+
+/* ── Tooltips ─────────────────────────────────────────────────────────────
+   A bar of icons with no words needs them, and the browser's own title
+   tooltip appears at the cursor, after a delay it chooses, in the operating
+   system's styling — three things this screen does not control. These sit
+   below the control, centred on it, and match everything around them. */
+
+.nw-vs-bar { position: relative; z-index: 30; }
+
+.nw-vs-bar [data-tip] { position: relative; }
+
+.nw-vs-bar [data-tip]::after,
+.nw-vs-bar [data-tip]::before {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .12s ease .35s;
+}
+
+.nw-vs-bar [data-tip]::after {
+    content: attr(data-tip);
+    transform: translateX(-50%);
+    padding: 5px 9px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 7px;
+    background: var(--nw-vs-chrome);
+    color: var(--nw-vs-text);
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+    box-shadow: 0 8px 22px var(--nw-vs-shadow);
+    z-index: 2;
+}
+
+/* The little arrow, drawn as a rotated square so it takes the same border and
+   background as the bubble it belongs to. */
+.nw-vs-bar [data-tip]::before {
+    content: '';
+    top: calc(100% + 4px);
+    width: 8px;
+    height: 8px;
+    transform: translateX(-50%) rotate(45deg);
+    border-left: 1px solid var(--nw-vs-line);
+    border-top: 1px solid var(--nw-vs-line);
+    background: var(--nw-vs-chrome);
+    z-index: 3;
+}
+
+.nw-vs-bar [data-tip]:hover::after,
+.nw-vs-bar [data-tip]:hover::before,
+.nw-vs-bar [data-tip]:focus-visible::after,
+.nw-vs-bar [data-tip]:focus-visible::before { opacity: 1; }
+
+/* Keyboard focus should answer immediately; a hover delay exists to stop
+   tooltips flashing as the pointer crosses the bar, and there is no such
+   thing to avoid when someone has deliberately tabbed to a control. */
+.nw-vs-bar [data-tip]:focus-visible::after,
+.nw-vs-bar [data-tip]:focus-visible::before { transition-delay: 0s; }
+
+/* The first and last controls would otherwise hang their tooltip off the edge
+   of the window, where half of it is unreadable. */
+.nw-vs-bar > :first-child[data-tip]::after { left: 0; transform: none; }
+.nw-vs-bar > :last-child[data-tip]::after { left: auto; right: 0; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-vs-bar [data-tip]::after,
+    .nw-vs-bar [data-tip]::before { transition: none; }
+}
+
+/* Back sits under the mark and above the heading, on its own line. Beside the
+   icon it read as a caption for the logo rather than a way out of the screen. */
+.nw-vs-start__backrow { display: block; margin: 0 0 6px; }
+
+/* ── Your plan ────────────────────────────────────────────────────────────
+   Which one this site is on and what it buys, answered here rather than
+   discovered one refused tool at a time. */
+
+.nw-vs-plan-now {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: 12px;
+    background: var(--nw-vs-chrome);
+    text-align: left;
+}
+
+.nw-vs-plan-now__h {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 9px;
+}
+
+.nw-vs-plan-now__label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-plan-now__name {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--nw-vs-go);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.nw-vs-plan-now__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+
+.nw-vs-plan-now__list li {
+    position: relative;
+    padding-left: 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-plan-now__list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--nw-vs-go);
+}
+
+.nw-vs-plan-now__more {
+    appearance: none;
+    margin-top: 11px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--nw-vs-accent);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.nw-vs-plan-now__more:hover { text-decoration: underline; }
+
+/* ── The panel, folded ────────────────────────────────────────────────────
+   One long column with ten workflows in it pushes everything below them off
+   the screen, and there is no way to tell an empty section from one you have
+   scrolled past. Each section folds, counts what it holds, and caps its own
+   list rather than growing without limit. */
+
+.nw-vs-panel__h { margin: 0; }
+
+.nw-vs-panel__fold {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 0 0 8px;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--nw-vs-muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    text-align: left;
+    cursor: pointer;
+}
+
+.nw-vs-panel__fold:hover { color: var(--nw-vs-text); }
+.nw-vs-panel__fold:focus-visible { outline: 2px solid var(--nw-vs-accent); outline-offset: 2px; border-radius: 4px; }
+
+.nw-vs-panel__chev {
+    display: inline-flex;
+    flex: 0 0 auto;
+    transition: transform .15s ease;
+}
+
+.nw-vs-panel__fold[aria-expanded="false"] .nw-vs-panel__chev { transform: rotate(-90deg); }
+.nw-vs-panel__title { flex: 1; }
+
+.nw-vs-panel__count {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--nw-vs-hover);
+    border: 1px solid var(--nw-vs-line);
+    color: var(--nw-vs-muted);
+    font-size: 10px;
+    letter-spacing: 0;
+}
+
+.nw-vs-panel__body[hidden] { display: none; }
+
+/* The cage: a list this long is a scroll of its own, not a reason for every
+   section under it to be unreachable. The fade says there is more below
+   without spending a row on saying so. */
+.nw-vs-jobs--cage {
+    max-height: 246px;
+    overflow-y: auto;
+    padding-right: 3px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--nw-vs-line) transparent;
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 22px), transparent);
+    mask-image: linear-gradient(180deg, #000 calc(100% - 22px), transparent);
+}
+
+/* Nothing to fade when nothing is clipped. */
+.nw-vs-jobs--cage:not(.is-clipped) {
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
+.nw-vs-jobs--cage::-webkit-scrollbar { width: 8px; }
+.nw-vs-jobs--cage::-webkit-scrollbar-thumb { background: var(--nw-vs-line); border-radius: 999px; }
+.nw-vs-jobs--cage::-webkit-scrollbar-track { background: transparent; }
+
+/* Hovering a prompt should say what pressing it does, since what it does is
+   not "open" but "copy this sentence for your assistant". */
+.nw-vs-job { position: relative; transition: border-color .12s ease, transform .12s ease; }
+.nw-vs-job:hover { transform: translateX(1px); }
+
+.nw-vs-job::after {
+    content: 'Copy';
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-muted);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity .12s ease;
+}
+
+.nw-vs-job:hover::after, .nw-vs-job:focus-visible::after { opacity: 1; }
+.nw-vs-job.is-copied::after { content: 'Copied'; opacity: 1; color: var(--nw-vs-go); }
+.nw-vs-job--locked::after { content: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-vs-panel__chev, .nw-vs-job, .nw-vs-job::after { transition: none; }
+    .nw-vs-job:hover { transform: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   House style
+   ──────────────────────────────────────────────────────────────────────────
+   The panel and the first screen were built in isolation and came out looking
+   like a dashboard from anywhere: bordered boxes stacked in a column, a fill
+   colour per state, a card for every idea. NibWP's own admin has a quieter
+   grammar — a plain sidebar of text rows, one brand colour used sparingly,
+   borders instead of shadows, and space doing the separating. This section
+   brings the workspace onto that grammar. It comes last so it wins on cascade
+   without unpicking the rules above.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── The panel ─────────────────────────────────────────────────────────── */
+
+.nw-vs-side {
+    gap: 0;
+    background: var(--nw-vs-chrome);
+    border-right: 1px solid var(--nw-vs-line);
+}
+
+/* Sections are separated by space and a hairline, not by being boxes. */
+.nw-vs-panel {
+    padding: 6px 12px 14px;
+    background: transparent;
+    border-bottom: 1px solid var(--nw-vs-line-2);
+}
+
+.nw-vs-panel:last-child { border-bottom: 0; }
+
+.nw-vs-panel__fold {
+    padding: 11px 4px 5px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .6px;
+    color: var(--nw-vs-muted-2);
+}
+
+.nw-vs-panel__count {
+    padding: 0 6px;
+    border: 0;
+    border-radius: 99px;
+    background: transparent;
+    color: var(--nw-vs-muted-2);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.nw-vs-panel__note {
+    margin: 0 4px 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--nw-vs-muted);
+}
+
+/* A prompt is a row of text you press, like every other row in this product —
+   not a card. Twelve cards in a column is what made this look generic. */
+.nw-vs-jobs { gap: 0; }
+
+.nw-vs-job {
+    padding: 8px 10px;
+    margin: 1px 0;
+    border: 0;
+    border-radius: var(--nw-vs-r-sm);
+    background: transparent;
+    transition: background .12s, color .12s;
+}
+
+.nw-vs-job:hover {
+    background: var(--nw-vs-hover);
+    border-color: transparent;
+    transform: none;
+}
+
+.nw-vs-job:focus-visible { outline: 2px solid var(--nw-vs-brand); outline-offset: -2px; }
+
+.nw-vs-job__label {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--nw-vs-text-2);
+}
+
+.nw-vs-job:hover .nw-vs-job__label { color: var(--nw-vs-text); }
+
+.nw-vs-job__note {
+    margin-top: 2px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--nw-vs-muted-2);
+}
+
+.nw-vs-job.is-copied {
+    background: var(--nw-vs-brand-soft);
+    border-color: transparent;
+}
+
+.nw-vs-job.is-copied .nw-vs-job__label { color: var(--nw-vs-brand); }
+.nw-vs-job::after { top: 9px; background: transparent; color: var(--nw-vs-muted-2); }
+.nw-vs-job.is-copied::after { color: var(--nw-vs-brand); }
+
+/* Locked rows: dimmed, with the word, and no dashed box drawn around them. */
+.nw-vs-job--locked { border: 0; opacity: .8; }
+.nw-vs-job--locked:hover { border: 0; background: var(--nw-vs-hover); }
+.nw-vs-lock { color: var(--nw-vs-muted-2); font-weight: 600; }
+
+/* Command box: one field, no frame around the frame. */
+.nw-vs-cmd { padding: 12px 12px 8px; background: transparent; border-bottom: 1px solid var(--nw-vs-line-2); }
+
+.nw-vs-cmd__input {
+    padding: 8px 11px;
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-raise);
+    border-color: var(--nw-vs-line);
+    font-size: 13px;
+}
+
+.nw-vs-cmd__input:focus { border-color: var(--nw-vs-brand); box-shadow: 0 0 0 3px var(--nw-vs-brand-soft); }
+.nw-vs-cmd__hint { margin-top: 8px; font-size: 11px; color: var(--nw-vs-muted-2); }
+.nw-vs-cmd__hint code { background: var(--nw-vs-raise); border-color: var(--nw-vs-line); color: var(--nw-vs-muted); }
+
+/* Connection: a status line, not a panel with a call to action in it. */
+.nw-vs-conn .nw-vs-panel__h { color: var(--nw-vs-muted-2); }
+
+.nw-vs-check {
+    padding: 7px 12px;
+    border-radius: var(--nw-vs-r-sm);
+    border-color: var(--nw-vs-line);
+    background: var(--nw-vs-raise);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--nw-vs-text-2);
+}
+
+.nw-vs-check:hover { background: var(--nw-vs-hover); border-color: var(--nw-vs-line); color: var(--nw-vs-text); }
+
+.nw-vs-cta {
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-brand);
+    font-weight: 600;
+}
+
+.nw-vs-cta:hover { background: var(--nw-vs-brand-hover); filter: none; }
+.nw-vs-more { color: var(--nw-vs-brand); font-weight: 500; }
+.nw-vs-chip { background: var(--nw-vs-raise); border-color: var(--nw-vs-line); color: var(--nw-vs-muted); }
+
+/* ── The first screen ──────────────────────────────────────────────────── */
+
+.nw-vs-start { padding: 40px 24px 48px; }
+.nw-vs-start__inner { max-width: 780px; }
+
+.nw-vs-start h1 {
+    margin: 16px 0 10px;
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -.02em;
+}
+
+.nw-vs-start__lead { font-size: 14px; color: var(--nw-vs-muted); }
+
+.nw-vs-start__url { max-width: 580px; margin-bottom: 20px; }
+
+.nw-vs-start__url input {
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-raise);
+    font-size: 12.5px;
+}
+
+.nw-vs-start__copy {
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-brand);
+    border-color: var(--nw-vs-brand);
+    color: #fff;
+    font-weight: 600;
+}
+
+.nw-vs-start__copy:hover { background: var(--nw-vs-brand-hover); border-color: var(--nw-vs-brand-hover); }
+.nw-vs-start__copy.is-copied { background: transparent; border-color: var(--nw-vs-line); color: var(--nw-vs-muted); }
+
+/* The three steps read as a caption, not a feature strip. */
+.nw-vs-steps { gap: 6px 22px; margin-bottom: 24px; }
+.nw-vs-steps li { font-size: 12px; color: var(--nw-vs-muted-2); }
+
+.nw-vs-steps li::before {
+    width: 17px;
+    height: 17px;
+    border: 0;
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-muted);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Client cards: one border, no gradient, no lift. The lead is marked by a
+   filled button, which is enough — three signals for one idea was the tell. */
+.nw-vs-client {
+    padding: 14px;
+    border-radius: var(--nw-vs-r);
+    background: var(--nw-vs-chrome);
+    border-color: var(--nw-vs-line);
+    box-shadow: var(--nw-vs-card-shadow, none);
+    transition: border-color .12s;
+}
+
+.nw-vs-client:hover { transform: none; box-shadow: none; border-color: var(--nw-vs-line); }
+.nw-vs-client::before { content: none; }
+.nw-vs-client.is-lead { border-color: var(--nw-vs-line); }
+
+.nw-vs-client__mark {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--nw-vs-r-sm);
+    border: 0;
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.nw-vs-client.is-lead .nw-vs-client__mark { background: var(--nw-vs-brand-soft); color: var(--nw-vs-brand); }
+.nw-vs-client__name { font-size: 13px; font-weight: 600; }
+.nw-vs-client__where { font-size: 10px; letter-spacing: .6px; color: var(--nw-vs-muted-2); }
+.nw-vs-client__note { font-size: 11.5px; color: var(--nw-vs-muted); }
+
+.nw-vs-client__badge {
+    background: var(--nw-vs-brand-soft);
+    color: var(--nw-vs-brand);
+    font-size: 9px;
+    letter-spacing: .5px;
+}
+
+.nw-vs-client__go {
+    padding: 8px 12px;
+    border-radius: var(--nw-vs-r-sm);
+    border-color: var(--nw-vs-line);
+    background: transparent;
+    color: var(--nw-vs-text-2);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.nw-vs-client__go:hover { background: var(--nw-vs-hover); border-color: var(--nw-vs-line); color: var(--nw-vs-text); }
+
+.nw-vs-client.is-lead .nw-vs-client__go {
+    background: var(--nw-vs-brand);
+    border-color: var(--nw-vs-brand);
+    font-weight: 600;
+}
+
+.nw-vs-client.is-lead .nw-vs-client__go:hover { background: var(--nw-vs-brand-hover); border-color: var(--nw-vs-brand-hover); filter: none; }
+.nw-vs-client.is-lead .nw-vs-client__go.is-copied { background: transparent; border-color: var(--nw-vs-line); color: var(--nw-vs-muted); }
+
+/* Your plan, stated the way the dashboard states things: a line, then facts. */
+.nw-vs-plan-now {
+    padding: 14px 16px;
+    border-radius: var(--nw-vs-r);
+    background: var(--nw-vs-raise);
+    border-color: var(--nw-vs-line);
+}
+
+.nw-vs-plan-now__label { color: var(--nw-vs-muted-2); letter-spacing: .6px; }
+
+.nw-vs-plan-now__name {
+    background: var(--nw-vs-brand-soft);
+    color: var(--nw-vs-brand);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.nw-vs-plan-now__list li::before { background: var(--nw-vs-muted-2); }
+.nw-vs-plan-now__more { color: var(--nw-vs-brand); }
+.nw-vs-start__link { color: var(--nw-vs-brand); font-weight: 500; }
+.nw-vs-start__back { border-radius: var(--nw-vs-r-sm); border-color: var(--nw-vs-line); }
+
+/* ── Chrome ────────────────────────────────────────────────────────────── */
+
+.nw-vs-bar { background: var(--nw-vs-chrome); border-color: var(--nw-vs-line); }
+.nw-vs-ibtn { border-radius: var(--nw-vs-r-sm); border-color: var(--nw-vs-line); color: var(--nw-vs-muted); }
+.nw-vs-ibtn:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); border-color: var(--nw-vs-line); }
+.nw-vs-ibtn.is-on { background: var(--nw-vs-brand-soft); color: var(--nw-vs-brand); border-color: transparent; }
+.nw-vs-width { border-radius: var(--nw-vs-r-sm); }
+.nw-vs-width.is-active { background: var(--nw-vs-brand-soft); color: var(--nw-vs-brand); border-color: transparent; }
+.nw-vs-tabs { background: var(--nw-vs-chrome); }
+.nw-vs-tab { border-radius: var(--nw-vs-r-sm) var(--nw-vs-r-sm) 0 0; font-size: 12px; }
+.nw-vs-tab.is-active { background: var(--nw-vs-bg); border-color: var(--nw-vs-line); }
+.nw-vs-menu__list { border-radius: var(--nw-vs-r); border-color: var(--nw-vs-line); }
+.nw-vs-menu__item { border-radius: var(--nw-vs-r-sm); font-size: 13px; color: var(--nw-vs-text-2); }
+.nw-vs-menu__item:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+.nw-vs-menu__h { font-size: 10px; letter-spacing: .6px; color: var(--nw-vs-muted-2); }
+.nw-vs-menu__find { border-radius: var(--nw-vs-r-sm); background: var(--nw-vs-raise); }
+.nw-vs-dock { background: var(--nw-vs-chrome); border-color: var(--nw-vs-line); }
+.nw-vs-dock__h { font-size: 10px; letter-spacing: .6px; color: var(--nw-vs-muted-2); }
+.nw-vs-bar [data-tip]::after { border-radius: var(--nw-vs-r-sm); font-size: 11px; }
+
+/* Approval switch: on is brand, matching every other "this is set" in the
+   product. Green was doing a second job here, and green means connected. */
+.nw-vs-approval { border-radius: var(--nw-vs-r-sm); border-color: var(--nw-vs-line); }
+.nw-vs-approval input:checked + .nw-vs-approval__track { background: var(--nw-vs-brand); border-color: var(--nw-vs-brand); }
+
+/* Dialogs */
+.nw-vs-ask__card, .nw-vs-up__card { border-radius: var(--nw-vs-r-lg); border-color: var(--nw-vs-line); }
+.nw-vs-btn { border-radius: var(--nw-vs-r-sm); }
+.nw-vs-btn--go, .nw-vs-btn--go:hover { background: var(--nw-vs-brand); border-color: var(--nw-vs-brand); }
+.nw-vs-up__go { border-radius: var(--nw-vs-r-sm); background: var(--nw-vs-brand); }
+.nw-vs-up__go:hover { background: var(--nw-vs-brand-hover); filter: none; }
+.nw-vs-up__eyebrow, .nw-vs-up__alt, .nw-vs-plan__price { color: var(--nw-vs-brand); }
+.nw-vs-up__icon { border-radius: var(--nw-vs-r-sm); background: var(--nw-vs-brand-soft); color: var(--nw-vs-brand); }
+.nw-vs-plan { border-radius: var(--nw-vs-r); background: var(--nw-vs-raise); }
+.nw-vs-plan.is-best { border-color: var(--nw-vs-brand); }
+.nw-vs-plan.is-best .nw-vs-plan__list li::before { background: var(--nw-vs-brand); }
+.nw-vs-up__list li::before { background: var(--nw-vs-brand); }
+
+/* Green stays for one thing only: whether something can reach this site. */
+.nw-vs-status.is-ready .nw-vs-dot, .nw-vs-conn.is-on .nw-vs-conn__dot { background: var(--nw-vs-go); }
+.nw-vs-conn.is-on .nw-vs-panel__h { color: var(--nw-vs-muted-2); }
+
+/* ── Accordion sections ───────────────────────────────────────────────────
+   Each section is a row you press: a mark, a name, how much is in it, and a
+   chevron that turns. The count wears the brand orange, which is the one
+   colour this product uses to mean "ours" — blue is for the thing you are
+   about to press, green for whether anything can reach the site. */
+
+.nw-vs-panel { padding: 4px 10px 12px; }
+
+.nw-vs-panel__fold {
+    gap: 9px;
+    padding: 10px 6px;
+    border-radius: var(--nw-vs-r-sm);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: none;
+    color: var(--nw-vs-text-2);
+}
+
+.nw-vs-panel__fold:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+
+.nw-vs-panel__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-panel__fold:hover .nw-vs-panel__icon { color: var(--nw-vs-text); }
+
+.nw-vs-panel__title { flex: 1; letter-spacing: 0; }
+
+/* Orange, filled, and rounded — the one place a number is worth noticing. */
+.nw-vs-panel__count {
+    min-width: 20px;
+    padding: 1px 7px;
+    border: 0;
+    border-radius: 99px;
+    background: var(--nw-vs-mark, #ff904d);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+.nw-vs-panel__chev {
+    order: 3;
+    color: var(--nw-vs-muted-2);
+    transition: transform .16s ease;
+}
+
+.nw-vs-panel__fold[aria-expanded="false"] .nw-vs-panel__chev { transform: rotate(-90deg); }
+.nw-vs-panel__fold[aria-expanded="false"] .nw-vs-panel__icon { background: transparent; }
+.nw-vs-panel__body { padding: 2px 0 0; }
+
+/* ── Recent requests ──────────────────────────────────────────────────────
+   This is a log of who asked for what, and the only place a cross-account
+   mismatch becomes visible — so the one that was not you has to be the thing
+   you see, not a paragraph you read. */
+
+.nw-vs-tries { gap: 4px; margin-bottom: 8px; }
+
+.nw-vs-try {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-gap: 2px 8px;
+    padding: 8px 10px;
+    border: 0;
+    border-left: 2px solid var(--nw-vs-line);
+    border-radius: 0 var(--nw-vs-r-sm) var(--nw-vs-r-sm) 0;
+    background: var(--nw-vs-raise);
+    font-size: 11.5px;
+}
+
+.nw-vs-try.is-ok { border-left-color: var(--nw-vs-go); }
+.nw-vs-try.is-bad { border-left-color: var(--nw-vs-bad); }
+
+.nw-vs-try__cmd {
+    grid-column: 1;
+    align-self: center;
+    padding: 1px 6px;
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-text-2);
+    font-family: var(--nw-vs-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: 10.5px;
+    font-weight: 500;
+}
+
+.nw-vs-try__who { grid-column: 2; align-self: center; color: var(--nw-vs-muted); }
+.nw-vs-try__who strong { color: var(--nw-vs-bad); font-weight: 700; }
+.nw-vs-try__out { grid-column: 1 / -1; color: var(--nw-vs-muted-2); font-size: 11px; }
+.nw-vs-try.is-bad .nw-vs-try__out { color: var(--nw-vs-bad); }
+
+/* ── The cards under it ───────────────────────────────────────────────────
+   Detected builders and locked entries were chips and dashed boxes from two
+   different design ideas. Both are just facts about this site. */
+
+.nw-vs-detected {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    margin: 10px 4px 0;
+    font-size: 11.5px;
+    color: var(--nw-vs-muted-2);
+}
+
+.nw-vs-chip {
+    margin: 0;
+    padding: 2px 9px;
+    border-radius: 99px;
+    background: var(--nw-vs-hover);
+    border: 0;
+    color: var(--nw-vs-text-2);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.nw-vs-job--locked { opacity: 1; }
+.nw-vs-job--locked .nw-vs-job__label { color: var(--nw-vs-muted); }
+
+.nw-vs-lock {
+    float: none;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: var(--nw-vs-mark-soft, rgba(255, 144, 77, .16));
+    color: var(--nw-vs-mark, #ff904d);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    vertical-align: 1px;
+}
+
+.nw-vs-checkout { margin-top: 10px; font-size: 11.5px; }
+.nw-vs-checkrow { padding: 2px 0; }
+.nw-vs-warn { border-radius: 0 var(--nw-vs-r-sm) var(--nw-vs-r-sm) 0; border-left-color: var(--nw-vs-mark, #ff904d); background: var(--nw-vs-mark-soft, rgba(255, 144, 77, .12)); }
+
+/* ── Connection, at the top ───────────────────────────────────────────────
+   Whether anything can reach this site decides whether a single thing under
+   it will do anything at all, so it leads rather than sitting under a search
+   box for a list that cannot run yet. */
+
+.nw-vs-conn { padding: 14px 12px 14px; background: var(--nw-vs-raise); border-bottom: 1px solid var(--nw-vs-line); }
+
+.nw-vs-conn .nw-vs-panel__h {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--nw-vs-bad);
+}
+
+.nw-vs-conn.is-on .nw-vs-panel__h { color: var(--nw-vs-go); }
+.nw-vs-conn .nw-vs-conn__dot { width: 7px; height: 7px; }
+.nw-vs-conn .nw-vs-panel__note { margin: 0 0 8px; }
+.nw-vs-conn .nw-vs-check { margin-top: 8px; }
+.nw-vs-conn .nw-vs-cmd__hint { margin: 6px 0 0; }
+.nw-vs-clients li { font-size: 12.5px; font-weight: 500; color: var(--nw-vs-text-2); }
+
+/* Who this screen belongs to. A line of prose was the wrong shape for the one
+   fact that explains an agent talking to nothing: it is per account. */
+.nw-vs-whose {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 10px 0 0;
+    padding: 9px 10px;
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-hover);
+}
+
+.nw-vs-whose__face {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    border-radius: 99px;
+    background: var(--nw-vs-mark, #ff904d);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.nw-vs-whose__text { display: flex; flex-direction: column; min-width: 0; }
+.nw-vs-whose__text strong { font-size: 12.5px; font-weight: 600; color: var(--nw-vs-text); }
+.nw-vs-whose__text span { font-size: 11px; line-height: 1.45; color: var(--nw-vs-muted-2); }
+
+/* ── The bar, in the brand's orange ───────────────────────────────────────
+   Active width, an open dock or panel, and the unread count are all "this is
+   on" — the mark colour says that everywhere else in the product, so it says
+   it here too, and blue goes back to meaning only "press this". */
+
+.nw-vs-bar .nw-vs-ibtn.is-on,
+.nw-vs-bar .nw-vs-width.is-active {
+    background: var(--nw-vs-mark-soft);
+    color: var(--nw-vs-mark);
+    border-color: transparent;
+}
+
+.nw-vs-ibtn__count { background: var(--nw-vs-mark); color: #fff; }
+.nw-vs-approval input:checked + .nw-vs-approval__track { background: var(--nw-vs-mark); border-color: var(--nw-vs-mark); }
+.nw-vs-bar [data-tip]:focus-visible, .nw-vs-ibtn:focus-visible { outline-color: var(--nw-vs-mark); }
+
+/* Buttons in the panel: icon, label, one border — the shape the dashboard uses
+   for anything secondary. They were bare text in a box. */
+.nw-vs-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+}
+
+.nw-vs-check .nw-vs-i { flex: 0 0 auto; color: var(--nw-vs-muted); }
+.nw-vs-check:hover .nw-vs-i { color: var(--nw-vs-mark); }
+a.nw-vs-check { text-decoration: none; }
+a.nw-vs-check:link, a.nw-vs-check:visited, a.nw-vs-check:hover { color: var(--nw-vs-text-2); }
+a.nw-vs-check:hover { color: var(--nw-vs-text); }
+
+/* Whose screen this is, pinned to the foot of the panel. It is the answer to
+   "why is nothing arriving", and an answer you have to scroll to find is not
+   one. Sticky rather than a second scroll container: the panel keeps its one
+   scrollbar and this rides along at the bottom of it. */
+.nw-vs-whose {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: auto 0 0;
+    border-radius: 0;
+    border-top: 1px solid var(--nw-vs-line);
+    background: var(--nw-vs-chrome);
+    padding: 10px 12px;
+}
+
+/* ── Stood down ───────────────────────────────────────────────────────────
+   Two tabs cannot both hold the agent's commands. The one that lost says so,
+   with room around it — it sat flush under the bar looking like an error
+   banner — and offers both ways forward rather than only "reload". */
+
+.nw-vs-stood {
+    align-self: flex-start;
+    max-width: 44ch;
+    margin: 72px auto 0;
+    padding: 28px 26px 24px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: var(--nw-vs-r-lg);
+    background: var(--nw-vs-chrome);
+    text-align: center;
+}
+
+.nw-vs-stood__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 14px;
+    border-radius: 99px;
+    background: var(--nw-vs-mark-soft);
+    color: var(--nw-vs-mark);
+}
+
+.nw-vs-stood h2 { margin: 0 0 8px; font-size: 16px; font-weight: 650; color: var(--nw-vs-text); }
+.nw-vs-stood p { margin: 0 0 20px; font-size: 13px; line-height: 1.6; color: var(--nw-vs-muted); }
+
+.nw-vs-stood__acts { display: flex; flex-direction: column; gap: 8px; }
+
+.nw-vs-stood__go, .nw-vs-stood__alt {
+    appearance: none;
+    padding: 9px 14px;
+    border-radius: var(--nw-vs-r-sm);
+    border: 1px solid var(--nw-vs-line);
+    background: transparent;
+    color: var(--nw-vs-text-2);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.nw-vs-stood__go { background: var(--nw-vs-mark); border-color: var(--nw-vs-mark); color: #fff; }
+.nw-vs-stood__go:hover { filter: brightness(1.06); }
+.nw-vs-stood__alt:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+.nw-vs-stood__go:focus-visible, .nw-vs-stood__alt:focus-visible { outline: 2px solid var(--nw-vs-mark); outline-offset: 2px; }
+
+/* ── The panel scrolls; the account line does not ─────────────────────── */
+
+.nw-vs-side { overflow: hidden; }
+
+.nw-vs-side__scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--nw-vs-line) transparent;
+}
+
+.nw-vs-whose { position: static; margin: 0; flex: 0 0 auto; }
+
+/* While a tab is stood down, the stage keeps what it had — hidden, not
+   destroyed. Emptying it took the connect screen with it, and the button
+   offering to connect another assistant then had nothing to show. */
+.nw-vs-stage.is-stood .nw-vs-frame,
+.nw-vs-stage.is-stood .nw-vs-empty,
+.nw-vs-stage.is-stood .nw-vs-start { display: none !important; }
+
+/* ── Panel buttons ────────────────────────────────────────────────────────
+   They were text in a box the same colour as everything around them, with an
+   icon sitting on the text baseline rather than beside it. A button should
+   look pressable: its own surface, a mark-coloured icon in a tile, and the
+   two lined up on their centres. */
+
+.nw-vs-check {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    margin-top: 8px;
+    padding: 9px 12px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-chrome);
+    color: var(--nw-vs-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    box-shadow: 0 1px 2px var(--nw-vs-shadow);
+    transition: background .12s, border-color .12s;
+}
+
+.nw-vs-check:hover { background: var(--nw-vs-hover); border-color: var(--nw-vs-line); color: var(--nw-vs-text); }
+.nw-vs-check:focus-visible { outline: 2px solid var(--nw-vs-mark); outline-offset: 2px; }
+
+/* The icon gets its own tile, which is what stops it sitting on the baseline
+   of the words and drifting as the label wraps. */
+.nw-vs-check .nw-vs-i {
+    display: block;
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    padding: 5px;
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-mark-soft);
+    color: var(--nw-vs-mark);
+    box-sizing: border-box;
+}
+
+.nw-vs-check:hover .nw-vs-i { color: var(--nw-vs-mark); }
+.nw-vs-check > span { flex: 1; min-width: 0; }
+
+a.nw-vs-check, a.nw-vs-check:link, a.nw-vs-check:visited { color: var(--nw-vs-text); text-decoration: none; }
+a.nw-vs-check:hover, a.nw-vs-check:focus { color: var(--nw-vs-text); }
+
+/* A small mark on every prompt row, so a list of sentences reads as a list of
+   things you can press. Drawn as a mask rather than an element: one rule
+   covers workflows, abilities, tasks and anything added later, and it cannot
+   be read out as content by a screen reader. */
+.nw-vs-job__label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.nw-vs-job__label::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 11px;
+    height: 11px;
+    align-self: center;
+    background: currentColor;
+    opacity: .45;
+    transition: opacity .12s, transform .12s;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") center / 11px no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") center / 11px no-repeat;
+}
+
+.nw-vs-job:hover .nw-vs-job__label::before { opacity: 1; transform: translateX(1px); }
+.nw-vs-job__note { padding-left: 19px; }
+
+/* Locked rows point at a lock instead of onward, since pressing one explains
+   rather than does. */
+.nw-vs-job--locked .nw-vs-job__label::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='10' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='10' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-vs-job__label::before { transition: none; }
+    .nw-vs-job:hover .nw-vs-job__label::before { transform: none; }
+}
+
+/* Room to read: 44ch put "This workspace is open in another tab" on two lines
+   above a paragraph that then wrapped four times. */
+.nw-vs-stood { max-width: 58ch; padding: 30px 34px 26px; }
+
+/* ── Footer ───────────────────────────────────────────────────────────────
+   This screen only. It says what this is, that it is early, and which build —
+   the three things missing from every bug report about a new surface. */
+
+.nw-vs { grid-template-rows: auto 1fr auto auto; }
+
+.nw-vs-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--nw-vs-raise);
+    border-top: 1px solid var(--nw-vs-line);
+    font-size: 11.5px;
+    color: var(--nw-vs-muted-2);
+}
+
+.nw-vs-foot__left { display: inline-flex; align-items: center; gap: 8px; color: var(--nw-vs-muted); }
+.nw-vs-foot__right { margin-left: auto; }
+.nw-vs-foot__v { font-family: var(--nw-vs-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace); }
+
+.nw-vs-foot__beta {
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: var(--nw-vs-mark-soft);
+    color: var(--nw-vs-mark);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+    .nw-vs-foot__right { display: none; }
+}
+
+/* ── The plan card, and the links under it ────────────────────────────────
+   The plan sat at a different width from everything above it, which read as a
+   panel that had wandered in. It matches the address field now, and the links
+   below became buttons rather than three underlines in a row. */
+
+.nw-vs-plan-now { text-align: left; }
+
+.nw-vs-start__foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    padding-top: 18px;
+    border-top: 1px solid var(--nw-vs-line);
+}
+
+.nw-vs-start__link {
+    padding: 7px 12px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-chrome);
+    color: var(--nw-vs-text-2);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.nw-vs-start__link:hover {
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-text);
+    text-decoration: none;
+    border-color: var(--nw-vs-line);
+}
+
+.nw-vs-start__link:focus-visible { outline: 2px solid var(--nw-vs-mark); outline-offset: 2px; }
+
+/* Icon and label as one centred group. Left-aligned with a stretched label put
+   the two at opposite ends of a wide button, which is not "together". */
+.nw-vs-check { justify-content: center; text-align: center; }
+.nw-vs-check > span { flex: 0 1 auto; }
+.nw-vs-check .nw-vs-i { align-self: center; }
+
+/* Green on the panel's action icons: these two are about the connection, and
+   green is what the connection is drawn in everywhere else on this screen. */
+.nw-vs-conn .nw-vs-check .nw-vs-i {
+    background: var(--nw-vs-go-soft, rgba(22, 163, 74, .16));
+    color: var(--nw-vs-go);
+}
+
+.nw-vs-conn .nw-vs-check:hover .nw-vs-i { color: var(--nw-vs-go); }
+.nw-vs-conn .nw-vs-check:focus-visible { outline-color: var(--nw-vs-go); }
+
+/* Left, on one line with its icon. A centred label beside a left-hand tile
+   reads as two separate things rather than one control. */
+.nw-vs-conn .nw-vs-check {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.nw-vs-conn .nw-vs-check > span { flex: 1; }
+
+/* The footer links stay links — a small mark, no border, no fill. Three
+   bordered buttons were competing with the one button that matters above. */
+.nw-vs-start__foot { gap: 6px 20px; }
+
+.nw-vs-start__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--nw-vs-brand);
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.nw-vs-start__link:hover { background: transparent; color: var(--nw-vs-brand-hover); text-decoration: underline; }
+
+.nw-vs-start__link::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") center / 12px no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") center / 12px no-repeat;
+}
+
+.nw-vs-more { display: inline-flex; align-items: center; gap: 5px; }
+.nw-vs-more .nw-vs-i { opacity: .7; }
+
+/* ── The empty stage ──────────────────────────────────────────────────────
+   Waiting is most of what this screen does at first, so it should read as an
+   invitation rather than a blank page with a caption under it. */
+
+.nw-vs-empty { max-width: 46ch; padding: 48px 24px; }
+
+.nw-vs-empty__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 108px;
+    height: 108px;
+    margin-bottom: 20px;
+    border-radius: 99px;
+    background: radial-gradient(circle at 50% 45%, var(--nw-vs-mark-soft), transparent 68%);
+}
+
+.nw-vs-empty__mark img { display: block; opacity: .95; }
+.nw-vs-empty h1 { margin: 0 0 10px; font-size: 21px; font-weight: 650; letter-spacing: -.01em; }
+.nw-vs-empty p { margin: 0; font-size: 13.5px; line-height: 1.7; }
+
+.nw-vs-empty__try {
+    display: inline-block;
+    margin-top: 18px !important;
+    padding: 7px 13px;
+    border-radius: 99px;
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-muted) !important;
+    font-size: 12px !important;
+}
+
+/* ── Search results ───────────────────────────────────────────────────────
+   Answers from the whole catalogue: what it is, what it is called, and what
+   it does. Pressing one copies the sentence to paste at an assistant. */
+
+.nw-vs-find { margin-top: 8px; max-height: 46vh; overflow-y: auto; scrollbar-width: thin; }
+.nw-vs-find[hidden] { display: none; }
+
+.nw-vs-find__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    margin: 1px 0;
+    border: 0;
+    border-radius: var(--nw-vs-r-sm);
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.nw-vs-find__row:hover { background: var(--nw-vs-hover); }
+.nw-vs-find__row:focus-visible { outline: 2px solid var(--nw-vs-mark); outline-offset: -2px; }
+.nw-vs-find__row.is-copied { background: var(--nw-vs-mark-soft); }
+
+.nw-vs-find__kind {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-muted-2);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.nw-vs-find__row.is-copied .nw-vs-find__kind { background: transparent; color: var(--nw-vs-mark); }
+.nw-vs-find__body { display: flex; flex-direction: column; min-width: 0; }
+.nw-vs-find__label { font-size: 12.5px; font-weight: 600; color: var(--nw-vs-text-2); }
+.nw-vs-find__row:hover .nw-vs-find__label { color: var(--nw-vs-text); }
+
+.nw-vs-find__note {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--nw-vs-muted-2);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.nw-vs-find__none { margin: 8px 8px 4px; font-size: 11.5px; color: var(--nw-vs-muted-2); }
+
+/* The plan card is 580px wide and was wearing 14px of padding — enough for a
+   sidebar row, not for a card that spans the screen. Room to breathe, and the
+   heading set apart from the list under it. */
+.nw-vs-plan-now {
+    padding: 18px 22px 20px;
+    margin-bottom: 26px;
+}
+
+.nw-vs-plan-now__h {
+    margin: 0 0 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--nw-vs-line);
+}
+
+.nw-vs-plan-now__list { gap: 7px; }
+.nw-vs-plan-now__list li { padding-left: 16px; font-size: 12.5px; line-height: 1.55; }
+.nw-vs-plan-now__list li::before { top: 8px; }
+.nw-vs-plan-now__more { margin-top: 14px; }
+
+/* ── The first screen: neutral, and it fits ───────────────────────────────
+   Every button on this screen is a thing to press, so a blue "primary" was
+   colour with nothing to distinguish. One solid — white on dark, near-black
+   on light — for the two actions that matter, and a plain bordered surface
+   for the rest. Orange stays where it means "ours". */
+
+.nw-vs-start__copy,
+.nw-vs-client.is-lead .nw-vs-client__go {
+    background: var(--nw-vs-solid);
+    border-color: var(--nw-vs-solid);
+    color: var(--nw-vs-solid-ink);
+    font-weight: 650;
+}
+
+.nw-vs-start__copy:hover,
+.nw-vs-client.is-lead .nw-vs-client__go:hover {
+    background: var(--nw-vs-solid-hover);
+    border-color: var(--nw-vs-solid-hover);
+    color: var(--nw-vs-solid-ink);
+    filter: none;
+}
+
+.nw-vs-client.is-lead .nw-vs-client__go:link,
+.nw-vs-client.is-lead .nw-vs-client__go:visited,
+.nw-vs-client.is-lead .nw-vs-client__go:active { color: var(--nw-vs-solid-ink); }
+
+.nw-vs-start__copy.is-copied,
+.nw-vs-client.is-lead .nw-vs-client__go.is-copied {
+    background: transparent;
+    border-color: var(--nw-vs-line);
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-client.is-lead { border-color: var(--nw-vs-border-strong, var(--nw-vs-muted-2)); }
+.nw-vs-client.is-lead .nw-vs-client__mark { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+
+.nw-vs-client__badge {
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-text-2);
+}
+
+.nw-vs-plan-now__name { background: var(--nw-vs-hover); color: var(--nw-vs-text); }
+
+.nw-vs-start__link { color: var(--nw-vs-text-2); }
+.nw-vs-start__link:hover { color: var(--nw-vs-text); }
+.nw-vs-plan-now__more { color: var(--nw-vs-text-2); text-decoration: underline; }
+.nw-vs-plan-now__more:hover { color: var(--nw-vs-text); }
+
+/* Narrow: the workspace is a wide screen by nature, but the stage collapses
+   under a phone-width viewport preset and on a laptop with the panel open. */
+@media (max-width: 1100px) {
+    .nw-vs-start__grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+    .nw-vs-client.is-lead { grid-column: span 1; }
+}
+
+@media (max-width: 780px) {
+    .nw-vs-start { padding: 28px 18px 36px; }
+    .nw-vs-start h1 { font-size: 20px; }
+    .nw-vs-start__lead { font-size: 13px; }
+
+    .nw-vs-start__url { flex-direction: column; }
+    .nw-vs-start__copy { width: 100%; }
+
+    .nw-vs-steps { flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; }
+
+    .nw-vs-start__grid { grid-template-columns: 1fr; }
+    .nw-vs-plan-now { padding: 16px; }
+    .nw-vs-start__foot { flex-direction: column; align-items: center; gap: 4px; }
+}
+
+@media (max-width: 520px) {
+    .nw-vs-start__inner { max-width: 100%; }
+    .nw-vs-client { padding: 12px; }
+    .nw-vs-client__note { min-height: 0; }
+    .nw-vs-plan-now__list li { font-size: 12px; }
+}
+
+/* The bar is eleven controls in a row; below ~780px they no longer fit, and a
+   flex row that does not wrap simply pushes the page wider than the window —
+   which put a horizontal scrollbar under everything, panel included. */
+@media (max-width: 780px) {
+    .nw-vs-bar {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 52px;
+        padding: 8px 12px;
+        gap: 8px 10px;
+    }
+
+    .nw-vs-widths { margin-left: 0; order: 5; }
+    .nw-vs-brand span { display: none; }
+    .nw-vs-status__text { max-width: 44vw; overflow: hidden; text-overflow: ellipsis; }
+    .nw-vs-menu__list { width: min(268px, calc(100vw - 32px)); }
+    .nw-vs-side { max-height: 40vh; }
+}
+
+/* Nothing on this screen may be wider than the window. Said once, since the
+   offender changes every time the bar gains a control. */
+.nw-vs, .nw-vs-bar, .nw-vs-split, .nw-vs-side, .nw-vs-main { max-width: 100vw; min-width: 0; }
+
+/* Copy: the icon is the whole button. The field beside it already says what is
+   being copied, and the label was repeating the word above it. The mark
+   becomes a tick when it has been pressed, so the confirmation is the button
+   rather than a word appearing somewhere else. */
+.nw-vs-start__copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    flex: 0 0 auto;
+    padding: 0;
+}
+
+.nw-vs-start__copy .nw-vs-i { display: block; }
+.nw-vs-start__copy-ok { display: none; }
+.nw-vs-start__copy.is-copied .nw-vs-start__copy-i { display: none; }
+.nw-vs-start__copy.is-copied .nw-vs-start__copy-ok { display: inline-flex; }
+
+.nw-vs-start__copy.is-copied {
+    background: transparent;
+    border-color: var(--nw-vs-go);
+    color: var(--nw-vs-go);
+}
+
+@media (max-width: 780px) {
+    .nw-vs-start__copy { width: 100%; height: 38px; }
+}
+
+/* Pressing a result copies a sentence — an invisible act, so the row has to
+   say so. Same affordance the prompt rows carry: "Copy" on hover, "Copied"
+   once it has happened. Without it the only feedback was a faint tint, which
+   reads as a selection rather than a confirmation. */
+.nw-vs-find__row { position: relative; padding-right: 62px; }
+
+.nw-vs-find__row::after {
+    content: 'Copy';
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    padding: 1px 6px;
+    border-radius: 99px;
+    color: var(--nw-vs-muted-2);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity .12s ease;
+}
+
+.nw-vs-find__row:hover::after,
+.nw-vs-find__row:focus-visible::after { opacity: 1; }
+
+.nw-vs-find__row.is-copied::after {
+    content: 'Copied';
+    opacity: 1;
+    background: var(--nw-vs-mark-soft);
+    color: var(--nw-vs-mark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-vs-find__row::after { transition: none; }
+}
+
+/* ── How ──────────────────────────────────────────────────────────────────
+   The steps for each client, folded away. Eight cards of open instructions
+   is a manual; a card with no instructions at all is a copied string and a
+   shrug. Closed by default, one line when shut. */
+
+.nw-vs-client__how { margin-top: 2px; }
+
+.nw-vs-client__how summary {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 2px;
+    list-style: none;
+    color: var(--nw-vs-muted-2);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+.nw-vs-client__how summary::-webkit-details-marker { display: none; }
+.nw-vs-client__how summary:hover { color: var(--nw-vs-text-2); }
+.nw-vs-client__how summary .nw-vs-i { transition: transform .15s ease; }
+.nw-vs-client__how[open] summary .nw-vs-i { transform: rotate(180deg); }
+.nw-vs-client__how summary:focus-visible { outline: 2px solid var(--nw-vs-mark); outline-offset: 2px; border-radius: 4px; }
+
+.nw-vs-client__steps {
+    margin: 6px 0 0;
+    padding: 0 0 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nw-vs-client__steps li {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--nw-vs-muted);
+}
+
+.nw-vs-client__steps li::marker { color: var(--nw-vs-muted-2); font-weight: 700; }
+.nw-vs-client__steps strong { color: var(--nw-vs-text-2); font-weight: 600; }
+
+.nw-vs-client__steps code,
+.nw-vs-client__paths code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--nw-vs-hover);
+    color: var(--nw-vs-text-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10.5px;
+}
+
+/* Where the file lives, for the clients that want one edited. */
+.nw-vs-client__paths {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 8px 0 0;
+    border-top: 1px solid var(--nw-vs-line-2);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nw-vs-client__paths li { display: flex; flex-direction: column; gap: 2px; }
+
+.nw-vs-client__paths span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--nw-vs-muted-2);
+}
+
+.nw-vs-client__paths code { word-break: break-all; }
+
+/* "It is connected" — the way out of a bar that decided its state one page
+   load ago. Wears the same grey as every other control up there: it is a thing
+   to press, not a warning, and the bar has one accent already. */
+.nw-vs-recheck { border-color: var(--nw-vs-line); color: var(--nw-vs-muted); }
+.nw-vs-recheck:hover { background: var(--nw-vs-hover); color: var(--nw-vs-text); border-color: var(--nw-vs-line); }
+.nw-vs-recheck[disabled] { opacity: .7; cursor: default; }
+.nw-vs-recheck .nw-vs-ibtn__text { display: inline; }
+
+@media (max-width: 900px) {
+    .nw-vs-recheck .nw-vs-ibtn__text { display: none; }
+}
+
+/* Connected: the same shape as the buttons that used to sit under it, saying
+   what is on the other end rather than heading a list of ways to connect that
+   a connected site has no use for. */
+.nw-vs-live {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-chrome);
+    box-shadow: 0 1px 2px var(--nw-vs-shadow);
+}
+
+.nw-vs-live__dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--nw-vs-go);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--nw-vs-go) 22%, transparent);
+}
+
+.nw-vs-live__text { display: flex; flex-direction: column; min-width: 0; }
+.nw-vs-live__text strong { font-size: 12.5px; font-weight: 600; color: var(--nw-vs-text); }
+
+.nw-vs-live__text span {
+    font-size: 11.5px;
+    color: var(--nw-vs-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
