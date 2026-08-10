@@ -59,8 +59,10 @@ function nibwp_cli_info(): WP_REST_Response
         // The one thing that most often explains "it connected but there are no
         // tools": the switch on the Connect screen is off.
         'abilities_enabled' => function_exists('nibwp_is_enabled') ? nibwp_is_enabled() : false,
-        'wp_supported' => version_compare(get_bloginfo('version'), '6.8', '>='),
-        'php_supported' => version_compare(PHP_VERSION, '8.1', '>='),
+        // The plugin header's own minimums, so a client and the plugin never
+        // disagree about what this site supports.
+        'wp_supported' => version_compare(get_bloginfo('version'), '6.5', '>='),
+        'php_supported' => version_compare(PHP_VERSION, '8.0', '>='),
     ]);
 
     // Same treatment as the OAuth discovery documents: read by clients from
