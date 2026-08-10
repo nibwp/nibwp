@@ -41,8 +41,9 @@ No password anywhere. Then `nibwp agent add cursor` (or `vscode`, `claude-code`,
 `codex`, …) writes the connection into that editor, and `nibwp mcp` bridges
 stdio-only clients over the same grant.
 
-Source lives in [`cli/`](cli/) and ships to npm as `nibwp`. Requires Node 20+ and
-a site running this plugin with AI Abilities on.
+Source: [github.com/nibwp/nibwp-cli](https://github.com/nibwp/nibwp-cli), published
+to npm as `nibwp`. Requires Node 20+ and a site running this plugin with AI
+Abilities on.
 
 ### Connect an AI client by hand
 
