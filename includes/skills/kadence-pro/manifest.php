@@ -25,7 +25,7 @@ return [
     'tagline'        => 'Convert HTML, URLs, images, or screenshots into validated Kadence Blocks layouts, templates, and reusable patterns',
     'description'    => 'Paste raw HTML, drop a screenshot, or share a URL — the agent rebuilds it as a clean Kadence Blocks layout (rowlayout/column sections, advancedheading, singlebtn, image, infobox, iconlist, testimonials…). A hard validator rejects unknown block names, illegal nesting (column outside rowlayout, button outside advancedbtn), missing/duplicate uniqueIDs, and empty headings/buttons; a round-trip guard makes sure no block is ever dropped on save. Persist to a page, post, Kadence Element (header/footer/hook), or a reusable pattern.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.1',
+    'version'        => '1.0.2',
     'category'       => 'page-builders',
     'premium'        => true,
     'price'          => 49,

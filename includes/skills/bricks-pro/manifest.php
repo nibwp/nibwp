@@ -30,7 +30,7 @@ return [
     'tagline'        => 'Convert HTML, URLs, images, screenshots, or Figma frames into validated Bricks templates with ACSS tokens, global classes, query loops, and dynamic data',
     'description'    => 'Paste raw HTML, drop a screenshot, share a URL, or attach a Figma frame — the agent rebuilds it as a clean Bricks template or section. Loop detection turns repeated cards into a Bricks Query Loop + CPT + ACF fields. Native Bricks elements (form, video, nav-menu) replace raw <form> / <iframe> / nav HTML. Hard validator rejects unknown element names, inline styles, hardcoded colors / font-sizes outside var() fallback, missing global classes, and static text where dynamic data is available.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.1',
+    'version'        => '1.0.2',
     'category'       => 'page-builders',
     'premium'        => true,
     'price'          => 49,

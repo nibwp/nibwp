@@ -20,7 +20,7 @@ return [
     'tagline'        => 'Convert HTML, URLs, images, screenshots, or Figma frames into validated EtchWP components',
     'description'    => 'Paste raw HTML, drop a screenshot, share a URL, or attach a Figma frame — the agent rebuilds it as a clean, brand-consistent EtchWP component. Loop detection turns repeated cards into CPT + ACF + Etch loop blocks automatically. The validator rejects clamp() font-size, hardcoded colors, raw <style> tags, and missing brand prefixes before anything persists.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.1.2',
+    'version'        => '1.1.3',
     'category'       => 'page-builders',
     'premium'        => true,
     'price'          => 49,

@@ -23,7 +23,7 @@ return [
     'tagline'        => 'Turn a brief, outline, transcript or URL into a complete, validated Tutor LMS course',
     'description'    => 'Give the agent a topic, an outline, a transcript, a PDF, or a URL and it plans and builds a full Tutor LMS course — topics, lessons, and quizzes with real questions — validated against pedagogy + Tutor schema rules, then persisted via the Tutor LMS integration. Turn any content into a sellable course.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.0',
+    'version'        => '1.0.1',
     'category'       => 'lms',
     'premium'        => true,
     'price'          => 49,

@@ -30,7 +30,7 @@ return [
     'tagline'        => 'Design and build Voxel templates — preview cards, single posts, archives, search pages, headers and style kits',
     'description'    => 'Build the templates a Voxel site is made of. The agent composes an Elementor document using Voxel\'s own widgets — search form, post feed, map, gallery, work hours, review stats, actions — binds it to real listing data with @tags() dynamic tags, and this skill validates every piece before it is written: widget names against the live registry, filter and field keys against the site\'s own configuration, and every dynamic tag rendered against a real post so a typo can never ship as literal text on the page. Search forms, feeds and maps are wired together automatically, because that wiring lives in post meta and is positional — hand-written paths break the moment anything moves. Assign the result as a post type\'s main card, a named alternate, a single or archive layout, a header, or a site-wide style kit.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.0',
+    'version'        => '1.0.1',
     'category'       => 'page-builders',
     'premium'        => true,
     'price'          => 29,

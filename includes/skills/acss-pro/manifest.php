@@ -26,7 +26,7 @@ return [
     'tagline'        => 'Generate a working ACSS configuration from a screenshot, HTML+CSS, or live URL',
     'description'    => 'Feed in a design source (screenshot, HTML+CSS, or a live URL) and the agent proposes a complete ACSS configuration — palette, type ramp, space ramp, radius, shadows, breakpoints — validated for WCAG contrast, sane modular scale ratios, and consistent neutral-ramp luminance. Persists to the ACSS settings option after explicit user approval. Pairs with EtchWP Pro: tokens generated here are exactly the ones EtchWP Pro emits in components.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.0',
+    'version'        => '1.0.1',
     'category'       => 'design-system',
     'premium'        => true,
     'price'          => 19,

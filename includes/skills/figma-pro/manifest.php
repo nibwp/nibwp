@@ -32,7 +32,7 @@ return [
     'tagline'        => 'Convert Figma frames & components into native, maintainable WordPress — reads the real design (node tree + Variables), not a screenshot',
     'description'    => 'Point NibWP at a Figma URL, frame, or component and get a native WordPress build in your site\'s own builder. figma-pro reads the actual Figma document — auto-layout, constraints, Variables, styles — parses it into an internal design object, establishes a real design-token system (Variables → ACSS tokens), dedupes repeated components into reusable blocks with dynamic data, then drives the active builder skill (EtchWP / Bricks / Elementor / Gutenberg) to build it. The result is verified by rendering the page and image-diffing it against Figma\'s own export — pixel-perfect, not "close enough". Read-only in v1 (write-back to Figma is a later phase). Composes active enhancer skills automatically: acss-pro for a native token system, seo-pro for semantics/meta.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.0',
+    'version'        => '1.0.1',
     'category'       => 'design',
     'premium'        => true,
     'price'          => 49,

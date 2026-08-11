@@ -22,7 +22,7 @@ return [
     'tagline'        => 'Generate a styled landing / sales page for any Tutor LMS course',
     'description'    => 'Point it at a Tutor LMS course and it builds a polished landing micro-site — hero, what-you-will-learn, curriculum, instructor, pricing, FAQ and an enroll CTA — bound to the live course data and saved as a WordPress page linked to the course.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.0',
+    'version'        => '1.0.1',
     'category'       => 'lms',
     'premium'        => true,
     'price'          => 39,

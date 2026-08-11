@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Plugin Name: NIBWP
  * Plugin URI: https://www.nibwp.com
  * Description: Turns your WordPress site into a Model Context Protocol (MCP) server so AI agents like Claude Code and ChatGPT can read posts, terms, users, media, options, search, and a key-value memory store through a standard, permissioned interface.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Author: NIBWP
@@ -33,7 +33,7 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-define(constant_name: 'NIBWP_VERSION', value: '1.2.0');
+define(constant_name: 'NIBWP_VERSION', value: '1.2.1');
 define(constant_name: 'NIBWP_MAX_EXECUTION_TIME', value: 30);
 define('NIBWP_PLUGIN_FILE', __FILE__);
 define('NIBWP_PLUGIN_URL', plugin_dir_url(__FILE__));

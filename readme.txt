@@ -4,7 +4,7 @@ Tags: ai, mcp, claude, automation, chatgpt
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -63,6 +63,17 @@ Yes — activate per-site. Each subsite gets its own endpoint.
 4. Audit log — every tool call recorded with arguments + result summary.
 
 == Changelog ==
+
+= 1.2.1 =
+An important fix, and the start of something new: NibWP from the command line.
+
+* **Fixed: a Skill add-on next to Pro could take a site down.** Activating a licence could install a Skill add-on that your Pro plugin already contained. Two copies of the same file then loaded at once, which PHP refuses outright — the site went blank with no way in from the dashboard. Reported by a customer on a live site. Four things changed so it cannot happen again: your licence no longer installs a Skill you already have; if the two are already side by side, they now agree on which one loads; a site already in that state switches the duplicate off by itself and comes back on the next page load; and our release process now refuses to build if any file could load twice. Every Skill add-on has been rebuilt — update yours.
+* **New: NibWP from the terminal.** `npx nibwp-cli auth login https://yoursite.com` opens your browser, shows your site's own approval screen, and connects — no configuration file, no password anywhere. From there one command wires up Cursor, VS Code, Claude Code, Codex, Gemini CLI and others, and another bridges assistants that cannot speak to a site directly. Free and open source. It also lets you choose exactly what to grant: a connection approved for reading cannot write, and your site is what enforces that.
+* **New: work across every site at once.** Run the same thing on one site, a named site, or all of them, with a result for each. Built for anyone looking after more than a handful of installs.
+* **New: edit your theme in your own editor.** Pull a folder down, change it locally with whatever tools you like, push back only what you changed. It refuses to overwrite anything that changed on the site while you were working.
+* **New: repeat a build instead of re-describing it.** Your assistant works out how to build something once; NibWP records what it actually did and can carry out the same sequence on your other sites, exactly, without an assistant involved a second time.
+* **New: put things back.** Capture the pages and settings you are about to let an assistant near, and restore them if it goes wrong.
+* Fixed a button on the dashboard losing its rounded corners when focused.
 
 = 1.2.0 =
 Our biggest release yet — a new way to watch your assistant work, control over who can use it, and much more of your site it can build.

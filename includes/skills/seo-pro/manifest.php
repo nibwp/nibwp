@@ -21,7 +21,7 @@ return [
     'tagline'        => 'Audit, optimize and validate SEO across any engine — Yoast, Rank Math, AIOSEO, SEOPress or Slim SEO — with an AI co-pilot.',
     'description'    => 'A guided SEO workflow, not just field access. Scan the whole site for a scored report card, generate brand-voice titles + meta descriptions that pass length + uniqueness validation, build and validate structured data, fix canonicals/robots/alt text in bulk, migrate meta between SEO plugins, and gate drafts before publish. Every write runs through a dry-run → validate → commit pipeline so nothing bad lands.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.0',
+    'version'        => '1.0.1',
     'category'       => 'seo',
     'premium'        => true,
     'price'          => 59,

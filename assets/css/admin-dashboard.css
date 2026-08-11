@@ -519,13 +519,24 @@
     font-weight: 600;
     text-decoration: none;
     box-shadow: 0 6px 16px rgba(217, 119, 6, .25);
-    transition: filter .15s, transform .15s;
+    transition: background .15s, transform .15s;
 }
 
 .nw-figma-promo__btn:hover {
-    filter: brightness(1.06);
+    background: #2d2b27;
     transform: translateY(-1px);
     color: #fff !important;
+}
+
+/* wp-admin forces border-radius: 2px on any focused <a>. */
+.nw-figma-promo__btn:focus,
+.nw-figma-promo__btn:focus-visible {
+    border-radius: 10px;
+    box-shadow:
+        0 6px 16px rgba(217, 119, 6, .25),
+        0 0 0 2px #fff,
+        0 0 0 4px #b45309;
+    outline: 2px solid transparent;
 }
 
 .nw-figma-promo__hint {
