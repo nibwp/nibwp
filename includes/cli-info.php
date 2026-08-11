@@ -93,6 +93,13 @@ function nibwp_cli_features(): array
             'upload' => 'nibwp/create-upload-link',
             'find-tools' => 'nibwp/find-tools',
             'skills' => 'nibwp/load-skill-playbook',
+            // Reading files is free; writing them is not. A client that assumes
+            // both from one "files" flag tells someone to edit a theme locally
+            // and then fails at the last step, after the work is done.
+            'files-read' => 'nibwp/read-file',
+            'files-write' => 'nibwp/write-file',
+            'audit-log' => 'nibwp/read-audit-log',
+            'snapshot' => 'nibwp/migration-export-content',
         ] as $feature => $ability
     ) {
         if (nibwp_cli_has_ability($ability)) {

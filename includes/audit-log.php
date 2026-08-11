@@ -163,6 +163,51 @@ function nibwp_audit_log_get_entries(int $page = 1, int $per_page = 50, ?string 
 }
 
 /**
+ * Entries recorded since a moment, oldest first.
+ *
+ * Deliberately not the sibling above. That one pages a table for a human to
+ * read, so it sorts newest first; this one feeds a replay, where the only order
+ * that means anything is the order things actually happened in.
+ *
+ * @param string      $since_local A 'Y-m-d H:i:s' timestamp in site-local time,
+ *                                 matching how `created_at` is written.
+ * @param int         $limit       Hard cap on rows returned.
+ * @param string|null $status      'success' or 'error' to filter by outcome.
+ * @param string|null $client_id   Restrict to one OAuth client, so a tape can
+ *                                 carry what one assistant did and nothing else.
+ * @return list<object>
+ */
+function nibwp_audit_log_entries_since(
+    string $since_local,
+    int $limit = 200,
+    ?string $status = null,
+    ?string $client_id = null
+): array {
+    global $wpdb;
+
+    $table_name = $wpdb->prefix . 'nibwp_audit_log';
+    $where = ['created_at >= %s'];
+    $values = [$since_local];
+
+    if ($status !== null && $status !== '') {
+        $where[] = 'result_status = %s';
+        $values[] = $status;
+    }
+
+    if ($client_id !== null && $client_id !== '') {
+        $where[] = 'client_id = %s';
+        $values[] = $client_id;
+    }
+
+    $values[] = $limit;
+    $sql = "SELECT * FROM $table_name WHERE " . implode(' AND ', $where) . ' ORDER BY created_at ASC, id ASC LIMIT %d';
+
+    $rows = $wpdb->get_results($wpdb->prepare($sql, ...$values));
+
+    return $rows ?: [];
+}
+
+/**
  * Delete entries older than the given retention period.
  *
  * @return int Number of deleted rows.

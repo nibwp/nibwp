@@ -1470,6 +1470,7 @@ if ($is_enabled) {
         require_once $dir . 'templates.php';
         require_once $dir . 'skill-preflight.php';
         require_once $dir . 'multi-execute.php';
+        require_once $dir . 'read-audit-log.php';
 
         // Memory — Free, always available.
         require_once $dir . 'memory.php';

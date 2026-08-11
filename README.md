@@ -48,7 +48,7 @@ the client publishes one.
 ### From the terminal — one command
 
 ```sh
-npx nibwp auth login https://yoursite.com
+npx nibwp-cli auth login https://yoursite.com
 ```
 
 Your browser opens, your site asks what to grant, you approve. Then point an

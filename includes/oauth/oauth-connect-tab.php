@@ -350,7 +350,7 @@ function nibwp_oauth_remote_configs(string $mcp_url, string $name): array
         // consent screen as everything else here, and can then write the
         // configuration for whichever editor the person is actually using.
         'terminal' => [
-            'code' => 'npx nibwp auth login ' . escapeshellarg(home_url('/')),
+            'code' => 'npx nibwp-cli auth login ' . escapeshellarg(home_url('/')),
             'hint' => __(
                 'Run this in your terminal — it needs <strong>Node.js 20 or newer</strong> from nodejs.org. Your browser opens to approve, exactly as it does above. Afterwards <code>nibwp agent add cursor</code> (or <code>vscode</code>, <code>claude-code</code>, <code>codex</code>, …) writes the connection into that editor for you, and <code>nibwp discover</code> lists what this site can do.',
                 'nibwp',
