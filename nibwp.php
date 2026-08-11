@@ -586,6 +586,7 @@ require_once __DIR__ . '/includes/oauth/oauth.php';
 require_once __DIR__ . '/includes/oauth/oauth-server.php';
 require_once __DIR__ . '/includes/oauth/oauth-consent.php';
 require_once __DIR__ . '/includes/oauth/oauth-connect-tab.php';
+require_once __DIR__ . '/includes/addon-conflicts.php';
 require_once __DIR__ . '/includes/cli-info.php';
 require_once __DIR__ . '/includes/user-access.php';
 require_once __DIR__ . '/includes/branding.php';
