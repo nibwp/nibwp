@@ -46,7 +46,13 @@ if (!defined('ABSPATH')) {
  * ships in Free and Pro alike.
  */
 if (!function_exists('nibwp_integration_claim')) {
-    function nibwp_integration_claim(string $key): bool
+    /**
+     * @param string      $key  Integration name, unique per file.
+     * @param string|null $file Absolute path of the copy about to be required.
+     *                          Given it, the claim can also detect a copy some
+     *                          other plugin already loaded without claiming.
+     */
+    function nibwp_integration_claim(string $key, ?string $file = null): bool
     {
         static $claimed = [];
 
@@ -54,9 +60,56 @@ if (!function_exists('nibwp_integration_claim')) {
             return false;
         }
 
+        // An add-on built before the claim existed loads its copy without
+        // asking anyone. Nothing marks that in the registry, so the only
+        // evidence is the functions it declared. Ask the file we are about to
+        // load what it would declare, and if that already exists, someone got
+        // there first.
+        if ($file !== null) {
+            $sentinel = nibwp_integration_sentinel($file);
+            if ($sentinel !== null && function_exists($sentinel)) {
+                $claimed[$key] = true;
+
+                return false;
+            }
+        }
+
         $claimed[$key] = true;
 
         return true;
+    }
+}
+
+if (!function_exists('nibwp_integration_sentinel')) {
+    /**
+     * The first function an integration file declares at the top level.
+     *
+     * Read from the file rather than from a table, so it stays correct when
+     * someone renames a function, and costs one small read for the handful of
+     * integrations a request actually loads.
+     */
+    function nibwp_integration_sentinel(string $file): ?string
+    {
+        static $cache = [];
+
+        if (array_key_exists($file, $cache)) {
+            return $cache[$file];
+        }
+
+        $cache[$file] = null;
+
+        if (!is_readable($file)) {
+            return null;
+        }
+
+        $source = (string) file_get_contents($file);
+        // Column zero only: a nested declaration is bound at runtime and cannot
+        // be the thing that fatals, so it is no evidence of anything.
+        if (preg_match('/^function\s+([a-zA-Z_]\w*)\s*\(/m', $source, $matches) === 1) {
+            $cache[$file] = $matches[1];
+        }
+
+        return $cache[$file];
     }
 }
 
