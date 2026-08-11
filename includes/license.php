@@ -537,6 +537,36 @@ function nibwp_maybe_install_packages(array $response): array
  * Idempotent. Skips entirely when the monorepo build is already loaded for
  * the same slug (prevents redeclare with bundled premium code).
  */
+/**
+ * Does the plugin we are running already contain this skill, in full?
+ *
+ * Free ships each premium skill's `manifest.php` alone, so the Skills screen
+ * can render a card for something you have not bought. That manifest is not
+ * the skill, so its presence must not count — the test is whether the ability
+ * files are here, which only the Pro build has.
+ *
+ * @param string $slug A package slug such as `nibwp-skill-seo-pro`.
+ */
+function nibwp_build_already_ships_skill(string $slug): bool
+{
+    if (strncmp($slug, 'nibwp-skill-', 12) !== 0) {
+        return false;
+    }
+
+    if (!defined('NIBWP_PLUGIN_DIR')) {
+        return false;
+    }
+
+    $skill_id = substr($slug, 12);
+    if ($skill_id === '') {
+        return false;
+    }
+
+    $dir = NIBWP_PLUGIN_DIR . 'includes/skills/' . $skill_id . '/';
+
+    return file_exists($dir . 'manifest.php') && is_dir($dir . 'abilities');
+}
+
 function nibwp_maybe_install_one_package(string $slug, string $package_url, string $version, array $response): array
 {
     $result = [
@@ -556,6 +586,24 @@ function nibwp_maybe_install_one_package(string $slug, string $package_url, stri
         $result['already_installed'] = true;
         $result['activated']         = true;
         $result['message']           = sprintf('%s ships with this build — auto-install skipped.', $slug);
+        return $result;
+    }
+
+    // Same reasoning for skills, which the Pro build also bundles in full.
+    //
+    // Installing a standalone Skill add-on beside a Pro build puts a second
+    // copy of that skill's integration files on disk. They load from a
+    // different path, so require_once does not see the duplicate, and the
+    // repeated function declarations are a fatal compile error — the site
+    // goes white with no way to recover from inside WordPress.
+    //
+    // Activating a Pro or Bundle license used to do exactly this: the license
+    // server lists every entitled package, and the client installed all of
+    // them without asking whether the running build already had them.
+    if (nibwp_build_already_ships_skill($slug)) {
+        $result['already_installed'] = true;
+        $result['activated']         = true;
+        $result['message']           = sprintf('%s is included in this build — auto-install skipped.', $slug);
         return $result;
     }
 

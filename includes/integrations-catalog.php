@@ -23,6 +23,43 @@ if (!defined('ABSPATH')) {
  * just sees the metadata.
  */
 
+/**
+ * Claim the right to load one integration file, once per request.
+ *
+ * Two plugins can ship the same integration file: the Pro build carries
+ * includes/premium/integrations/<key>.php, and a standalone Skill add-on
+ * bundles a copy so it works without Pro. `require_once` deduplicates by
+ * absolute path, so two copies at two paths both load, both declare the same
+ * functions, and PHP raises E_COMPILE_ERROR — a white screen on the whole
+ * site, not a caught error, because compilation fails before anything can
+ * handle it.
+ *
+ * A runtime `function_exists()` guard inside the file cannot prevent that:
+ * function declarations at the top level of an included file are bound when
+ * the file is compiled, before a single statement runs. The guard has to live
+ * at the point of the require, which is what this is.
+ *
+ * First caller wins. Whichever copy loads is immaterial — they are the same
+ * file — so the loser skipping silently is the correct outcome.
+ *
+ * Lives here rather than in premium/ because both trees need it and this file
+ * ships in Free and Pro alike.
+ */
+if (!function_exists('nibwp_integration_claim')) {
+    function nibwp_integration_claim(string $key): bool
+    {
+        static $claimed = [];
+
+        if (isset($claimed[$key])) {
+            return false;
+        }
+
+        $claimed[$key] = true;
+
+        return true;
+    }
+}
+
 if (!function_exists('nibwp_premium_integrations')) {
     function nibwp_premium_integrations(): array
     {
