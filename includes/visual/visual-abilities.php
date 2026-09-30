@@ -99,7 +99,7 @@ function nibwp_visual_sanitize_steps($steps): array
     // and not the other. Block editing is deliberately absent: batch resolves
     // to mcp:write, and block-delete is mcp:manage — letting it ride inside a
     // batch would hand out the deleting scope to anyone holding the writing one.
-    $known = ['open', 'read', 'click', 'fill', 'viewport', 'audit', 'console', 'tabs'];
+    $known = ['open', 'read', 'click', 'hover', 'fill', 'viewport', 'audit', 'console', 'tabs'];
     $out = [];
 
     foreach ((array) $steps as $step) {
@@ -122,6 +122,41 @@ function nibwp_visual_sanitize_steps($steps): array
     return $out;
 }
 
+/**
+ * What the workspace currently listening can actually be asked to do.
+ *
+ * Every visual ability fails the same way when nothing is listening — the
+ * command queues and times out — so the useful answer separates "nothing is
+ * open" from "open, but it cannot do that".
+ *
+ * @return array<string, mixed>
+ */
+function nibwp_visual_report_capabilities(array $input): array
+{
+    $user_id = nibwp_visual_user_id();
+    $open = $user_id > 0 && nibwp_visual_is_open($user_id);
+    $kind = $open ? nibwp_visual_kind($user_id) : '';
+
+    // Everything except the capture works the same in either workspace.
+    $shared = [
+        'open', 'read', 'click', 'hover', 'fill', 'viewport',
+        'audit', 'console', 'tabs', 'blocks', 'batch',
+    ];
+
+    return [
+        'listening' => $open,
+        'workspace' => $kind === '' ? null : $kind,
+        'unattended' => $kind === 'runner',
+        'can' => $open ? ($kind === 'runner' ? array_merge($shared, ['screenshot']) : $shared) : [],
+        'cannot' => $open && $kind !== 'runner' ? ['screenshot'] : [],
+        'note' => $open
+            ? ($kind === 'runner'
+                ? 'A headless runner is serving this workspace, so visual work can run unattended.'
+                : 'A browser tab is serving this workspace. It cannot take screenshots, and it stops when the tab closes. Start the runner for unattended capture.')
+            : 'Nothing is listening. Open NibWP -> Agent View, or start the headless runner.',
+    ];
+}
+
 function nibwp_visual_register_abilities(): void
 {
     if (!function_exists('wp_register_ability')) {
@@ -134,7 +169,7 @@ function nibwp_visual_register_abilities(): void
     ];
 
     wp_register_ability('nibwp/visual-open', [
-        'label' => __('Open a page in the workspace', domain: 'nibwp'),
+        'label' => __('Open a page in the workspace', 'nibwp'),
         'description' => 'Opens a URL on this site in a new workspace tab and returns the page once it has loaded. Only URLs on this site can be opened. Use this before reading or interacting with a page.',
         'category' => 'visual',
         'input_schema' => [
@@ -160,26 +195,28 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-read', [
-        'label' => __('Read the current page', domain: 'nibwp'),
-        'description' => 'Returns the visible text, headings, links, form fields and interactive elements of the active workspace tab, each with a selector the interaction abilities accept. This is how the agent sees the page.',
+        'label' => __('Read the current page', 'nibwp'),
+        'description' => 'Returns the visible text, headings, links, form fields and interactive elements of the active workspace tab, each with a selector the interaction abilities accept. This is how the agent sees the page. Text alone cannot show a visual defect — a border that blends into the page, a heading in the wrong size or colour — so after building something, read it again with styles: true to get each heading and element\'s box and computed look (color, background or the surface showing behind it, font-size, font-weight, border-radius, and any border that paints). Pair styles with selector to read one section at a time: styles lowers the element cap to 100 and sets truncated when it is reached. For borders across the whole page, nibwp/visual-audit with the borders check is faster.',
         'category' => 'visual',
         'input_schema' => [
             'type' => 'object',
             'properties' => [
-                'selector' => ['type' => 'string', 'description' => 'Limit the read to one region of the page. Defaults to the whole document.'],
-                'max_elements' => ['type' => 'integer', 'description' => 'Cap on interactive elements returned. Default 150.'],
+                'selector' => ['type' => 'string', 'description' => 'CSS selector limiting the read to one region of the page, e.g. a section or card. Defaults to the whole document. With styles: true the region itself is also returned, with its box and style.'],
+                'max_elements' => ['type' => 'integer', 'description' => 'Cap on interactive elements returned. Default 150, at most 400; at most 100 when styles is true.'],
+                'styles' => ['type' => 'boolean', 'description' => 'Also return box {x, y, w, h} (page pixels) and style {color, background or surface, font-size, font-weight, border-radius, border {width, style, color}} for every heading and element. Use it to check what was built looks right. Default false.'],
             ],
         ],
         'execute_callback' => static fn(array $input) => nibwp_visual_dispatch('read', [
             'selector' => (string) ($input['selector'] ?? ''),
             'maxElements' => (int) ($input['max_elements'] ?? 150),
+            'styles' => !empty($input['styles']),
         ]),
         'permission_callback' => 'nibwp_permission_callback',
         'meta' => ['mcp' => ['public' => true], 'annotations' => ['readonly' => true, 'destructive' => false, 'idempotent' => true]],
     ]);
 
     wp_register_ability('nibwp/visual-click', [
-        'label' => __('Click an element', domain: 'nibwp'),
+        'label' => __('Click an element', 'nibwp'),
         'description' => 'Clicks an element in the active workspace tab and returns what changed. The element is scrolled into view and highlighted first, so the person watching sees what is about to happen.',
         'category' => 'visual',
         'input_schema' => [
@@ -194,8 +231,64 @@ function nibwp_visual_register_abilities(): void
         'meta' => ['mcp' => ['public' => true], 'annotations' => ['readonly' => false, 'destructive' => false, 'idempotent' => false]],
     ]);
 
+    wp_register_ability('nibwp/visual-hover', [
+        'label' => __('Hover over an element', 'nibwp'),
+        'description' => 'Hovers a real pointer over an element in the active workspace tab and reports which computed styles changed, plus whether anything appeared. Hover states cannot be read from the stylesheet — a :hover rule can come from anywhere in the cascade, and a menu that only exists on hover is not in the page until it does.',
+        'category' => 'visual',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'selector' => $target,
+                'settle' => ['type' => 'integer', 'description' => 'Milliseconds to wait for transitions before reading, 0-3000. Default 400.'],
+                'hold' => ['type' => 'boolean', 'description' => 'Leave the pointer on the element instead of moving off afterwards, so a follow-up visual-read sees the hovered state. Default false.'],
+            ],
+            'required' => ['selector'],
+        ],
+        'execute_callback' => static fn(array $input) => nibwp_visual_dispatch('hover', [
+            'selector' => (string) ($input['selector'] ?? ''),
+            'settle' => isset($input['settle']) ? max(0, min(3000, (int) $input['settle'])) : 400,
+            'hold' => !empty($input['hold']),
+        ]),
+        'permission_callback' => 'nibwp_permission_callback',
+        // Hovering changes nothing on the server and nothing the page persists,
+        // so it reads as safe — but it is not idempotent, because holding the
+        // pointer leaves the page in a different state than releasing it.
+        'meta' => ['mcp' => ['public' => true], 'annotations' => ['readonly' => true, 'destructive' => false, 'idempotent' => false]],
+    ]);
+
+    wp_register_ability('nibwp/visual-screenshot', [
+        'label' => __('Screenshot the page', 'nibwp'),
+        'description' => 'Captures the active workspace tab as a real PNG and returns its URL in the media library. Requires the headless runner: a browser tab cannot photograph itself, and rasterising the DOM in JavaScript re-renders rather than captures, so it is not what the browser drew. Check nibwp/visual-capabilities first.',
+        'category' => 'visual',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'selector' => ['type' => 'string', 'description' => 'Capture just this element instead of the viewport.'],
+                'full_page' => ['type' => 'boolean', 'description' => 'Capture the whole scrollable page rather than the viewport. Ignored when a selector is given.'],
+            ],
+        ],
+        // Capturing takes longer than the default: a full-page shot has to
+        // scroll and settle before the runner can hand back an image.
+        'execute_callback' => static fn(array $input) => nibwp_visual_dispatch('screenshot', [
+            'selector' => (string) ($input['selector'] ?? ''),
+            'full_page' => !empty($input['full_page']),
+        ], 60),
+        'permission_callback' => 'nibwp_permission_callback',
+        'meta' => ['mcp' => ['public' => true], 'annotations' => ['readonly' => true, 'destructive' => false, 'idempotent' => true]],
+    ]);
+
+    wp_register_ability('nibwp/visual-capabilities', [
+        'label' => __('What this workspace can do', 'nibwp'),
+        'description' => 'Reports whether a workspace is listening, what kind it is, and which of the visual abilities it can actually serve. Call this before planning visual work — screenshots need the headless runner, and finding that out from a failed capture halfway through a QA run is the expensive way to learn it.',
+        'category' => 'visual',
+        'input_schema' => ['type' => 'object', 'properties' => new \stdClass()],
+        'execute_callback' => 'nibwp_visual_report_capabilities',
+        'permission_callback' => 'nibwp_permission_callback',
+        'meta' => ['mcp' => ['public' => true], 'annotations' => ['readonly' => true, 'destructive' => false, 'idempotent' => true]],
+    ]);
+
     wp_register_ability('nibwp/visual-fill', [
-        'label' => __('Fill a form field', domain: 'nibwp'),
+        'label' => __('Fill a form field', 'nibwp'),
         'description' => 'Types a value into an input, textarea or select in the active workspace tab, firing the events a real keystroke would so scripts on the page react normally.',
         'category' => 'visual',
         'input_schema' => [
@@ -217,7 +310,7 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-viewport', [
-        'label' => __('Resize the viewport', domain: 'nibwp'),
+        'label' => __('Resize the viewport', 'nibwp'),
         'description' => 'Resizes the workspace viewport to a named breakpoint or an exact width, so the agent can check how a page behaves on phones and tablets without leaving the session.',
         'category' => 'visual',
         'input_schema' => [
@@ -236,15 +329,15 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-audit', [
-        'label' => __('Check the page for problems', domain: 'nibwp'),
-        'description' => 'Runs accessibility and layout checks against the live rendered page: colour contrast below the readable threshold, images with no alt text, form fields with no label, heading levels that skip, and anything overflowing the viewport horizontally. Reports what it found with selectors.',
+        'label' => __('Check the page for problems', 'nibwp'),
+        'description' => 'Runs accessibility and layout checks against the live rendered page: color contrast below the readable threshold, images with no alt text, form fields with no label, heading levels that skip, anything overflowing the viewport horizontally, and borders that are effectively invisible — a border whose colour, blended over what is behind it, stands out less than 1.5:1 from both the surface around the element and its own fill (for example a white-at-20% border token on a white page). Reports what it found with selectors; border findings also carry the border colour, the surface colour and the ratio. Run the borders check after building cards, inputs or dividers, because a border that does not show cannot be spotted from markup or text.',
         'category' => 'visual',
         'input_schema' => [
             'type' => 'object',
             'properties' => [
                 'checks' => [
                     'type' => 'array',
-                    'items' => ['type' => 'string', 'enum' => ['contrast', 'alt', 'labels', 'headings', 'overflow']],
+                    'items' => ['type' => 'string', 'enum' => ['contrast', 'alt', 'labels', 'headings', 'overflow', 'borders']],
                     'description' => 'Which checks to run. Defaults to all of them.',
                 ],
             ],
@@ -257,7 +350,7 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-console', [
-        'label' => __('Read errors from the page', domain: 'nibwp'),
+        'label' => __('Read errors from the page', 'nibwp'),
         'description' => 'Returns JavaScript errors, console warnings and failed network requests recorded in the active workspace tab since it loaded. Use this when something on the page did not behave as expected.',
         'category' => 'visual',
         'input_schema' => ['type' => 'object', 'properties' => new stdClass()],
@@ -272,7 +365,7 @@ function nibwp_visual_register_abilities(): void
     // same API the editor uses on itself. Nothing is loaded on anybody else's
     // editor screen to make this work.
     wp_register_ability('nibwp/visual-blocks', [
-        'label' => __('Read the blocks on the open page', domain: 'nibwp'),
+        'label' => __('Read the blocks on the open page', 'nibwp'),
         'description' => 'Lists the blocks in the block editor open in the workspace: name, clientId, attributes and a text preview, nested to the requested depth. The clientId is what the other block abilities accept. Needs a block editor screen open in the workspace.',
         'category' => 'visual',
         'input_schema' => [
@@ -293,7 +386,7 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-block-insert', [
-        'label' => __('Insert a block', domain: 'nibwp'),
+        'label' => __('Insert a block', 'nibwp'),
         'description' => 'Inserts a block into the editor open in the workspace. Give the block name (core/paragraph, core/heading, core/image and so on), its attributes, and optionally a parent clientId and a position among its siblings. Nested children can be given inline.',
         'category' => 'visual',
         'input_schema' => [
@@ -320,7 +413,7 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-block-update', [
-        'label' => __('Change a block', domain: 'nibwp'),
+        'label' => __('Change a block', 'nibwp'),
         'description' => 'Updates the attributes of one block in the editor open in the workspace, found by its clientId. Only the attributes given are changed.',
         'category' => 'visual',
         'input_schema' => [
@@ -340,7 +433,7 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-block-delete', [
-        'label' => __('Remove a block', domain: 'nibwp'),
+        'label' => __('Remove a block', 'nibwp'),
         'description' => 'Removes one block, and everything inside it, from the editor open in the workspace. Destructive: the block is gone once the post is saved.',
         'category' => 'visual',
         'input_schema' => [
@@ -356,7 +449,7 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-block-schema', [
-        'label' => __('What attributes does a block accept', domain: 'nibwp'),
+        'label' => __('What attributes does a block accept', 'nibwp'),
         'description' => 'Returns the attribute schema for a block type as the editor open in the workspace understands it, or lists every block registered on this site. Use it before inserting or changing a block rather than guessing attribute names.',
         'category' => 'visual',
         'input_schema' => [
@@ -375,7 +468,7 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-batch', [
-        'label' => __('Run several workspace steps at once', domain: 'nibwp'),
+        'label' => __('Run several workspace steps at once', 'nibwp'),
         'description' => 'Runs a sequence of workspace steps in one call: open a page, read it, click something, read it again. Each step is the name of a visual ability without the prefix (open, read, click, fill, viewport, audit, console, tabs) plus its arguments. The sequence stops at the first failure, because a later step usually assumes the earlier one worked. Use this instead of several separate calls when the steps are known in advance — it is one round trip rather than one per step.',
         'category' => 'visual',
         'input_schema' => [
@@ -387,7 +480,7 @@ function nibwp_visual_register_abilities(): void
                     'items' => [
                         'type' => 'object',
                         'properties' => [
-                            'command' => ['type' => 'string', 'enum' => ['open', 'read', 'click', 'fill', 'viewport', 'audit', 'console', 'tabs']],
+                            'command' => ['type' => 'string', 'enum' => ['open', 'read', 'click', 'hover', 'fill', 'viewport', 'audit', 'console', 'tabs']],
                             'payload' => ['type' => 'object', 'description' => 'Arguments for that step, same shape as the matching ability.'],
                         ],
                         'required' => ['command'],
@@ -404,7 +497,7 @@ function nibwp_visual_register_abilities(): void
     ]);
 
     wp_register_ability('nibwp/visual-tabs', [
-        'label' => __('List and switch workspace tabs', domain: 'nibwp'),
+        'label' => __('List and switch workspace tabs', 'nibwp'),
         'description' => 'Lists the tabs currently open in the workspace. Pass a tab id to focus it, or to close it, so the agent can work across several pages at once.',
         'category' => 'visual',
         'input_schema' => [

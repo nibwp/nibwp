@@ -431,6 +431,13 @@ function nibwp_skills_skill_cards(): array
             'skill_id'           => (string) $skill['id'],
             'name'               => (string) ($skill['name'] ?? $skill['id']),
             'tagline'            => (string) ($skill['tagline'] ?? ''),
+            // Plain English, and the field the agent is meant to reason from.
+            // `triggers` are a fast path, not the boundary: they are regular
+            // expressions, and a customer who asked for "a hero section with
+            // etch and acss" matched none of them, so the skill never loaded and
+            // the agent improvised a page with no classes and no styles. A model
+            // reading a sentence would have routed it correctly.
+            'use_when'           => (string) ($skill['use_when'] ?? $skill['tagline'] ?? ''),
             'triggers'           => array_values(array_filter((array) $skill['triggers'])),
             'commands'           => (array) ($skill['commands'] ?? []),
             'pipeline'           => array_values((array) ($routing['pipeline'] ?? [])),

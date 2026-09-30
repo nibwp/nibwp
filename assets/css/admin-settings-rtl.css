@@ -1,0 +1,174 @@
+/* rtl-source: c172deca7df4277f6d6e148735c7bb15b75d0080 */
+/* Generated from admin-settings.css by build/rtl.sh (rtlcss 4.3.0). Do not edit; change the source and re-run. */
+/* NIBWP — Settings styles. Extracted from inline \3c style>; enqueued via includes/admin-styles.php. */
+
+#nw-abilities-table tr.is-disabled td { opacity: 0.55; }
+            #nw-abilities-table tr.is-disabled td:nth-child(4) { opacity: 1; }
+            #nw-abilities-table tr.is-disabled code { text-decoration: line-through; text-decoration-color: var(--nw-text-muted-2); }
+
+.nibwp-settings-card {
+                    background: var(--nw-surface);
+                    border: 1px solid var(--nw-border);
+                    border-radius: var(--nw-radius, 8px);
+                    padding: 20px 24px;
+                    margin: 0 0 16px;
+                    color: var(--nw-text);
+                }
+                .nibwp-settings-card h3 {
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: var(--nw-text);
+                    margin: 0 0 16px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid var(--nw-border-2);
+                }
+                .nibwp-settings-row {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 16px;
+                    padding: 12px 0;
+                    border-bottom: 1px solid var(--nw-border-2);
+                }
+                .nibwp-settings-row:last-child {
+                    border-bottom: none;
+                    padding-bottom: 0;
+                }
+                .nibwp-settings-label {
+                    flex: 0 0 200px;
+                    font-weight: 600;
+                    color: var(--nw-text);
+                    padding-top: 4px;
+                }
+                .nibwp-settings-field {
+                    flex: 1;
+                    color: var(--nw-text-2);
+                }
+                .nibwp-settings-field .description {
+                    margin-top: 4px;
+                    color: var(--nw-text-muted);
+                    font-size: 13px;
+                }
+                .nibwp-settings-field input[type="number"],
+                .nibwp-settings-field input[type="text"],
+                .nibwp-settings-field textarea {
+                    padding: 6px 10px;
+                    background: var(--nw-surface-2);
+                    border: 1px solid var(--nw-border-strong);
+                    border-radius: 4px;
+                    color: var(--nw-text);
+                    font-size: 14px;
+                }
+                .nibwp-settings-field input[type="number"] {
+                    width: 100px;
+                }
+                .nibwp-settings-field textarea {
+                    width: 100%;
+                    max-width: 400px;
+                    min-height: 60px;
+                    font-family: monospace;
+                    /* One IP address per line. */
+                    direction: ltr;
+                    unicode-bidi: isolate;
+                    text-align: left;
+                    font-size: 13px;
+                }
+                .nibwp-tool-checklist {
+                    max-height: 300px;
+                    overflow-y: auto;
+                    border: 1px solid var(--nw-border);
+                    border-radius: 4px;
+                    padding: 8px 12px;
+                    background: var(--nw-surface-2);
+                }
+                .nibwp-tool-checklist label {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 4px 0;
+                    font-size: 13px;
+                    color: var(--nw-text);
+                    cursor: pointer;
+                }
+                .nibwp-tool-checklist label:hover {
+                    color: var(--nw-accent, #2271b1);
+                }
+                .nibwp-tool-checklist code {
+                    font-size: 12px;
+                    background: var(--nw-surface-3);
+                    color: var(--nw-text-2);
+                    padding: 1px 5px;
+                    border-radius: 3px;
+                }
+                .nibwp-settings-card #nibwp-disabled-tools-toggle {
+                    background: var(--nw-surface-2);
+                    border: 1px solid var(--nw-border-strong);
+                    color: var(--nw-text);
+                    border-radius: var(--nw-radius-sm, 6px);
+                    padding: 0px 12px;
+                    height: 32px;
+                    cursor: pointer;
+                    transition: background 0.12s, border-color 0.12s, color 0.12s;
+                }
+                .nibwp-settings-card #nibwp-disabled-tools-toggle:hover {
+                    background: var(--nw-surface-3);
+                    color: var(--nw-text);
+                    border-color: var(--nw-border-strong);
+                }
+                /* On/off switch — same size and colours as the Integrations
+                   toggle, but a real checkbox underneath, so it saves with the
+                   form and needs no script. */
+                .nibwp-settings-switch {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    position: relative;
+                }
+                .nibwp-settings-switch input {
+                    position: absolute;
+                    opacity: 0;
+                    width: 1px;
+                    height: 1px;
+                    margin: 0;
+                }
+                .nibwp-settings-switch__track {
+                    display: block;
+                    flex-shrink: 0;
+                    width: 44px;
+                    height: 24px;
+                    border-radius: 12px;
+                    background: #c3c4c7;
+                    position: relative;
+                    transition: background 0.2s;
+                }
+                .nibwp-settings-switch__thumb {
+                    display: block;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    background: #fff;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                    position: absolute;
+                    top: 3px;
+                    right: 3px;
+                    transition: right 0.2s;
+                }
+                .nibwp-settings-switch input:checked + .nibwp-settings-switch__track {
+                    background: #00a32a;
+                }
+                .nibwp-settings-switch input:checked + .nibwp-settings-switch__track .nibwp-settings-switch__thumb {
+                    right: 23px;
+                }
+                .nibwp-settings-switch input:focus-visible + .nibwp-settings-switch__track {
+                    outline: 2px solid #2271b1;
+                    outline-offset: 2px;
+                }
+                @media screen and (max-width: 782px) {
+                    .nibwp-settings-row {
+                        flex-direction: column;
+                        gap: 6px;
+                    }
+                    .nibwp-settings-label {
+                        flex: none;
+                    }
+                }

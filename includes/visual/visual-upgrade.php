@@ -103,7 +103,7 @@ function nibwp_visual_locked(): array
                         __('%s is installed here. This skill is what teaches the agent to build with it properly.', 'nibwp'),
                         $needs
                     )
-                    : (string) ($skill['tagline'] ?? ''),
+                    : nibwp_i18n_data((string) ($skill['tagline'] ?? '')),
                 'tier' => 'skill:' . $id,
                 'cta' => sprintf(
                     /* translators: %s: skill name */
@@ -113,7 +113,10 @@ function nibwp_visual_locked(): array
                 'url' => nibwp_visual_buy_url('skill:' . $id),
                 'icon' => (string) ($skill['icon'] ?? ''),
                 'price' => isset($skill['price']) ? '$' . (string) $skill['price'] : '',
-                'features' => array_slice(array_map('strval', (array) ($skill['features'] ?? [])), 0, 3),
+                'features' => array_map(
+                    static fn($f): string => nibwp_i18n_data((string) $f),
+                    array_slice((array) ($skill['features'] ?? []), 0, 3)
+                ),
                 'ready' => $ready,
             ];
         }
@@ -326,13 +329,13 @@ function nibwp_visual_current_plan(): array
         }
     }
 
-    // A licence for a single skill is neither Free nor Pro, and calling it
+    // A license for a single skill is neither Free nor Pro, and calling it
     // either would be wrong in a different direction each time.
     $label = function_exists('nibwp_license_plan_label') ? nibwp_license_plan_label() : '';
 
     return [
         'key' => $label !== '' ? $label : 'free',
-        'name' => $label === 'skill' ? __('Skill licence', 'nibwp') : __('Free', 'nibwp'),
+        'name' => $label === 'skill' ? __('Skill license', 'nibwp') : __('Free', 'nibwp'),
         'price' => '',
         'current' => true,
         'url' => '',
@@ -380,7 +383,7 @@ function nibwp_visual_render_upsell(): void
                             <?php if ($plan['current']): ?>
                                 <span class="nw-vs-plan__tag"><?php esc_html_e('You are here', 'nibwp'); ?></span>
                             <?php elseif ($plan['price'] !== ''): ?>
-                                <span class="nw-vs-plan__price"><?php echo esc_html($plan['price']); ?><small>/yr</small></span>
+                                <span class="nw-vs-plan__price"><?php echo esc_html($plan['price']); ?><small><?php echo esc_html_x('/yr', 'after a price: per year', 'nibwp'); ?></small></span>
                             <?php endif; ?>
                         </p>
                         <ul class="nw-vs-plan__list">

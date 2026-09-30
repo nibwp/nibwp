@@ -99,7 +99,7 @@ function nibwp_visual_menu(): void
 
     $hook = add_submenu_page(
         parent_slug: 'nibwp-dashboard',
-        page_title: __('Agent View', domain: 'nibwp'),
+        page_title: __('Agent View', 'nibwp'),
         menu_title: $label,
         capability: 'manage_options',
         menu_slug: 'nibwp-visual',
@@ -158,7 +158,7 @@ function nibwp_visual_render(): void
     __('Agent View — %s', 'nibwp'),
     get_bloginfo('name')
 )); ?></title>
-<link rel="stylesheet" href="<?php echo esc_url(NIBWP_PLUGIN_URL . 'assets/css/admin-visual.css?v=' . nibwp_visual_asset_version('assets/css/admin-visual.css')); ?>">
+<link rel="stylesheet" href="<?php echo esc_url((function_exists('nibwp_css_url') ? nibwp_css_url('admin-visual.css') : NIBWP_PLUGIN_URL . 'assets/css/admin-visual.css') . '?v=' . nibwp_visual_asset_version('assets/css/admin-visual.css')); ?>">
 <script>
 // Before the first paint, and before the stylesheet has anything to react to.
 // Reading this later means a dark workspace flashes white on every load, which
@@ -382,7 +382,21 @@ function nibwp_visual_render(): void
 </div>
 
 <script>window.nibwpVisual = <?php echo wp_json_encode($boot); ?>;</script>
-<script src="<?php echo esc_url(NIBWP_PLUGIN_URL . 'assets/js/visual-workspace.js?v=' . nibwp_visual_asset_version('assets/js/visual-workspace.js')); ?>"></script>
+<?php
+// Registered rather than written as a tag, so wp-i18n arrives first and the
+// script's strings arrive in the viewer's language. Printed through do_items()
+// and not wp_print_scripts(): that fires an action other plugins print into,
+// and this page has no head of theirs to put it in.
+wp_register_script(
+    'nibwp-visual-workspace',
+    NIBWP_PLUGIN_URL . 'assets/js/visual-workspace.js',
+    ['wp-i18n'],
+    nibwp_visual_asset_version('assets/js/visual-workspace.js'),
+    true
+);
+wp_set_script_translations('nibwp-visual-workspace', 'nibwp', NIBWP_PLUGIN_DIR . 'languages');
+wp_scripts()->do_items(['nibwp-visual-workspace']);
+?>
 </body>
 </html>
     <?php

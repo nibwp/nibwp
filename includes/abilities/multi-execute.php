@@ -35,7 +35,7 @@ function nibwp_multi_execute_register_ability(): void
     }
     wp_register_ability('nibwp/multi-execute', [
         'label'       => __('Multi-Execute (batch abilities)', 'nibwp'),
-        'description' => __('Run up to 25 NIBWP abilities in one round-trip. Each step is { ability, parameters }. Pass `continue_on_error: true` to keep going past failures. Use `{{prev.N.path.to.value}}` in any parameter string to reference earlier step output. Returns per-step results array.', 'nibwp'),
+        'description' => 'Run up to 25 NIBWP abilities in one round-trip. Each step is { ability, parameters }. Pass `continue_on_error: true` to keep going past failures. Use `{{prev.N.path.to.value}}` in any parameter string to reference earlier step output. Returns per-step results array.',
         'category'    => 'nibwp',
         'input_schema' => [
             'type' => 'object',

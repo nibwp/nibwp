@@ -40,7 +40,7 @@ function nibwp_oauth_scopes(): array
             'danger' => false,
         ],
         'mcp:manage' => [
-            'label' => __('Delete and reorganise', 'nibwp'),
+            'label' => __('Delete and reorganize', 'nibwp'),
             'description' => __('Delete posts, pages, users and media, and run bulk changes. Deletions are not reversible from here.', 'nibwp'),
             'danger' => true,
         ],
@@ -71,7 +71,7 @@ function nibwp_oauth_default_scopes(): array
 }
 
 /**
- * Keep only recognised scopes, in catalogue order.
+ * Keep only recognized scopes, in catalogue order.
  *
  * @param array<int, string>|string $requested
  * @return array<int, string>

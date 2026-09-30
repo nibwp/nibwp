@@ -32,7 +32,7 @@ function nibwp_load_integration_playbook_register(): void
     if (! nibwp_has_ability('nibwp/load-integration-playbook')) {
         wp_register_ability('nibwp/load-integration-playbook', [
             'label'       => __('Load integration playbook on demand', 'nibwp'),
-            'description' => __('Read the curated playbook for an integration (forms, acf, etchwp, automaticcss, elementor, bricks, fluentcrm, fluentcart, fluentaffiliate, directorist, seo, …). Returns: available abilities, common actions, preferred parameter shapes, and aggregated thumb-down lessons-learned for this site. Call BEFORE invoking unfamiliar integration abilities.', 'nibwp'),
+            'description' => 'Read the curated playbook for an integration (forms, acf, etchwp, automaticcss, elementor, bricks, fluentcrm, fluentcart, fluentaffiliate, directorist, seo, …). Returns: available abilities, common actions, preferred parameter shapes, and aggregated thumb-down lessons-learned for this site. Call BEFORE invoking unfamiliar integration abilities.',
             'category'    => 'nibwp',
             'input_schema' => [
                 'type' => 'object',
@@ -63,7 +63,7 @@ function nibwp_load_integration_playbook_register(): void
     if (! nibwp_has_ability('nibwp/integration-feedback')) {
         wp_register_ability('nibwp/integration-feedback', [
             'label'       => __('Integration — Record feedback', 'nibwp'),
-            'description' => __('Record 👍 / 👎 on the most recent integration operation. Thumb-down reasons feed into the next load-integration-playbook call so future runs learn from prior misses.', 'nibwp'),
+            'description' => 'Record 👍 / 👎 on the most recent integration operation. Thumb-down reasons feed into the next load-integration-playbook call so future runs learn from prior misses.',
             'category'    => 'nibwp',
             'input_schema' => [
                 'type' => 'object',

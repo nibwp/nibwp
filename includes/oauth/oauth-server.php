@@ -199,27 +199,89 @@ function nibwp_oauth_authorization_server_metadata(): WP_REST_Response
  * Registrations nobody ever signed in with are swept first, which is what keeps
  * the total from being reached by abandoned attempts rather than real clients.
  */
-function nibwp_oauth_registration_within_limits(): bool
+/**
+ * The bucket a registration attempt counts against.
+ *
+ * REMOTE_ADDR alone was the whole key, and behind Cloudflare or any reverse
+ * proxy REMOTE_ADDR is the proxy — so every AI client registering through it
+ * shared one 20-per-hour bucket, and the twenty-first person on the site that
+ * hour got an unexplained refusal inside their own AI client. That is the
+ * customer-reported "could not register with the sign-in service".
+ *
+ * The claimed client IP (CF-Connecting-IP, or the last X-Forwarded-For hop —
+ * the one appended by the nearest proxy, hardest for the origin caller to
+ * choose) is CONCATENATED onto REMOTE_ADDR, never substituted for it. That is
+ * the entire spoofing analysis: a forged claim can only subdivide the
+ * forger's own transport bucket, it can never land in anyone else's. The
+ * house rule (agent-guardrails.php) that forwarded headers must not identify
+ * a caller still holds — here they only partition one.
+ */
+function nibwp_oauth_registration_bucket(): string
+{
+    $transport = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+
+    $claimed = '';
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        $claimed = trim((string) $_SERVER['HTTP_CF_CONNECTING_IP']);
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $hops = explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $claimed = trim((string) end($hops));
+    }
+
+    // A claim that is not a public IP partitions nothing — collapse to the
+    // plain transport bucket rather than letting garbage mint fresh buckets.
+    if ($claimed !== '' && !filter_var($claimed, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+        $claimed = '';
+    }
+
+    return $claimed === '' ? $transport : $transport . '|' . $claimed;
+}
+
+/**
+ * @return 'ok'|'window'|'cap' Why a registration may or may not proceed.
+ */
+function nibwp_oauth_registration_within_limits(): string
 {
     nibwp_oauth_prune_unused_clients();
 
     $max_clients = (int) apply_filters('nibwp_oauth_max_clients', 200);
     if (count(nibwp_oauth_clients()) >= $max_clients) {
-        return false;
+        // Under cap pressure, unconsented hour-old registrations lose their
+        // seat. DCR's contract is that an unused client may simply register
+        // again, so an hour of patience is all it is owed — while the 24-hour
+        // sweep alone let a flood of junk registrations lock every legitimate
+        // client out for a day.
+        nibwp_oauth_prune_unused_clients(HOUR_IN_SECONDS);
+        if (count(nibwp_oauth_clients()) >= $max_clients) {
+            return 'cap';
+        }
     }
 
-    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
-    $key = 'nibwp_oauth_reg_' . md5($ip);
+    $bucket = nibwp_oauth_registration_bucket();
+    $key = 'nibwp_oauth_reg_' . md5($bucket);
     $count = (int) get_transient($key);
     $per_window = (int) apply_filters('nibwp_oauth_registrations_per_hour', 20);
 
     if ($count >= $per_window) {
-        return false;
+        return 'window';
+    }
+
+    // The coarser ceiling on the transport address alone is what makes the
+    // per-bucket limit unspoofable in aggregate: without it, rotating claimed
+    // IPs would mint unlimited fresh buckets from a single connection.
+    $transport = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    $transport_key = 'nibwp_oauth_regt_' . md5($transport);
+    $transport_count = (int) get_transient($transport_key);
+    $per_transport = (int) apply_filters('nibwp_oauth_registrations_per_hour_per_transport', 60);
+
+    if ($transport_count >= $per_transport) {
+        return 'window';
     }
 
     set_transient($key, $count + 1, HOUR_IN_SECONDS);
+    set_transient($transport_key, $transport_count + 1, HOUR_IN_SECONDS);
 
-    return true;
+    return 'ok';
 }
 
 /**
@@ -229,7 +291,7 @@ function nibwp_oauth_registration_within_limits(): bool
  * ago and never carried through is either an abandoned attempt or noise, and
  * either way it should not occupy a slot forever.
  */
-function nibwp_oauth_prune_unused_clients(): void
+function nibwp_oauth_prune_unused_clients(int $max_age = DAY_IN_SECONDS): void
 {
     $clients = nibwp_oauth_clients();
     if ($clients === []) {
@@ -241,17 +303,52 @@ function nibwp_oauth_prune_unused_clients(): void
         $granted[$id] = true;
     }
 
-    $cutoff = time() - DAY_IN_SECONDS;
+    $now = time();
+    $cutoff = $now - $max_age;
     $keep = [];
+    $dated = false;
     foreach ($clients as $id => $client) {
-        $created = (int) ($client['created'] ?? 0);
-        $manual = !empty($client['manual']);
-        if ($manual || isset($granted[$id]) || $created === 0 || $created > $cutoff) {
+        // A record made by hand is waiting to be pasted into an AI client, and
+        // one that holds a token is in use by somebody. Neither is an abandoned
+        // attempt, whatever its age, so neither is ever swept.
+        if (!empty($client['manual']) || isset($granted[$id])) {
+            $keep[$id] = $client;
+            continue;
+        }
+
+        // Two spellings of one fact: the manual form writes `created`, dynamic
+        // registration writes `registered`. Reading only `created` dated every
+        // dynamic registration to zero — and zero was then treated as "keep
+        // forever". The one kind of record an anonymous caller can create was
+        // the one kind this sweep never removed, so a patient or distributed
+        // caller could fill the 200-client cap with registrations nobody had
+        // consented to and every legitimate AI client was refused with 429 from
+        // then on, permanently. Reading both keys is what lets the cap recover.
+        $age_from = (int) ($client['created'] ?? 0);
+        if ($age_from === 0) {
+            $age_from = (int) ($client['registered'] ?? 0);
+        }
+
+        if ($age_from === 0) {
+            // Undatable, so there is no age to compare against the cutoff.
+            // Stamping it on first sight rather than keeping it forever is the
+            // difference between a record that ages out one window late and one
+            // that holds a seat against the cap until an administrator notices
+            // and deletes it by hand. Deleting it outright is the wrong call in
+            // the other direction: a record we cannot date is not evidence of
+            // abuse, and it may be a connection somebody is mid-way through.
+            $client['registered'] = $now;
+            $keep[$id] = $client;
+            $dated = true;
+            continue;
+        }
+
+        if ($age_from > $cutoff) {
             $keep[$id] = $client;
         }
     }
 
-    if (count($keep) !== count($clients)) {
+    if ($dated || count($keep) !== count($clients)) {
         update_option(NIBWP_OAUTH_CLIENTS_OPTION, $keep, false);
     }
 }
@@ -295,12 +392,21 @@ function nibwp_oauth_register_client(WP_REST_Request $request)
     // Registration has to answer unauthenticated callers — that is the point of
     // it — which makes it the one endpoint anyone on the internet can write to.
     // Unmetered, it grows an option row without limit.
-    if (!nibwp_oauth_registration_within_limits()) {
-        return nibwp_oauth_error(
+    $limit = nibwp_oauth_registration_within_limits();
+    if ($limit !== 'ok') {
+        // Retry-After turns an opaque refusal into one the AI client can
+        // schedule around, and the two causes get their own sentence because
+        // only one of them is something the site owner can act on.
+        $response = nibwp_oauth_error(
             'temporarily_unavailable',
-            'Too many registration attempts. Try again shortly.',
+            $limit === 'cap'
+                ? 'This site has reached its connected-client limit. A site administrator can remove unused clients under NibWP - Connect - Manage connections.'
+                : 'This site has received too many client registrations from your network in the past hour. Wait a while and try again.',
             429
         );
+        $response->header('Retry-After', '3600');
+
+        return $response;
     }
 
     $body = $request->get_json_params();
@@ -629,6 +735,14 @@ add_filter('query_vars', static function (array $vars): array {
  * insert form only reaches WordPress when it owns the domain root — so a
  * subdirectory install that served the insert form alone would be undiscoverable.
  *
+ * The resource document has a form that carries the resource path, and that one
+ * belongs to this server alone. The bare form does not: there is one of it per
+ * site, and whichever plugin answers first owns it for every other plugin
+ * installed. Reported from the field — a second OAuth-enabled MCP server on the
+ * same install was undiscoverable because we answered its clients with our
+ * document. So the bare form is claimed only where it is the sole form that
+ * reaches WordPress, and is filterable for installs that want it back.
+ *
  * @return array{resource: list<string>, server: list<string>}
  */
 function nibwp_oauth_discovery_paths(): array
@@ -636,11 +750,25 @@ function nibwp_oauth_discovery_paths(): array
     $home = rtrim((string) wp_parse_url(home_url(), PHP_URL_PATH), '/');
     $resource = (string) wp_parse_url(nibwp_oauth_resource_id(), PHP_URL_PATH);
 
+    // Degenerate under plain permalinks: the REST route lives in a query string,
+    // so there is no path to carry and the scoped form collapses onto the bare
+    // one. Under a subdirectory install the scoped form lands on the domain
+    // root, which WordPress does not own. Either way the bare form is then the
+    // only address a client can reach, and refusing to serve it would trade one
+    // site's conflict for another site's broken sign-in.
+    $bare = '/.well-known/oauth-protected-resource';
+    $scoped = rtrim($bare . $resource, '/');
+
+    $resource_paths = [];
+    if ($scoped !== $bare) {
+        $resource_paths[] = $scoped;
+    }
+    if ((bool) apply_filters('nibwp_oauth_serve_bare_wellknown', $resource_paths === [] || $home !== '')) {
+        $resource_paths[] = $home . $bare;
+    }
+
     return [
-        'resource' => array_values(array_unique([
-            $home . '/.well-known/oauth-protected-resource',
-            '/.well-known/oauth-protected-resource' . $resource,
-        ])),
+        'resource' => array_values(array_unique($resource_paths)),
         'server' => array_values(array_unique([
             // OIDC's append form works under a subdirectory, which is why it is
             // first: it is the one shape that never needs the domain root.
@@ -664,8 +792,8 @@ function nibwp_oauth_discovery_paths(): array
  * `required` — the URL named in the challenge header. Nothing works without it.
  * `any`      — the authorization-server document has interchangeable forms; one
  *              answering is a pass, so a blocked form is not a failure.
- * `optional` — informational. The insert form lands on the domain root, which a
- *              subdirectory install does not own.
+ * `optional` — informational. Anything past the first resource form is a
+ *              fallback we may not even be serving, so a miss is not a failure.
  *
  * @return list<array{url: string, field: string, expected: string, requirement: string, label: string}>
  */
@@ -680,12 +808,18 @@ function nibwp_oauth_discovery_probes(): array
     $resource = nibwp_oauth_resource_id();
     $issuer = nibwp_oauth_issuer();
 
-    $probes = [
-        [$paths['resource'][0], 'resource', $resource, 'required', __('Endpoint metadata', 'nibwp')],
-    ];
-
-    if (isset($paths['resource'][1])) {
-        $probes[] = [$paths['resource'][1], 'resource', $resource, 'optional', __('Endpoint metadata (root form)', 'nibwp')];
+    // The first form is the one the challenge header names, so it is the one
+    // that has to answer. A filter can leave this list empty; that is a choice
+    // to rely on the REST metadata alone, not a fault to report.
+    $probes = [];
+    foreach ($paths['resource'] as $i => $path) {
+        $probes[] = [
+            $path,
+            'resource',
+            $resource,
+            $i === 0 ? 'required' : 'optional',
+            $i === 0 ? __('Endpoint metadata', 'nibwp') : __('Endpoint metadata (root form)', 'nibwp'),
+        ];
     }
 
     $labels = [
@@ -696,6 +830,20 @@ function nibwp_oauth_discovery_probes(): array
     ];
     foreach ($paths['server'] as $i => $path) {
         $probes[] = [$path, 'issuer', $issuer, 'any', $labels[$i] ?? __('Sign-in metadata', 'nibwp')];
+    }
+
+    // The client-derived shapes the matcher now answers beyond the canonical
+    // list — some clients suffix the server document with the resource path.
+    // Optional: their absence breaks nothing, their presence is worth showing.
+    $resource_path = rtrim((string) wp_parse_url($resource, PHP_URL_PATH), '/');
+    if ($resource_path !== '') {
+        $probes[] = [
+            '/.well-known/oauth-authorization-server' . $resource_path,
+            'issuer',
+            $issuer,
+            'optional',
+            __('Sign-in metadata (resource-suffixed form)', 'nibwp'),
+        ];
     }
 
     $out = [];
@@ -728,6 +876,71 @@ function nibwp_oauth_discovery_probes(): array
  * did not work. Matching the request path on `init` has none of those failure
  * modes.
  */
+/**
+ * Which discovery document a well-known path is asking for, if any.
+ *
+ * The old exact-path list answered only the variants the RFCs strictly
+ * require, and real clients ask for more: ChatGPT and Claude derive extra
+ * shapes — the authorization-server document suffixed with the resource path,
+ * the bare protected-resource form — and every unanswered shape fell through
+ * to the theme's 404 page, which on some hosts is slow enough that the client
+ * gives up before trying the next shape. Reproduced live on two production
+ * installs.
+ *
+ * So: any recognisable variant of the SERVER document is answered, because
+ * that document has one owner per issuer and answering it can take nothing
+ * from anyone. The RESOURCE document is different — the bare form is shared
+ * ground. A second OAuth-enabled MCP plugin on the same site publishes its own
+ * resource document, and a field bug taught us what happens when we answer for
+ * it. Its suffixed forms are answered only for OUR resource path; every other
+ * suffix falls through to whoever owns it, and the bare form stays delegated
+ * to nibwp_oauth_discovery_paths(), the one place that owns that decision.
+ *
+ * @return 'resource'|'server'|null
+ */
+function nibwp_oauth_match_discovery_path(string $path): ?string
+{
+    $marker = '/.well-known/';
+    $at = strpos($path, $marker);
+    if ($at === false) {
+        return null;
+    }
+
+    $prefix = rtrim(substr($path, 0, $at), '/');
+    $rest = substr($path, $at + strlen($marker));
+
+    $home = rtrim((string) wp_parse_url(home_url(), PHP_URL_PATH), '/');
+    if ($prefix !== '' && $prefix !== $home) {
+        return null;
+    }
+
+    $resource = rtrim((string) wp_parse_url(nibwp_oauth_resource_id(), PHP_URL_PATH), '/');
+
+    foreach (['oauth-authorization-server', 'openid-configuration'] as $doc) {
+        if ($rest !== $doc && !str_starts_with($rest, $doc . '/')) {
+            continue;
+        }
+        $suffix = rtrim(substr($rest, strlen($doc)), '/');
+        if (in_array($suffix, ['', $home, $resource], true)) {
+            return 'server';
+        }
+
+        return null;
+    }
+
+    if ($rest === 'oauth-protected-resource' || str_starts_with($rest, 'oauth-protected-resource/')) {
+        $suffix = rtrim(substr($rest, strlen('oauth-protected-resource')), '/');
+        if ($suffix !== '' && $suffix === $resource) {
+            return 'resource';
+        }
+        if ($suffix === '' && in_array($path, nibwp_oauth_discovery_paths()['resource'], true)) {
+            return 'resource';
+        }
+    }
+
+    return null;
+}
+
 add_action('init', 'nibwp_oauth_serve_discovery', 1);
 
 function nibwp_oauth_serve_discovery(): void
@@ -742,16 +955,32 @@ function nibwp_oauth_serve_discovery(): void
         return;
     }
 
-    $paths = nibwp_oauth_discovery_paths();
-    $which = null;
-    if (in_array($path, $paths['resource'], true)) {
-        $which = 'resource';
-    } elseif (in_array($path, $paths['server'], true)) {
-        $which = 'server';
+    // Follow the master switch, like the endpoint itself does. With abilities
+    // off there is no `mcp/nibwp` route to describe, and these paths are shared
+    // with every other plugin on the site — answering on them while serving
+    // nothing is how a switched-off NibWP still took discovery away from a
+    // second OAuth server.
+    if (function_exists('nibwp_is_enabled') && !nibwp_is_enabled()) {
+        return;
     }
 
+    $which = nibwp_oauth_match_discovery_path($path);
     if ($which === null) {
         return;
+    }
+
+    // Browsers preflight cross-origin fetches of these documents. The old
+    // handler answered OPTIONS with the JSON body and no method headers, which
+    // reads as a failed preflight and a blocked fetch.
+    if (strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET')) === 'OPTIONS') {
+        if (!headers_sent()) {
+            status_header(204);
+            header('Access-Control-Allow-Origin: *');
+            header('Access-Control-Allow-Methods: GET, OPTIONS');
+            header('Access-Control-Allow-Headers: Authorization, Content-Type, MCP-Protocol-Version');
+            header('Access-Control-Max-Age: 3600');
+        }
+        exit;
     }
 
     $data = $which === 'resource'
@@ -761,6 +990,8 @@ function nibwp_oauth_serve_discovery(): void
     if (!headers_sent()) {
         header('Content-Type: application/json; charset=utf-8');
         header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, OPTIONS');
+        header('Access-Control-Allow-Headers: Authorization, Content-Type, MCP-Protocol-Version');
         header('Cache-Control: public, max-age=3600');
     }
     echo wp_json_encode($data);
@@ -774,8 +1005,18 @@ function nibwp_oauth_serve_discovery(): void
  * template and must not wait for a theme to load, and an unauthenticated visitor
  * has to hit auth_redirect() before WordPress decides this is a 404.
  */
-add_action('parse_request', static function ($wp): void {
-    if (empty($wp->query_vars['nibwp_oauth_authorize'])) {
+add_action('parse_request', 'nibwp_oauth_maybe_serve_authorize');
+
+function nibwp_oauth_maybe_serve_authorize($wp): void
+{
+    // The query var only exists when the rewrite rule matched, and rewrite
+    // rules go stale: a failed flush, a migrated database, a host that
+    // regenerates permalinks without our rule. The advertised URL then 404s
+    // with nothing anywhere saying why. $wp->request is the raw path from
+    // REQUEST_URI, set before any rule runs — matching it directly makes the
+    // sign-in URL independent of rewrite state altogether.
+    if (empty($wp->query_vars['nibwp_oauth_authorize'])
+        && trim((string) ($wp->request ?? ''), '/') !== 'nibwp-oauth/authorize') {
         return;
     }
 
@@ -786,7 +1027,7 @@ add_action('parse_request', static function ($wp): void {
 
     nibwp_oauth_handle_authorize();
     exit;
-});
+}
 
 /**
  * Flush rewrites once, when the rules change.

@@ -293,9 +293,29 @@ body.nw-dark .nw-logo-icon img {
 .nw-rating-stars a:hover { transform: scale(1.15); }
 html.nw-dark .nw-rating-stars a, body.nw-dark .nw-rating-stars a { color: #3a404d; }
 
+/* Sits beside the logo, not at the foot of the sidebar: the version belongs
+   with the thing it is the version OF, and it is the first answer anyone needs
+   when reporting a problem. Centred against the logo rather than baseline-
+   aligned: the logo is an image, whose baseline is its bottom edge, which
+   would drop the version to the foot of a 48px mark instead of beside it. */
+.nw-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 .nw-sidebar__version {
-    text-align: right; font-size: 10.5px; color: var(--nw-text-muted-2);
-    margin-top: 8px; padding-right: 4px;
+    font-size: 10.5px;
+    line-height: 1;
+    /* Both tokens are redefined under the dark theme, so the tag follows it
+       without a second rule here. */
+    color: var(--nw-brand);
+    background: var(--nw-brand-soft);
+    border-radius: 999px;
+    padding: 3px 7px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
 /* ── Main Area ── */
@@ -304,7 +324,10 @@ html.nw-dark .nw-rating-stars a, body.nw-dark .nw-rating-stars a { color: #3a404
     flex-direction: column;
     min-width: 0;       /* critical: allows grid child to shrink below content size */
     max-width: 100%;    /* never exceed grid column */
-    overflow: hidden;   /* contain children */
+    /* clip, not hidden: both contain children identically, but `hidden` makes
+       this a scroll container that never scrolls — and a scroll container that
+       cannot scroll silently kills position:sticky for everything inside it. */
+    overflow: clip;
 }
 
 .nw-main a:focus {
@@ -415,7 +438,7 @@ body.nw-onb-locked { overflow: hidden; }
 }
 .nw-onboarder__panel {
     position: relative; z-index: 1;
-    width: 100%; max-width: 560px;
+    width: 100%; max-width: 720px;
     background: var(--nw-surface);
     border: 1px solid var(--nw-border);
     border-radius: var(--nw-radius-lg, 14px);
@@ -569,7 +592,7 @@ body.nw-dark .nw-onb-client-select, html.nw-dark .nw-onb-client-select {
     margin: 0; padding: 12px 14px;
     font-family: var(--nw-mono, monospace); font-size: 12px; line-height: 1.5;
     color: var(--nw-text); background: transparent;
-    max-height: 260px; overflow: auto; text-align: left;
+    max-height: 260px; overflow: auto; /*rtl:ignore*/ text-align: left;
     white-space: pre-wrap; word-break: break-word;
 }
 /* Step 3 — plain-English how-to */
@@ -1545,6 +1568,58 @@ body[class*="nibwp_page_"] #wpbody-content > .wrap {
     left: 20px;
 }
 
+/* Pending state.
+   The thumb becomes a spinner and sits CENTRED rather than at either end —
+   parking it left or right would assert a result the server has not confirmed
+   yet, and on a slow save that reads as the toggle having flipped back. */
+.nibwp-toggle-btn.is-pending {
+    cursor: wait;
+}
+.nibwp-toggle-btn.is-pending .nibwp-toggle-track {
+    opacity: 0.75;
+}
+.nibwp-toggle-btn.is-pending .nibwp-toggle-thumb {
+    left: 11px;
+    box-sizing: border-box;
+    background: transparent;
+    box-shadow: none;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top-color: #fff;
+    animation: nibwp-toggle-spin 0.6s linear infinite;
+}
+.nibwp-toggle-btn.is-pending.is-off .nibwp-toggle-thumb {
+    border-color: rgba(0, 0, 0, 0.18);
+    border-top-color: var(--nw-brand);
+}
+@keyframes nibwp-toggle-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* A short confirmation pulse, so a fast save still registers as an event
+   rather than the control appearing not to have responded at all. */
+.nibwp-toggle-btn.just-changed .nibwp-toggle-track {
+    box-shadow: 0 0 0 3px var(--nw-brand-soft);
+    transition: box-shadow 0.5s;
+}
+
+.nibwp-toggle-error {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--nw-danger, #b32d2e);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nibwp-toggle-btn.is-pending .nibwp-toggle-thumb {
+        animation: none;
+        opacity: 0.55;
+    }
+    .nibwp-toggle-btn.just-changed .nibwp-toggle-track {
+        transition: none;
+    }
+}
+
 /* ══════════════════════════════════════════════
    Integration Grid
    ══════════════════════════════════════════════ */
@@ -2046,27 +2121,34 @@ html.nw-dark .nibwp-production-warning__icon { color: #e4b048; }
     border-top: 1px solid var(--nw-border);
     padding-top: 16px;
 }
+/* The way in to the password table wears .nibwp-btn-ghost — the same class as
+   "Show full text" and the other secondary buttons — so it gets that fill,
+   height, radius and hover for free and cannot drift from them. Only what a
+   <summary> needs on top of a button is here. */
 .nibwp-manage-passwords-summary {
-    font-weight: 600;
-    cursor: pointer;
+    width: fit-content;
     list-style: none;
-    color: var(--nw-text);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-    font-size: 13px;
 }
+
+/* Both markers, or the browser draws its own triangle beside our chevron. */
+.nibwp-manage-passwords-summary::marker { content: ''; }
 .nibwp-manage-passwords-summary::-webkit-details-marker { display: none; }
+
 .nibwp-manage-passwords-summary::before {
-    content: '\25B8';
-    color: var(--nw-text-muted);
-    transition: transform 0.15s;
-    font-size: 11px;
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform .15s ease;
 }
+
 .nibwp-manage-passwords[open] .nibwp-manage-passwords-summary::before {
-    transform: rotate(90deg);
+    transform: rotate(45deg);
 }
+/* Room under the button, whether or not the table below it is showing. */
+.nibwp-manage-passwords { margin-bottom: 16px; }
 .nibwp-manage-passwords-body { padding-top: 12px; }
 .nibwp-revoke-btn {
     color: var(--nw-danger) !important;
@@ -2628,13 +2710,14 @@ html.nw-dark .nibwp-production-warning__icon { color: #e4b048; }
     color: var(--nw-text-muted-2);
     flex-shrink: 0;
     opacity: 0;
-    transform: translateX(-4px);
+    /* An onward arrow faces the reading direction. */
+    transform: translateX(-4px) /*rtl:translateX(4px) scaleX(-1)*/;
     transition: opacity 0.15s, transform 0.15s;
 }
 .nw-help-topic:hover .nw-help-topic__arrow,
 .nw-help-action:hover .nw-help-topic__arrow {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(0) /*rtl:translateX(0) scaleX(-1)*/;
     color: var(--nw-brand);
 }
 
@@ -3963,3 +4046,1080 @@ html.nw-dark .nw-confirm__head.is-warn .nw-confirm__icon {
 @media (prefers-reduced-motion: reduce) {
     .nibwp-nav-spark { animation: none; }
 }
+
+/* ── Shared card ──────────────────────────────────────────────────────────
+   Was defined in admin-dashboard.css, which only loads on the Dashboard.
+   Lives here so every NIBWP page draws the same card from one definition
+   rather than each page inventing its own panel. */
+
+.nibwp-dash-card {
+    background: var(--nw-surface);
+    border: 1px solid var(--nw-border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 0 0 20px;
+    color: var(--nw-text);
+}
+
+.nibwp-dash-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--nw-text);
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nibwp-dash-card-title svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    color: var(--nw-text-muted);
+}
+
+/* ── Affiliate programme page ─────────────────────────────────────────── */
+
+.nw-aff {
+    /* Fills the panel like every other NIBWP page — no narrower measure of
+       its own. Long prose inside still gets a max-width per block. */
+    width: 100%;
+    padding-bottom: 8px;
+}
+
+/* Hero — the pitch and the form, side by side. */
+
+.nw-aff__hero {
+    position: relative;
+    display: grid;
+    /* The form is capped rather than proportional — on a wide screen a
+       fraction of the panel turns a signup card into a billboard. */
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+    gap: 20px;
+    align-items: start;
+}
+
+.nw-aff__col {
+    min-width: 0;
+}
+
+/* The signup card follows the whole page down, the way the Dashboard sidebar
+   does. align-self:start is what makes it possible — a stretched grid item
+   is already as tall as the column and has nowhere to travel. */
+.nw-aff__aside {
+    position: sticky;
+    top: 32px;
+    align-self: start;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+/* The pitch is a card in its own right, sitting beside the form card rather
+   than sharing one panel with it. */
+.nw-aff__hero-copy {
+    margin: 0 0 20px;
+    padding: 32px;
+}
+
+.nw-aff__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 5px 12px 5px 10px;
+    border: 1px solid var(--nw-border-strong);
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-surface);
+    font-size: var(--text-xs, 11px);
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--nw-text-2);
+}
+
+.nw-aff__pip {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--nw-ok);
+    box-shadow: 0 0 0 3px var(--nw-ok-soft);
+}
+
+.nw-aff__title {
+    margin: 0 0 14px;
+    max-width: 20ch;
+    font-size: var(--text-xxl, 38px);
+    line-height: 1.08;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--nw-text);
+}
+
+.nw-aff__sub {
+    margin: 0 0 14px;
+    font-size: var(--text-m, 15px);
+    line-height: 1.65;
+    color: var(--nw-text-2);
+}
+
+/* The second paragraph carries the argument, so it steps back a size and
+   closes the run before the numbers. */
+.nw-aff__sub--tight {
+    margin-bottom: 26px;
+    font-size: var(--text-s, 14px);
+    color: var(--nw-text-muted);
+}
+
+.nw-aff__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.nw-aff__stats li {
+    flex: 1 1 140px;
+    padding: 14px 16px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    /* Tinted, not white: these sit inside a white hero and would otherwise
+       read as one flat slab held together by hairlines. */
+    background: var(--nw-surface-1);
+}
+
+.nw-aff__stats strong {
+    display: block;
+    margin-bottom: 2px;
+    font-size: var(--text-l, 19px);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--nw-text);
+}
+
+.nw-aff__stats span {
+    font-size: var(--text-xs, 11px);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--nw-text-muted-2);
+}
+
+.nw-aff__payout {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 24px;
+    font-size: var(--text-s, 13px);
+    color: var(--nw-text-muted);
+}
+
+.nw-aff__payout svg {
+    flex: 0 0 auto;
+    color: var(--nw-ok);
+}
+
+/* Estimator */
+
+.nw-aff__calc {
+    margin: 0;
+    /* Tinted, not white: it sits inside a white card and needs to read as its
+       own block rather than as more of the same panel. */
+    background: var(--nw-surface-1);
+}
+
+.nw-aff__calc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.nw-aff__calc-head label {
+    font-size: var(--text-xs, 12px);
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--nw-text-muted);
+}
+
+.nw-aff__calc-count {
+    min-width: 44px;
+    padding: 3px 10px;
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-brand-soft);
+    font-size: var(--text-s, 13px);
+    font-weight: 700;
+    text-align: center;
+    color: var(--nw-brand);
+}
+
+.nw-aff__range {
+    /* Brand orange, not the blue used everywhere else on the page: this is the
+       one control the reader is meant to grab, and it should not read as more
+       chrome. */
+    --nw-aff-fill: 10%;
+    --nw-aff-track: var(--nw-accent, #ff904d);
+    width: 100%;
+    height: 6px;
+    margin: 0 0 18px;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: var(--nw-radius-full);
+    background: linear-gradient(
+        to right,
+        var(--nw-aff-track) 0%,
+        var(--nw-aff-track) var(--nw-aff-fill),
+        var(--nw-border-strong) var(--nw-aff-fill),
+        var(--nw-border-strong) 100%
+    );
+    cursor: pointer;
+}
+
+.nw-aff__range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 3px solid var(--nw-surface);
+    border-radius: 50%;
+    background: var(--nw-aff-track);
+    box-shadow: 0 1px 6px -1px rgba(255, 144, 77, .7);
+}
+
+.nw-aff__range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--nw-surface);
+    border-radius: 50%;
+    background: var(--nw-aff-track);
+}
+
+.nw-aff__range:focus-visible {
+    outline: 2px solid var(--nw-aff-track);
+    outline-offset: 4px;
+}
+
+.nw-aff__calc-count {
+    color: var(--nw-accent, #ff904d);
+    background: rgba(255, 144, 77, .12);
+}
+.nw-aff__calc-out {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.nw-aff__calc-out strong {
+    display: block;
+    font-size: var(--text-xl, 26px);
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.1;
+    color: var(--nw-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.nw-aff__calc-out span {
+    font-size: var(--text-xs, 12px);
+    color: var(--nw-text-muted);
+}
+
+.nw-aff__calc-note {
+    margin: 14px 0 0;
+    font-size: var(--text-xs, 11px);
+    line-height: 1.5;
+    color: var(--nw-text-muted-2);
+}
+
+/* Form card */
+
+.nw-aff__form {
+    margin: 0;
+    /* The one card on the page allowed to sit above the others — it is the
+       thing the page is for. */
+    border-color: var(--nw-border-strong);
+    box-shadow: var(--nw-shadow-lg);
+}
+
+.nw-aff__form-title {
+    margin: 0 0 4px;
+    font-size: var(--text-l, 18px);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--nw-text);
+}
+
+.nw-aff__form-sub {
+    margin: 0 0 18px;
+    font-size: var(--text-xs, 12px);
+    color: var(--nw-text-muted);
+}
+
+.nw-aff__field {
+    margin-bottom: 14px;
+}
+
+.nw-aff__label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: var(--text-xs, 12px);
+    font-weight: 600;
+    color: var(--nw-text-2);
+}
+
+.nw-aff__form input[type="text"],
+.nw-aff__form input[type="email"],
+.nw-aff__form textarea,
+.nw-aff__link {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid var(--nw-border-strong);
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-surface-1);
+    color: var(--nw-text);
+    font-family: inherit;
+    font-size: var(--text-s, 13px);
+    line-height: 1.5;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.nw-aff__form textarea {
+    resize: vertical;
+}
+
+.nw-aff__form input[readonly],
+.nw-aff__link {
+    color: var(--nw-text-muted);
+    background: var(--nw-surface-2);
+    cursor: default;
+}
+
+.nw-aff__form input:focus,
+.nw-aff__form textarea:focus {
+    outline: none;
+    border-color: var(--nw-brand);
+    box-shadow: 0 0 0 3px var(--nw-brand-soft);
+}
+
+.nw-aff__consent {
+    display: flex;
+    gap: 10px;
+    margin: 18px 0;
+    padding: 12px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-surface-1);
+    font-size: var(--text-xs, 12px);
+    line-height: 1.55;
+    color: var(--nw-text-muted);
+    cursor: pointer;
+}
+
+.nw-aff__consent input {
+    margin: 2px 0 0;
+    flex: 0 0 auto;
+}
+
+.nw-aff__consent a {
+    color: var(--nw-text-2);
+}
+
+.nw-aff__error {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 18px;
+    padding: 13px 15px;
+    border: 1px solid var(--nw-danger);
+    border-left-width: 3px;
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-danger-soft);
+    font-size: var(--text-xs, 12px);
+    line-height: 1.55;
+    color: var(--nw-text);
+}
+
+.nw-aff__error a {
+    color: var(--nw-text);
+    font-weight: 600;
+}
+
+/* Buttons */
+
+.nw-aff__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 11px 20px;
+    border: 1px solid transparent;
+    border-radius: var(--nw-radius-sm);
+    font-family: inherit;
+    font-size: var(--text-s, 13px);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+
+.nw-aff__btn--primary {
+    width: 100%;
+    background: var(--nw-brand);
+    color: #fff;
+    box-shadow: var(--nw-shadow-sm);
+}
+
+.nw-aff__btn--primary:hover {
+    background: var(--nw-brand-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--nw-shadow);
+}
+
+.nw-aff__btn--primary:active {
+    transform: none;
+}
+
+.nw-aff__btn--ghost,
+.nw-aff__btn--copy {
+    border-color: var(--nw-border-strong);
+    background: var(--nw-surface);
+    color: var(--nw-text);
+}
+
+.nw-aff__btn--ghost:hover,
+.nw-aff__btn--copy:hover {
+    border-color: var(--nw-brand);
+    color: var(--nw-brand);
+}
+
+.nw-aff__btn--copy {
+    flex: 0 0 auto;
+}
+
+/* Section heads */
+
+.nw-aff__section-head {
+    margin: 34px 0 14px;
+}
+
+.nw-aff__section-head h2 {
+    margin: 0;
+    font-size: var(--text-l, 17px);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--nw-text);
+}
+
+/* Perks */
+
+/* Six perks, three across, two rows. Fixed rather than auto-fit: the count
+   is known and a ragged last row looks like a mistake. */
+.nw-aff__perks {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.nw-aff__perk {
+    /* .nibwp-dash-card carries the box; only the grid-specific bits here. */
+    margin: 0;
+    transition: border-color .15s ease;
+}
+
+.nw-aff__perk:hover {
+    border-color: var(--nw-border-strong);
+}
+
+.nw-aff__perk p {
+    margin: 0;
+    font-size: var(--text-xs, 13px);
+    line-height: 1.6;
+    color: var(--nw-text-muted);
+}
+
+/* Share-and-tell-us — the one section on the page asking for an action, so it
+   is the one section allowed to look different from the cards around it.
+
+   Solid, not tinted: a wall of white cards needs one thing that stops the eye,
+   and a gradient over white is a suggestion where a solid panel is a statement.
+   The colour is fixed rather than tokenised because it has to hold in both
+   themes — dark panel on a white page, and the same panel on a dark one. */
+
+.nw-aff__share {
+    --nw-share-ink: #ffffff;
+    --nw-share-ink-soft: rgba(255, 255, 255, .74);
+    --nw-share-line: rgba(255, 255, 255, .16);
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 310px);
+    gap: 30px;
+    align-items: start;
+    margin: 26px 0 0;
+    padding: 30px;
+    border: 1px solid #16307a;
+    border-radius: 8px;
+    background: #17307b;
+    color: var(--nw-share-ink);
+    box-shadow: 0 10px 30px -12px rgba(23, 48, 123, .55);
+}
+
+.nw-aff__share-tag {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 4px 11px;
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-share-ink);
+    color: #17307b;
+    font-size: var(--text-xs, 11px);
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.nw-aff__share-title {
+    margin: 0 0 10px;
+    font-size: var(--text-l, 22px);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    line-height: 1.2;
+    color: var(--nw-share-ink);
+}
+
+.nw-aff__share-body {
+    margin: 0 0 18px;
+    max-width: 64ch;
+    font-size: var(--text-s, 14px);
+    line-height: 1.65;
+    color: var(--nw-share-ink-soft);
+}
+
+.nw-aff__share-steps {
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+    counter-reset: nw-aff-share;
+}
+
+.nw-aff__share-steps li {
+    position: relative;
+    margin: 0 0 9px;
+    padding-left: 32px;
+    font-size: var(--text-s, 13px);
+    line-height: 1.55;
+    color: var(--nw-share-ink);
+    counter-increment: nw-aff-share;
+}
+
+.nw-aff__share-steps li::before {
+    content: counter(nw-aff-share);
+    position: absolute;
+    left: 0;
+    top: -1px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 21px;
+    height: 21px;
+    border: 1px solid var(--nw-share-line);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .12);
+    color: var(--nw-share-ink);
+    font-size: var(--text-xs, 11px);
+    font-weight: 700;
+}
+
+.nw-aff__share-caveat {
+    margin: 0;
+    max-width: 64ch;
+    padding-top: 14px;
+    border-top: 1px solid var(--nw-share-line);
+    font-size: var(--text-xs, 12px);
+    line-height: 1.6;
+    color: var(--nw-share-ink-soft);
+}
+
+.nw-aff__share-side {
+    /* Extra top padding leaves room for the seal to hang over the edge. */
+    padding: 46px 20px 20px;
+    margin-top: 34px;
+    border: 1px solid var(--nw-share-line);
+    border-radius: var(--nw-radius);
+    background: rgba(255, 255, 255, .08);
+}
+
+/* The seal straddles the top edge of the reward panel, cut out of the blue
+   behind it so it reads as stamped on rather than sitting inside. */
+.nw-aff__seal {
+    display: block;
+    width: 66px;
+    height: 66px;
+    margin: -54px auto 10px;
+    padding: 4px;
+    border-radius: 50%;
+    background: #17307b;
+    color: #f7c15a;
+    line-height: 0;
+}
+
+.nw-aff__seal svg {
+    display: block;
+}
+
+.nw-aff__seal-label {
+    margin: 0 0 14px;
+    text-align: center;
+    font-size: var(--text-xs, 11px);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #f7c15a;
+}
+.nw-aff__share-reward {
+    margin: 0 0 16px;
+    font-size: var(--text-xs, 13px);
+    line-height: 1.6;
+    color: var(--nw-share-ink);
+}
+
+/* Inverted on the dark panel — a blue button on blue is a button nobody
+   presses. */
+.nw-aff__share .nw-aff__btn--primary {
+    background: var(--nw-share-ink);
+    color: #17307b;
+    box-shadow: none;
+}
+
+.nw-aff__share .nw-aff__btn--primary:hover {
+    background: #e8eeff;
+    color: #17307b;
+}
+
+.nw-aff__share-to {
+    margin: 10px 0 0;
+    text-align: center;
+    font-size: var(--text-xs, 11px);
+    color: var(--nw-share-ink-soft);
+    word-break: break-all;
+}
+
+@media (max-width: 900px) {
+    .nw-aff__share {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 22px;
+    }
+}
+
+/* Steps */
+
+.nw-aff__steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px 24px;
+    margin: 26px 0 0;
+}
+
+.nw-aff__step {
+    display: flex;
+    gap: 13px;
+}
+
+.nw-aff__step-num {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--nw-ok);
+    color: #fff;
+    font-size: var(--text-xs, 12px);
+    font-weight: 700;
+}
+
+.nw-aff__step h4 {
+    margin: 3px 0 4px;
+    font-size: var(--text-s, 14px);
+    font-weight: 600;
+    color: var(--nw-text);
+}
+
+.nw-aff__step p {
+    margin: 0;
+    font-size: var(--text-xs, 12px);
+    line-height: 1.6;
+    color: var(--nw-text-muted);
+}
+
+/* FAQ */
+
+.nw-aff__faq {
+    /* Rows run edge to edge, so the card's own padding is dropped here. */
+    margin: 26px 0 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.nw-aff__faq-item + .nw-aff__faq-item {
+    border-top: 1px solid var(--nw-border);
+}
+
+.nw-aff__faq-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 18px;
+    font-size: var(--text-s, 13px);
+    font-weight: 600;
+    color: var(--nw-text);
+    cursor: pointer;
+    list-style: none;
+}
+
+.nw-aff__faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.nw-aff__faq-item summary::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--nw-text-muted-2);
+    border-bottom: 2px solid var(--nw-text-muted-2);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform .18s ease;
+}
+
+.nw-aff__faq-item[open] summary::after {
+    transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+.nw-aff__faq-item summary:hover {
+    background: var(--nw-surface-1);
+}
+
+.nw-aff__faq-item p {
+    margin: 0;
+    padding: 0 18px 16px;
+    font-size: var(--text-xs, 13px);
+    line-height: 1.65;
+    color: var(--nw-text-muted);
+}
+
+/* Foot */
+
+.nw-aff__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid var(--nw-border);
+    font-size: var(--text-xs, 12px);
+}
+
+.nw-aff__foot a {
+    color: var(--nw-text-muted);
+    text-decoration: none;
+}
+
+.nw-aff__foot a:hover {
+    color: var(--nw-brand);
+}
+
+/* Joined state */
+
+.nw-aff--joined {
+    width: 100%;
+    padding: 32px;
+    margin: 0;
+}
+
+.nw-aff__badge {
+    display: inline-block;
+    margin-bottom: 14px;
+    padding: 4px 12px;
+    border-radius: var(--nw-radius-full);
+    font-size: var(--text-xs, 11px);
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.nw-aff__badge.is-approved {
+    background: var(--nw-ok-soft);
+    color: var(--nw-ok);
+}
+
+.nw-aff__badge.is-pending {
+    background: var(--nw-warn-soft);
+    color: var(--nw-warn);
+}
+
+.nw-aff__link-row {
+    margin: 26px 0 22px;
+}
+
+.nw-aff__copy {
+    display: flex;
+    gap: 8px;
+}
+
+.nw-aff__meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 0;
+}
+
+.nw-aff__note {
+    font-size: var(--text-xs, 12px);
+    color: var(--nw-text-muted);
+}
+
+@media (max-width: 1240px) {
+    .nw-aff__perks {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .nw-aff__hero {
+        grid-template-columns: 1fr;
+    }
+
+    .nw-aff__hero-copy {
+        padding: 24px;
+    }
+
+    /* Nothing to stick to in a single column, and a card pinned over a
+       page you are still reading is worse than one that scrolls away. */
+    .nw-aff__aside {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .nw-aff__perks,
+    .nw-aff__steps {
+        grid-template-columns: 1fr;
+    }
+
+    .nw-aff__title {
+        max-width: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-aff__perk,
+    .nw-aff__btn,
+    .nw-aff__faq-item summary::after {
+        transition: none;
+    }
+
+    .nw-aff__perk:hover,
+    .nw-aff__btn--primary:hover {
+        transform: none;
+    }
+}
+
+/* ── Affiliate: share dialog + result banner ──────────────────────────── */
+
+.nw-aff__result {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 0 0 18px;
+    border-left: 3px solid var(--nw-ok);
+}
+
+.nw-aff__result.is-bad {
+    border-left-color: var(--nw-danger);
+}
+
+.nw-aff__result strong {
+    font-size: var(--text-s, 14px);
+    color: var(--nw-text);
+}
+
+.nw-aff__result span {
+    font-size: var(--text-xs, 12px);
+    line-height: 1.55;
+    color: var(--nw-text-muted);
+}
+
+.nw-aff-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100001;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.nw-aff-modal.is-open {
+    display: flex;
+}
+
+.nw-aff-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 18, 38, .6);
+    backdrop-filter: blur(2px);
+}
+
+.nw-aff-modal__panel {
+    position: relative;
+    width: 100%;
+    max-width: 470px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding: 28px;
+    border: 1px solid var(--nw-border-strong);
+    border-radius: var(--nw-radius-lg);
+    background: var(--nw-surface);
+    box-shadow: var(--nw-shadow-lg);
+}
+
+.nw-aff-modal__close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--nw-radius-sm);
+    background: none;
+    color: var(--nw-text-muted);
+    cursor: pointer;
+}
+
+.nw-aff-modal__close:hover {
+    border-color: var(--nw-border);
+    background: var(--nw-surface-1);
+    color: var(--nw-text);
+}
+
+.nw-aff-modal__title {
+    margin: 0 0 6px;
+    padding-right: 34px;
+    font-size: var(--text-l, 19px);
+    font-weight: 700;
+    letter-spacing: -.01em;
+    color: var(--nw-text);
+}
+
+.nw-aff-modal__sub {
+    margin: 0 0 20px;
+    font-size: var(--text-xs, 13px);
+    line-height: 1.6;
+    color: var(--nw-text-muted);
+}
+
+/* The dialog reuses the signup field styles, which are scoped to .nw-aff__form. */
+.nw-aff-modal input[type="url"],
+.nw-aff-modal textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid var(--nw-border-strong);
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-surface-1);
+    color: var(--nw-text);
+    font-family: inherit;
+    font-size: var(--text-s, 13px);
+    line-height: 1.5;
+}
+
+.nw-aff-modal textarea {
+    resize: vertical;
+}
+
+.nw-aff-modal input:focus,
+.nw-aff-modal textarea:focus {
+    outline: none;
+    border-color: var(--nw-brand);
+    box-shadow: 0 0 0 3px var(--nw-brand-soft);
+}
+
+.nw-aff-modal form {
+    margin: 0;
+}
+
+.nw-aff-modal .nw-aff__btn--primary {
+    margin-top: 6px;
+}
+
+/* Custom integration request — failure message under the wizard footer. */
+.nw-req-error {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border: 1px solid var(--nw-danger);
+    border-left-width: 3px;
+    border-radius: var(--nw-radius-sm);
+    background: var(--nw-danger-soft);
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--nw-text);
+}
+
+/* ── Right-to-left: text that is not prose ──────────────────────────────
+   URLs, endpoints, keys, config snippets and ability names read left to right
+   in any UI language. Without this an Arabic or Hebrew admin reorders the
+   punctuation of a JSON block or a URL. `isolate` keeps an inline token from
+   pulling the words around it into its own direction. Left as written in both
+   files; in the LTR one it changes nothing. */
+/*rtl:begin:ignore*/
+.nw-app code, .nw-app kbd, .nw-app samp, .nw-app pre,
+.nibwp-wrap code, .nibwp-wrap kbd, .nibwp-wrap samp, .nibwp-wrap pre,
+.nw-modal code, .nw-modal pre,
+.nw-kbd,
+.nibwp-connect-value,
+.nibwp-activity-name,
+.nibwp-audit-tool-name,
+.nibwp-ability-list,
+.nibwp-memory-key,
+.nibwp-placeholder,
+.nw-oc-conn__meta,
+.nw-wf-sug__key {
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+.nw-app pre, .nibwp-wrap pre, .nw-modal pre,
+.nibwp-config-block pre,
+.nibwp-paste-content pre,
+.nw-code-block pre,
+.nw-app input[type="url"],
+.nibwp-license-hero__input,
+.nibwp-license-paste input,
+.nw-lock-popup__paste input,
+.nw-license-form__row input,
+.nw-pw__input--mono {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+/*rtl:end:ignore*/
+
+/* Directional icons in markup ("next", "back", "onward"): add this class and
+   the icon turns round in right-to-left languages. Not for logos, media
+   controls or ticks, which keep their shape in every language. */
+.nw-rtl-flip { transform: none /*rtl:scaleX(-1)*/; }
+/* A text arrow is inline, and transforms skip inline boxes. */
+/*rtl:raw:
+span.nw-rtl-flip { display: inline-block; }
+*/

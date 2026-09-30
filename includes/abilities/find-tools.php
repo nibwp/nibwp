@@ -22,13 +22,10 @@ if (!defined('ABSPATH')) {
  */
 wp_register_ability('nibwp/find-tools', [
     'label'       => __('Find the tools for a subject', 'nibwp'),
-    'description' => __(
-        'Call this the moment the user names a builder, plugin, theme or design tool — Etch, Figma, Kadence, Bricks, Elementor, Voxel, SureCart, ACSS, WooCommerce, Tutor LMS and so on. '
+    'description' => 'Call this the moment the user names a builder, plugin, theme or design tool — Etch, Figma, Kadence, Bricks, Elementor, Voxel, SureCart, ACSS, WooCommerce, Tutor LMS and so on. '
         . 'Returns everything this site actually has for that subject: the skill that claims it and the exact pipeline to run, any saved workflow covering it, the integration, every matching ability, and whether each is ready, locked, or unavailable and why. '
         . 'When nothing owns the subject it says so and clears you to build it with nibwp/execute-php, so a miss here is never a reason to decline the work. '
         . 'Cheaper and far more reliable than recalling the routing contract from the start of the conversation, and it reflects THIS site rather than what NibWP offers in general.',
-        'nibwp'
-    ),
     'category'    => 'nibwp',
     'input_schema' => [
         'type' => 'object',
@@ -102,7 +99,7 @@ function nibwp_find_tools(array $input): array
             $why   = '';
             if (!$unlocked) {
                 $state = 'locked';
-                $why   = __('Not included in this licence.', 'nibwp');
+                $why   = __('Not included in this license.', 'nibwp');
             } elseif (!$enabled) {
                 $state = 'switched_off';
                 $why   = __('Owned, but switched off in NibWP → Skills.', 'nibwp');
@@ -382,7 +379,7 @@ function nibwp_find_tools_advice(array $skills, array $abilities, array $workflo
         if ($s['state'] === 'locked') {
             return sprintf(
                 /* translators: 1: skill name, 2: what to do instead */
-                __('%1$s covers this but is not in the current licence. Mention it, then %2$s', 'nibwp'),
+                __('%1$s covers this but is not in the current license. Mention it, then %2$s', 'nibwp'),
                 (string) $s['name'],
                 $abilities !== []
                     ? __('use the abilities below.', 'nibwp')

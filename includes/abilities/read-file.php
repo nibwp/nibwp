@@ -11,11 +11,8 @@ if (!defined('ABSPATH')) {
 }
 
 wp_register_ability('nibwp/read-file', [
-    'label' => __('Read File', domain: 'nibwp'),
-    'description' => __(
-        'Reads the contents of a file from the server filesystem. Supports text and binary files. Binary files and files with invalid UTF-8 are returned as base64-encoded. Supports partial reads via offset and limit parameters.',
-        domain: 'nibwp',
-    ),
+    'label' => __('Read File', 'nibwp'),
+    'description' => 'Reads the contents of a file from the server filesystem. Supports text and binary files. Binary files and files with invalid UTF-8 are returned as base64-encoded. Supports partial reads via offset and limit parameters.',
     'category' => 'filesystem',
     'input_schema' => [
         'type' => 'object',
@@ -56,7 +53,9 @@ wp_register_ability('nibwp/read-file', [
         ],
     ],
     'execute_callback' => 'nibwp_read_file',
-    'permission_callback' => 'nibwp_permission_callback',
+    // Not the plain manage_options gate: on Multisite a site administrator is
+    // not a server administrator, and this reads the install's files.
+    'permission_callback' => 'nibwp_filesystem_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],

@@ -8,11 +8,8 @@ if (!defined('ABSPATH')) {
 // --- Ability: nibwp/wc-list-products ---
 
 wp_register_ability('nibwp/wc-list-products', [
-    'label' => __('WooCommerce – List Products', domain: 'nibwp'),
-    'description' => __(
-        'List WooCommerce products with comprehensive filters including status, type, category, tag, price range, search, and pagination.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – List Products', 'nibwp'),
+    'description' => 'List WooCommerce products with comprehensive filters including status, type, category, tag, price range, search, and pagination.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -226,11 +223,8 @@ function nibwp_wc_list_products(array $input): array|WP_Error
 // --- Ability: nibwp/wc-get-product ---
 
 wp_register_ability('nibwp/wc-get-product', [
-    'label' => __('WooCommerce – Get Product', domain: 'nibwp'),
-    'description' => __(
-        'Get full details of a single WooCommerce product including description, attributes, variations, images, and all metadata.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – Get Product', 'nibwp'),
+    'description' => 'Get full details of a single WooCommerce product including description, attributes, variations, images, and all metadata.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -416,11 +410,8 @@ function nibwp_wc_get_product(array $input): array|WP_Error
 // --- Ability: nibwp/wc-create-product ---
 
 wp_register_ability('nibwp/wc-create-product', [
-    'label' => __('WooCommerce – Create Product', domain: 'nibwp'),
-    'description' => __(
-        'Create a new WooCommerce product with all properties: pricing, inventory, categories, images, attributes, and more.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – Create Product', 'nibwp'),
+    'description' => 'Create a new WooCommerce product with all properties: pricing, inventory, categories, images, attributes, and more.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -735,11 +726,8 @@ function nibwp_wc_sideload_images(array $images, int $product_id): array|WP_Erro
 // --- Ability: nibwp/wc-update-product ---
 
 wp_register_ability('nibwp/wc-update-product', [
-    'label' => __('WooCommerce – Update Product', domain: 'nibwp'),
-    'description' => __(
-        'Update an existing WooCommerce product. Only the provided fields will be changed; all others remain untouched.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – Update Product', 'nibwp'),
+    'description' => 'Update an existing WooCommerce product. Only the provided fields will be changed; all others remain untouched.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -923,11 +911,8 @@ function nibwp_wc_update_product(array $input): array|WP_Error
 // --- Ability: nibwp/wc-delete-product ---
 
 wp_register_ability('nibwp/wc-delete-product', [
-    'label' => __('WooCommerce – Delete Product', domain: 'nibwp'),
-    'description' => __(
-        'Delete or trash a WooCommerce product. By default moves to trash; use force=true for permanent deletion.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – Delete Product', 'nibwp'),
+    'description' => 'Delete or trash a WooCommerce product. By default moves to trash; use force=true for permanent deletion.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -1000,11 +985,8 @@ function nibwp_wc_delete_product(array $input): array|WP_Error
 // --- Ability: nibwp/wc-list-orders ---
 
 wp_register_ability('nibwp/wc-list-orders', [
-    'label' => __('WooCommerce – List Orders', domain: 'nibwp'),
-    'description' => __(
-        'List WooCommerce orders with filters for status, customer, date range, and pagination.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – List Orders', 'nibwp'),
+    'description' => 'List WooCommerce orders with filters for status, customer, date range, and pagination.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -1139,11 +1121,8 @@ function nibwp_wc_list_orders(array $input): array|WP_Error
 // --- Ability: nibwp/wc-get-order ---
 
 wp_register_ability('nibwp/wc-get-order', [
-    'label' => __('WooCommerce – Get Order', domain: 'nibwp'),
-    'description' => __(
-        'Get full details of a single WooCommerce order including items, billing, shipping, fees, coupons, and notes.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – Get Order', 'nibwp'),
+    'description' => 'Get full details of a single WooCommerce order including items, billing, shipping, fees, coupons, and notes.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -1300,11 +1279,8 @@ function nibwp_wc_get_order(array $input): array|WP_Error
 // --- Ability: nibwp/wc-update-order-status ---
 
 wp_register_ability('nibwp/wc-update-order-status', [
-    'label' => __('WooCommerce – Update Order Status', domain: 'nibwp'),
-    'description' => __(
-        'Update the status of a WooCommerce order with an optional note.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – Update Order Status', 'nibwp'),
+    'description' => 'Update the status of a WooCommerce order with an optional note.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -1398,11 +1374,8 @@ function nibwp_wc_update_order_status(array $input): array|WP_Error
 // --- Ability: nibwp/wc-list-customers ---
 
 wp_register_ability('nibwp/wc-list-customers', [
-    'label' => __('WooCommerce – List Customers', domain: 'nibwp'),
-    'description' => __(
-        'List WooCommerce customers with search, pagination, and sorting. Returns customer details with order statistics.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – List Customers', 'nibwp'),
+    'description' => 'List WooCommerce customers with search, pagination, and sorting. Returns customer details with order statistics.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -1516,11 +1489,8 @@ function nibwp_wc_list_customers(array $input): array|WP_Error
 // --- Ability: nibwp/wc-list-coupons ---
 
 wp_register_ability('nibwp/wc-list-coupons', [
-    'label' => __('WooCommerce – List Coupons', domain: 'nibwp'),
-    'description' => __(
-        'List WooCommerce coupons with search and pagination.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – List Coupons', 'nibwp'),
+    'description' => 'List WooCommerce coupons with search and pagination.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -1616,11 +1586,8 @@ function nibwp_wc_list_coupons(array $input): array|WP_Error
 // --- Ability: nibwp/wc-create-coupon ---
 
 wp_register_ability('nibwp/wc-create-coupon', [
-    'label' => __('WooCommerce – Create Coupon', domain: 'nibwp'),
-    'description' => __(
-        'Create a new WooCommerce coupon with discount type, amount, usage limits, product restrictions, and more.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – Create Coupon', 'nibwp'),
+    'description' => 'Create a new WooCommerce coupon with discount type, amount, usage limits, product restrictions, and more.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',
@@ -1761,11 +1728,8 @@ function nibwp_wc_create_coupon(array $input): array|WP_Error
 // --- Ability: nibwp/wc-get-reports ---
 
 wp_register_ability('nibwp/wc-get-reports', [
-    'label' => __('WooCommerce – Get Reports', domain: 'nibwp'),
-    'description' => __(
-        'Get WooCommerce sales reports and statistics including totals, top sellers, and top earners for configurable date ranges.',
-        domain: 'nibwp',
-    ),
+    'label' => __('WooCommerce – Get Reports', 'nibwp'),
+    'description' => 'Get WooCommerce sales reports and statistics including totals, top sellers, and top earners for configurable date ranges.',
     'category' => 'woocommerce',
     'input_schema' => [
         'type' => 'object',

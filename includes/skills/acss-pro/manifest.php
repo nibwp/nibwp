@@ -26,7 +26,7 @@ return [
     'tagline'        => 'Generate a working ACSS configuration from a screenshot, HTML+CSS, or live URL',
     'description'    => 'Feed in a design source (screenshot, HTML+CSS, or a live URL) and the agent proposes a complete ACSS configuration — palette, type ramp, space ramp, radius, shadows, breakpoints — validated for WCAG contrast, sane modular scale ratios, and consistent neutral-ramp luminance. Persists to the ACSS settings option after explicit user approval. Pairs with EtchWP Pro: tokens generated here are exactly the ones EtchWP Pro emits in components.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.1',
+    'version'        => '1.0.2',
     'category'       => 'design-system',
     'premium'        => true,
     'price'          => 19,
@@ -54,10 +54,21 @@ return [
     'instructions_file' => 'authoring/SKILL.md',
     'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>',
 
+    // What this skill OWNS, in the words a model can reason about. The
+    // regexes below are a fast path; this sentence is the boundary.
+    'use_when' => 'The user wants styling, tokens or a design system handled with Automatic.css (ACSS) on this site - establishing tokens, restyling to them, or auditing where raw values crept in. Owns it however it is phrased, including "automatic css" written with a space or a hyphen.',
+
     'triggers' => [
-        '/(?i)\b(?:generate|create|build|extract|derive)\b[^.\n]{0,40}\b(?:acss|automatic\.?css|design\s*system|design\s*tokens|palette)\b/',
-        '/(?i)\b(?:acss|automatic\.?css)\b[^.\n]{0,30}\b(?:config|configuration|palette|tokens|setup)\b/',
+        '/(?i)\b(?:generate|create|build|extract|derive)\b[^.\n]{0,40}\b(?:acss|automatic[\s.\-]?css|design\s*system|design\s*tokens|palette)\b/',
+        '/(?i)\b(?:acss|automatic[\s.\-]?css)\b[^.\n]{0,30}\b(?:config|configuration|palette|tokens|setup)\b/',
         '/(?i)\b(?:screenshot|image|html|url|figma)\b[^.\n]{0,30}\b(?:to|into|as)\b[^.\n]{0,20}\b(?:acss|tokens|design\s*system|palette)\b/',
+        // Order-agnostic build intent. The patterns above all require the
+        // builder's name BEFORE the thing being built, so the most natural way
+        // anyone phrases it — "create a hero section with X" — matched nothing,
+        // the skill never loaded, and the agent improvised a tree with no
+        // classes and no styles. That is what a customer reported.
+        '/(?i)\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b[^.\n]{0,80}\b(?:acss|automatic[\s.\-]?css)\b/',
+        '/(?i)\b(?:acss|automatic[\s.\-]?css)\b[^.\n]{0,80}\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b/',
     ],
     'commands' => [
         '/acss-from-design'  => ['description' => 'Generate ACSS config from a screenshot, HTML+CSS, or live URL.'],

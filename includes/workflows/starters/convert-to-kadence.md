@@ -16,7 +16,7 @@ Every Kadence block is a **dynamic block** — it compiles a scoped stylesheet f
 
 ## Principles
 - **Native blocks only.** Section = `kadence/rowlayout htmlTag:"section"` → `kadence/column` → content (`advancedheading`, `singlebtn` in `advancedbtn`, `iconlist`, `image`, `kadence/posts`). **No `core/html`** for cards, lists, or sections. Ever.
-- **Attributes carry design** — typography, colour, spacing, background, overlay, min-height, alignment. `fontSize` is `[desktop,tablet,mobile]` (never the legacy scalar `size`); `lineHeight`/`letterSpacing` are numbers; `overlay` is a colour string.
+- **Attributes carry design** — typography, color, spacing, background, overlay, min-height, alignment. `fontSize` is `[desktop,tablet,mobile]` (never the legacy scalar `size`); `lineHeight`/`letterSpacing` are numbers; `overlay` is a color string.
 - **`source:html` content in markup** — `advancedheading` content, `listitem` text, `infobox` text come from the block's inner HTML (author the text; attribute-only = blank).
 - **Overlay on hero/CTA over image** = `currentOverlayTab:"gradient"` + `overlayGradient` + `overlayOpacity:100`. Never a CSS `::before`.
 - **CSS storage order** — attribute → `_kad_blocks_custom_css` (Kadence's per-page Custom CSS, for post-loop `.entry-*`, third-party markup, `@keyframes`, `:hover` only) → **never** Customizer Additional CSS for page styling.

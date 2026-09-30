@@ -9,6 +9,14 @@
 (function () {
     'use strict';
 
+    var __ = wp.i18n.__, _n = wp.i18n._n, _x = wp.i18n._x, sprintf = wp.i18n.sprintf;
+
+    // What the person reads is translated; what goes back to the agent —
+    // results, errors, notes — stays English, because the agent reads it as
+    // instructions and the server does not know the locale. Prompts to paste
+    // are the person's own words, so they translate, but the workflow, skill
+    // and ability names inside them stay exactly as the agent will look them up.
+
     var cfg = window.nibwpVisual || {};
     var stage = document.getElementById('nw-vs-stage');
     var tabsEl = document.getElementById('nw-vs-tabs');
@@ -185,6 +193,9 @@
         var id = 'p' + (++seq);
         var frame = document.createElement('iframe');
         frame.className = 'nw-vs-frame';
+        // The headless runner addresses frames from outside the document, where
+        // the pages map does not exist — this attribute is the only handle it has.
+        frame.setAttribute('data-vs-frame', id);
         frame.src = safe;
         // No allow-top-navigation: a page must not be able to replace the
         // workspace around it.
@@ -290,10 +301,8 @@
         var panel = document.createElement('div');
         panel.className = 'nw-vs-blocked';
         panel.innerHTML = '<h2></h2><p></p><p class="nw-vs-blocked__url"></p>';
-        panel.children[0].textContent = 'This page refused to be framed';
-        panel.children[1].textContent = 'A security plugin or server rule is sending X-Frame-Options: DENY, '
-            + 'or a Content-Security-Policy frame-ancestors that excludes this site. '
-            + 'Allow same-origin framing and reopen the page.';
+        panel.children[0].textContent = __('This page refused to be framed', 'nibwp');
+        panel.children[1].textContent = __('A security plugin or server rule is sending X-Frame-Options: DENY, or a Content-Security-Policy frame-ancestors that excludes this site. Allow same-origin framing and reopen the page.', 'nibwp');
         panel.children[2].textContent = page.url;
         page.panel = panel;
         stage.appendChild(panel);
@@ -391,6 +400,61 @@
         return { id: page.id, url: d.location.href, title: d.title, ready: d.readyState };
     }
 
+    /* Page coordinates rather than viewport ones. A click scrolls its target
+       into view first, so viewport boxes from two reads either side of it
+       would disagree about where the same element is. */
+    function boxOf(el) {
+        var r = el.getBoundingClientRect();
+        var win = el.ownerDocument.defaultView;
+        return {
+            x: Math.round(r.left + win.scrollX),
+            y: Math.round(r.top + win.scrollY),
+            w: Math.round(r.width),
+            h: Math.round(r.height)
+        };
+    }
+
+    /* The handful of computed properties that decide whether something looks
+       the way it was meant to. Not the whole computed style: an agent handed
+       three hundred properties per element diffs none of them. */
+    function styleOf(el) {
+        var cs = el.ownerDocument.defaultView.getComputedStyle(el);
+        var out = { color: cs.color };
+
+        // A transparent background says nothing about what the element sits
+        // on, and "transparent" is what almost every element reports. What
+        // the agent needs then is the colour actually showing through.
+        var own = readColor(cs.backgroundColor);
+        if (own && own.a > 0) {
+            out.background = cs.backgroundColor;
+        } else {
+            out.surface = colorText(surfaceFrom(el.parentElement));
+        }
+
+        out['font-size'] = cs.fontSize;
+        out['font-weight'] = cs.fontWeight;
+
+        var radius = cs.borderRadius || cs.borderTopLeftRadius;
+        if (radius && radius !== '0px') { out['border-radius'] = radius; }
+
+        // Only borders that paint. Every element has four border colours in
+        // its computed style, most of them on a zero-width or none border.
+        var sides = bordersOf(cs);
+        if (sides.length) {
+            out.border = { width: sides[0].width, style: sides[0].style, color: sides[0].color };
+            if (sides.length < 4) {
+                out.border.sides = sides.map(function (s) { return s.side; });
+            }
+        }
+
+        return out;
+    }
+
+    // Styles make each entry several times larger, and a read too big for the
+    // agent's context is a read it never sees. The ceiling drops when they are
+    // asked for, and the answer says when it was reached.
+    var STYLED_CAP = 100;
+
     function readPage(payload) {
         var page = activePage();
         if (!page) { throw new Error('No page is open. Use visual-open first.'); }
@@ -400,18 +464,35 @@
         var root = payload.selector ? d.querySelector(payload.selector) : d.body;
         if (!root) { throw new Error('Nothing matches the selector ' + payload.selector); }
 
-        var cap = Math.max(10, Math.min(payload.maxElements || 150, 400));
+        var styles = !!payload.styles;
+        // max_elements as well, because a batch step carries the ability's own
+        // argument names rather than the ones the ability translates them to.
+        var cap = Math.max(10, Math.min(payload.maxElements || payload.max_elements || 150, styles ? STYLED_CAP : 400));
         var out = { url: d.location.href, title: d.title, headings: [], elements: [], text: '' };
+        var dropped = 0;
+
+        // The region itself is often the thing in question — a card whose
+        // border cannot be seen has no interactive element to carry that.
+        if (styles && payload.selector) {
+            out.region = { selector: payload.selector, box: boxOf(root), style: styleOf(root) };
+        }
 
         root.querySelectorAll('h1, h2, h3, h4').forEach(function (h) {
             if (!visible(h)) { return; }
-            out.headings.push({ level: Number(h.tagName[1]), text: h.textContent.trim().slice(0, 160) });
+            if (styles && out.headings.length >= cap) { dropped++; return; }
+            var heading = { level: Number(h.tagName[1]), text: h.textContent.trim().slice(0, 160) };
+            if (styles) {
+                heading.box = boxOf(h);
+                heading.style = styleOf(h);
+            }
+            out.headings.push(heading);
         });
 
         var selector = 'a[href], button, input, select, textarea, [role="button"], [contenteditable="true"]';
         var seen = 0;
         root.querySelectorAll(selector).forEach(function (el) {
-            if (seen >= cap || !visible(el)) { return; }
+            if (!visible(el)) { return; }
+            if (seen >= cap) { dropped++; return; }
             seen++;
             var item = {
                 tag: el.tagName.toLowerCase(),
@@ -422,11 +503,19 @@
             if (el.name) { item.name = el.name; }
             if (el.href) { item.href = el.href; }
             if (el.disabled) { item.disabled = true; }
+            if (styles) {
+                item.box = boxOf(el);
+                item.style = styleOf(el);
+            }
             out.elements.push(item);
         });
 
         out.text = (root.innerText || '').replace(/\s+\n/g, '\n').trim().slice(0, 6000);
-        out.truncated = seen >= cap;
+        out.truncated = dropped > 0;
+        if (out.truncated && styles) {
+            out.note = 'Styles were requested, so at most ' + cap + ' headings and ' + cap
+                + ' elements are returned. Pass a selector to read one section at a time.';
+        }
 
         return out;
     }
@@ -481,6 +570,130 @@
         });
     }
 
+    /* Styles worth comparing across a hover. Kept short on purpose: the point
+       is to answer "did the hover state change, and to what", not to dump a
+       full computed-style object the agent then has to diff itself. */
+    var HOVER_PROPS = [
+        'color', 'background-color', 'border-color', 'outline-color',
+        'text-decoration-line', 'opacity', 'visibility', 'transform', 'box-shadow'
+    ];
+
+    function styleSnapshot(win, el) {
+        var cs = win.getComputedStyle(el);
+        var out = {};
+        HOVER_PROPS.forEach(function (prop) { out[prop] = cs.getPropertyValue(prop); });
+        return out;
+    }
+
+    /* A hover cannot be read from the stylesheet — :hover rules can come from
+       anywhere in the cascade, and a menu that only appears on hover is not in
+       the DOM's visible set until it does. So dispatch a real pointer sequence
+       and read what the page actually became. */
+    function hoverIt(payload) {
+        var found = pick(payload);
+        var el = found.el;
+        var win = found.doc.defaultView;
+        spotlight(el);
+
+        var before = styleSnapshot(win, el);
+        var visibleBefore = found.doc.querySelectorAll('*').length;
+
+        var r = el.getBoundingClientRect();
+        var at = {
+            bubbles: true,
+            cancelable: true,
+            clientX: r.left + r.width / 2,
+            clientY: r.top + r.height / 2,
+            view: win
+        };
+        // pointerenter/mouseenter do not bubble, so they are dispatched on the
+        // element itself rather than relied on to propagate from a parent.
+        ['pointerover', 'pointerenter', 'mouseover', 'mouseenter', 'mousemove'].forEach(function (type) {
+            var Ctor = type.indexOf('pointer') === 0 && win.PointerEvent ? win.PointerEvent : win.MouseEvent;
+            el.dispatchEvent(new Ctor(type, at));
+        });
+
+        var settle = typeof payload.settle === 'number' ? Math.min(Math.max(payload.settle, 0), 3000) : 400;
+
+        return new Promise(function (resolve) {
+            setTimeout(function () {
+                var after = styleSnapshot(win, el);
+                var changed = {};
+                HOVER_PROPS.forEach(function (prop) {
+                    if (before[prop] !== after[prop]) {
+                        changed[prop] = { from: before[prop], to: after[prop] };
+                    }
+                });
+
+                // Something that appears on hover — a submenu, a tooltip — is
+                // the other half of what a hover check is looking for, and it
+                // shows up as nodes the page did not have a moment ago.
+                var appeared = found.doc.querySelectorAll('*').length - visibleBefore;
+
+                if (!payload.hold) {
+                    ['mouseout', 'mouseleave', 'pointerout', 'pointerleave'].forEach(function (type) {
+                        var Ctor = type.indexOf('pointer') === 0 && win.PointerEvent ? win.PointerEvent : win.MouseEvent;
+                        el.dispatchEvent(new Ctor(type, at));
+                    });
+                }
+
+                resolve({
+                    hovered: payload.selector,
+                    changed: changed,
+                    unchanged: Object.keys(changed).length === 0,
+                    before: before,
+                    after: after,
+                    nodes_added: appeared,
+                    held: !!payload.hold,
+                    url: found.page.url
+                });
+            }, settle);
+        });
+    }
+
+    /* A page cannot photograph itself. Rasterising the DOM in JavaScript looks
+       like an answer and is not — it re-renders rather than captures, so canvas,
+       WebGL and cross-origin images come out wrong, and a screenshot that is not
+       what the browser drew is worse than none for spotting a visual regression.
+
+       So the pixels come from outside the page: the headless runner drives this
+       workspace through a real browser and hands it a binding. When that binding
+       is absent this is a human-attended tab, and saying so plainly beats
+       returning an approximation nobody can trust. */
+    function shootIt(payload) {
+        var page = activePage();
+        if (!page) { throw new Error('No page is open. Use visual-open first.'); }
+
+        if (typeof window.__nibwpShot !== 'function') {
+            throw new Error(
+                'Screenshots need the headless runner. This workspace is a browser tab, '
+                + 'which cannot capture its own pixels. Start the runner (npx nibwp-runner) '
+                + 'and it will serve this workspace instead.'
+            );
+        }
+
+        return Promise.resolve(window.__nibwpShot({
+            frame: page.id,
+            selector: payload.selector || '',
+            fullPage: !!payload.full_page
+        })).then(function (shot) {
+            if (!shot || shot.error) {
+                throw new Error(shot && shot.error ? shot.error : 'The runner returned no image.');
+            }
+
+            return {
+                url: shot.url || null,
+                media_id: shot.media_id || null,
+                width: shot.width || null,
+                height: shot.height || null,
+                bytes: shot.bytes || null,
+                page_url: page.url,
+                selector: payload.selector || null,
+                full_page: !!payload.full_page
+            };
+        });
+    }
+
     function fillIt(payload) {
         var found = pick(payload);
         var el = found.el;
@@ -507,22 +720,199 @@
         return { filled: payload.selector, value: el.value, submitted: false };
     }
 
-    /* ------------------------------------------------------------ audits -- */
+    /* ------------------------------------------------------------ colour -- */
 
-    function luminance(rgb) {
-        var parts = rgb.match(/\d+(\.\d+)?/g);
-        if (!parts || parts.length < 3) { return null; }
-        var c = parts.slice(0, 3).map(function (v) {
-            var x = Number(v) / 255;
-            return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
-        });
-        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    /* The colour maths touches no DOM, so it can be checked without a browser
+       (tests/visual-border-contrast-check.js lifts these by name). Computed
+       styles do not come back in one shape: legacy rgba() with commas, rgb()
+       with a slash, or color(srgb …) when a token was built with color-mix(). */
+    function parseColor(value) {
+        var s = String(value || '').trim().toLowerCase();
+        if (s === 'transparent') { return { r: 0, g: 0, b: 0, a: 0 }; }
+
+        var hex = s.match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/);
+        if (hex) {
+            var h = hex[1].length < 6
+                ? hex[1].split('').map(function (c) { return c + c; }).join('')
+                : hex[1];
+            return {
+                r: parseInt(h.slice(0, 2), 16),
+                g: parseInt(h.slice(2, 4), 16),
+                b: parseInt(h.slice(4, 6), 16),
+                a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1
+            };
+        }
+
+        var fn = s.match(/^(rgba?|color)\(\s*(.*?)\s*\)$/);
+        if (!fn) { return null; }
+
+        var body = fn[2];
+        // color() is only read in sRGB, where channels run 0-1. Wider spaces
+        // need gamut mapping this does not attempt; readColor asks the browser.
+        var unit = 1;
+        if (fn[1] === 'color') {
+            if (body.indexOf('srgb ') !== 0) { return null; }
+            body = body.slice(5);
+            unit = 255;
+        }
+
+        var alpha = '1';
+        var halves = body.split('/');
+        if (halves.length > 2) { return null; }
+        if (halves.length === 2) {
+            alpha = halves[1].trim();
+            body = halves[0];
+        }
+
+        var parts = body.split(/[\s,]+/).filter(Boolean);
+        if (parts.length === 4 && halves.length === 1 && fn[1] !== 'color') { alpha = parts.pop(); }
+        if (parts.length !== 3) { return null; }
+
+        function channel(raw) {
+            var n = raw === 'none' ? 0 : parseFloat(raw);
+            n = raw.slice(-1) === '%' ? n * 2.55 : n * unit;
+            return Math.min(255, Math.max(0, n));
+        }
+
+        var a = alpha === 'none' ? 0 : parseFloat(alpha);
+        if (alpha.slice(-1) === '%') { a = a / 100; }
+
+        var color = { r: channel(parts[0]), g: channel(parts[1]), b: channel(parts[2]), a: Math.min(1, Math.max(0, a)) };
+        // NaN survives min/max, so one bad channel poisons the sum. Better no
+        // answer than a confident ratio computed from garbage.
+        return isNaN(color.r + color.g + color.b + color.a) ? null : color;
     }
 
-    function contrast(fg, bg) {
-        var a = luminance(fg), b = luminance(bg);
-        if (a === null || b === null) { return null; }
+    /* Source-over, the way the browser paints one colour on another. A border
+       at 20% is not the colour its token names: it is mostly whatever lies
+       underneath, and that blend is what the eye actually compares. */
+    function blendOver(top, bottom) {
+        var a = top.a + bottom.a * (1 - top.a);
+        if (a <= 0) { return { r: 0, g: 0, b: 0, a: 0 }; }
+        function mix(t, b) { return (t * top.a + b * bottom.a * (1 - top.a)) / a; }
+        return { r: mix(top.r, bottom.r), g: mix(top.g, bottom.g), b: mix(top.b, bottom.b), a: a };
+    }
+
+    /* WCAG relative luminance. Alpha is ignored on purpose: callers blend
+       first, because a translucent colour has no luminance of its own. */
+    function relativeLuminance(c) {
+        var lin = [c.r, c.g, c.b].map(function (v) {
+            var x = v / 255;
+            return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+    }
+
+    function contrastRatio(x, y) {
+        var a = relativeLuminance(x), b = relativeLuminance(y);
         return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }
+
+    // Below this a border separates nothing. It is not a WCAG number — WCAG's
+    // 3:1 for non-text UI would flag every hairline divider on the web — it is
+    // the point under which a border stops being visible at all.
+    var BORDER_FLOOR = 1.5;
+
+    /* How far a border stands out, as the better of its two edges: against
+       the surface outside the element and against the element's own fill.
+       Judging the outside alone flagged a border that matched the page but
+       plainly framed a dark card; judging the inside alone missed a white
+       card on a white page, which is exactly the build that shipped with
+       invisible borders. Painted over the fill when the background runs under
+       the border (background-clip: border-box, the default), else the surface. */
+    function borderContrast(border, fill, surface, underBorder) {
+        var inside = blendOver(fill, surface);
+        var drawn = blendOver(border, underBorder ? inside : surface);
+        return Math.max(contrastRatio(drawn, surface), contrastRatio(drawn, inside));
+    }
+
+    var colorCache = {};
+    var colorCanvas = null;
+
+    /* parseColor first; anything it cannot read — oklch(), lab(), display-p3 —
+       the browser can, so let it paint one pixel and read back what it drew.
+       Tokens built in those spaces were otherwise skipped by every check. */
+    function readColor(value) {
+        var key = String(value || '');
+        if (Object.prototype.hasOwnProperty.call(colorCache, key)) { return colorCache[key]; }
+
+        var color = parseColor(key);
+        if (!color && key) {
+            try {
+                if (!colorCanvas) {
+                    colorCanvas = document.createElement('canvas');
+                    colorCanvas.width = 1;
+                    colorCanvas.height = 1;
+                }
+                var ctx = colorCanvas.getContext('2d');
+                // An invalid colour leaves fillStyle untouched, so a sentinel
+                // that survives the assignment means the browser refused it.
+                ctx.fillStyle = '#010203';
+                ctx.fillStyle = key;
+                if (ctx.fillStyle !== '#010203') {
+                    ctx.clearRect(0, 0, 1, 1);
+                    ctx.fillRect(0, 0, 1, 1);
+                    var px = ctx.getImageData(0, 0, 1, 1).data;
+                    color = { r: px[0], g: px[1], b: px[2], a: px[3] / 255 };
+                }
+            } catch (e) { color = null; }
+        }
+
+        // A page has a few dozen distinct colours; a workspace left open all
+        // day visits many pages, so the cache is dropped rather than grown.
+        if (Object.keys(colorCache).length > 500) { colorCache = {}; }
+        colorCache[key] = color;
+        return color;
+    }
+
+    function colorText(c) {
+        var rgb = Math.round(c.r) + ', ' + Math.round(c.g) + ', ' + Math.round(c.b);
+        return c.a < 1 ? 'rgba(' + rgb + ', ' + Math.round(c.a * 100) / 100 + ')' : 'rgb(' + rgb + ')';
+    }
+
+    /* The opaque colour showing behind a node: every translucent background up
+       to the first solid one, blended in paint order. Taking the nearest
+       non-transparent background alone reported a 5% tint as the surface and
+       lost the dark section it sat on. Background images are not seen. */
+    function surfaceFrom(node) {
+        var layers = [];
+        while (node && node.nodeType === 1) {
+            var c = readColor(node.ownerDocument.defaultView.getComputedStyle(node).backgroundColor);
+            if (c && c.a > 0) {
+                layers.push(c);
+                if (c.a >= 1) { break; }
+            }
+            node = node.parentElement;
+        }
+        // Nothing painted at all is the browser's white canvas.
+        var surface = { r: 255, g: 255, b: 255, a: 1 };
+        for (var i = layers.length - 1; i >= 0; i--) { surface = blendOver(layers[i], surface); }
+        return surface;
+    }
+
+    var BORDER_SIDES = ['top', 'right', 'bottom', 'left'];
+
+    /* Sides whose border actually paints. Under 1px is left out: it renders as
+       a hairline or not at all depending on the screen, and is not a border
+       anyone designed to be seen. */
+    function bordersOf(cs) {
+        var out = [];
+        BORDER_SIDES.forEach(function (side) {
+            var width = cs.getPropertyValue('border-' + side + '-width');
+            var kind = cs.getPropertyValue('border-' + side + '-style');
+            if ((parseFloat(width) || 0) >= 1 && kind !== 'none' && kind !== 'hidden') {
+                out.push({ side: side, width: width, style: kind, color: cs.getPropertyValue('border-' + side + '-color') });
+            }
+        });
+        return out;
+    }
+
+    /* ------------------------------------------------------------ audits -- */
+
+    function contrast(fg, bg) {
+        var a = readColor(fg), b = readColor(bg);
+        if (!a || !b) { return null; }
+        return contrastRatio(a, b);
     }
 
     function backdrop(el) {
@@ -542,7 +932,7 @@
         if (!d) { throw new Error('The active page is on another origin.'); }
 
         var want = (payload.checks && payload.checks.length) ? payload.checks
-            : ['contrast', 'alt', 'labels', 'headings', 'overflow'];
+            : ['contrast', 'alt', 'labels', 'headings', 'overflow', 'borders'];
         var findings = [];
         var win = d.defaultView;
 
@@ -613,6 +1003,48 @@
             });
         }
 
+        // A border can be set, sized and styled and still not be there: its
+        // token resolved to white at 20% on a white page, and nothing in the
+        // markup, the stylesheet or a text read says so. Only the rendered
+        // colours, blended the way the browser paints them, show it.
+        if (want.indexOf('borders') !== -1) {
+            var faint = 0;
+            d.querySelectorAll('body *').forEach(function (el) {
+                if (faint >= 200) { return; }
+                var s = win.getComputedStyle(el);
+                var sides = bordersOf(s);
+                if (!sides.length || !visible(el)) { return; }
+
+                var surface = surfaceFrom(el.parentElement);
+                var fill = readColor(s.backgroundColor) || { r: 0, g: 0, b: 0, a: 0 };
+                // The background colour is clipped by the bottom-most layer,
+                // which is the last entry in the list.
+                var clip = String(s.backgroundClip || 'border-box').split(',').pop().trim();
+
+                for (var i = 0; i < sides.length; i++) {
+                    var border = readColor(sides[i].color);
+                    if (!border) { continue; }
+                    var ratio = borderContrast(border, fill, surface, clip === 'border-box');
+                    if (ratio < BORDER_FLOOR) {
+                        faint++;
+                        findings.push({
+                            check: 'borders',
+                            selector: cssPath(el),
+                            detail: 'Border is effectively invisible against its background: '
+                                + ratio.toFixed(2) + ':1 against a floor of ' + BORDER_FLOOR + ':1.',
+                            text: (el.textContent || '').trim().slice(0, 40),
+                            border: sides[i].color,
+                            surface: colorText(surface),
+                            ratio: Math.round(ratio * 100) / 100
+                        });
+                        // One finding per element; four identical sides are
+                        // one mistake, not four.
+                        break;
+                    }
+                }
+            });
+        }
+
         return {
             url: d.location.href,
             viewport: d.documentElement.clientWidth,
@@ -658,7 +1090,8 @@
             // "No block with clientId" because the save between them reloaded
             // the editor. Bring it forward, leave it alone.
             if (editorIn(existing)) {
-                log('follow', 'showing ' + (p.title || url), 'ok');
+                /* translators: %s: title or address of the post being shown */
+                log('follow', sprintf(__('showing %s', 'nibwp'), p.title || url), 'ok');
                 return { followed: true, focused: true, url: existing.url };
             }
 
@@ -667,11 +1100,13 @@
             } catch (e) {
                 existing.frame.src = existing.frame.src;
             }
-            log('follow', 'reloaded ' + (p.title || url), 'ok');
+            /* translators: %s: title or address of the post that was reloaded */
+            log('follow', sprintf(__('reloaded %s', 'nibwp'), p.title || url), 'ok');
             return { followed: true, reloaded: true, url: existing.url };
         }
 
-        log('follow', 'opening ' + (p.title || url), 'ok');
+        /* translators: %s: title or address of the post being opened */
+        log('follow', sprintf(__('opening %s', 'nibwp'), p.title || url), 'ok');
         return openPage(url, p.title || url).then(function (page) {
             return { followed: true, opened: true, url: page.url };
         });
@@ -915,6 +1350,15 @@
     /* --------------------------------------------------------- approvals -- */
 
     function ask(command, payload) {
+        // Nobody is watching a headless run, so a prompt here would hang until
+        // the command timed out and report it as "no response" — which reads as
+        // a broken workspace rather than a refusal. Decline at once instead.
+        // The gate itself stays exactly as strict: what needs a person still
+        // needs a person, it just fails fast and says why.
+        if (window.__nibwpHeadless) {
+            return Promise.resolve(false);
+        }
+
         return new Promise(function (resolve) {
             askWhat.textContent = describe(command, payload);
             askEl.hidden = false;
@@ -928,18 +1372,46 @@
 
     function describe(command, payload) {
         switch (command) {
-            case 'click': return 'Click ' + (payload.selector || 'an element') + ' on this page.';
-            case 'fill': return 'Type “' + (payload.value || '') + '” into ' + (payload.selector || 'a field') + (payload.submit ? ', then submit the form.' : '.');
+            case 'click': return payload.selector
+                /* translators: %s: CSS selector of the element to click */
+                ? sprintf(__('Click %s on this page.', 'nibwp'), payload.selector)
+                : __('Click an element on this page.', 'nibwp');
+            case 'hover': return payload.selector
+                /* translators: %s: CSS selector of the element to hover over */
+                ? sprintf(__('Hover over %s and report what changes.', 'nibwp'), payload.selector)
+                : __('Hover over an element and report what changes.', 'nibwp');
+            case 'screenshot': return payload.selector
+                /* translators: %s: CSS selector of the element to capture */
+                ? sprintf(__('Take a screenshot of %s.', 'nibwp'), payload.selector)
+                : __('Take a screenshot of this page.', 'nibwp');
+            case 'fill': {
+                var field = payload.selector || __('a field', 'nibwp');
+                return payload.submit
+                    /* translators: 1: the text to type, 2: CSS selector of the field */
+                    ? sprintf(__('Type “%1$s” into %2$s, then submit the form.', 'nibwp'), payload.value || '', field)
+                    /* translators: 1: the text to type, 2: CSS selector of the field */
+                    : sprintf(__('Type “%1$s” into %2$s.', 'nibwp'), payload.value || '', field);
+            }
             case 'batch': {
                 var steps = (payload.steps || []).map(function (st) { return describe(st.command, st.payload || {}); });
-                return steps.length + ' steps in one go:' + String.fromCharCode(10, 10) + steps.join(String.fromCharCode(10));
+                /* translators: %d: number of steps */
+                return sprintf(_n('%d step in one go:', '%d steps in one go:', steps.length, 'nibwp'), steps.length)
+                    + String.fromCharCode(10, 10) + steps.join(String.fromCharCode(10));
             }
-            case 'block-insert': return 'Insert a ' + (payload.blockName || 'block') + ' block into the page being edited.';
-            case 'block-update': return 'Change ' + Object.keys(payload.attributes || {}).join(', ') + ' on block ' + payload.clientId + '.';
-            case 'block-delete': return 'Delete block ' + payload.clientId + ' and everything inside it.';
-            case 'open': return 'Open ' + (payload.url || 'a page') + ' in the workspace.';
-            case 'read': return 'Read the current page.';
-            case 'audit': return 'Check the current page for accessibility and layout problems.';
+            case 'block-insert': return payload.blockName
+                /* translators: %s: block name, e.g. core/heading */
+                ? sprintf(__('Insert a %s block into the page being edited.', 'nibwp'), payload.blockName)
+                : __('Insert a block into the page being edited.', 'nibwp');
+            /* translators: 1: comma-separated attribute names, 2: block client id */
+            case 'block-update': return sprintf(__('Change %1$s on block %2$s.', 'nibwp'), Object.keys(payload.attributes || {}).join(', '), payload.clientId);
+            /* translators: %s: block client id */
+            case 'block-delete': return sprintf(__('Delete block %s and everything inside it.', 'nibwp'), payload.clientId);
+            case 'open': return payload.url
+                /* translators: %s: address of the page to open */
+                ? sprintf(__('Open %s in the workspace.', 'nibwp'), payload.url)
+                : __('Open a page in the workspace.', 'nibwp');
+            case 'read': return __('Read the current page.', 'nibwp');
+            case 'audit': return __('Check the current page for accessibility and layout problems.', 'nibwp');
             default: return command + ' ' + JSON.stringify(payload);
         }
     }
@@ -954,7 +1426,7 @@
             var box = document.getElementById('nw-vs-approval');
             if (box) { box.checked = false; }
             api('state', { approval: '0' });
-            log('setting', 'Approval off — turn it back on in the bar');
+            log('setting', __('Approval off — turn it back on in the bar', 'nibwp'));
             if (pending) { pending(true); }
         });
     }
@@ -962,7 +1434,7 @@
 
     document.getElementById('nw-vs-approval').addEventListener('change', function (e) {
         api('state', { approval: e.target.checked ? '1' : '0' });
-        log('setting', e.target.checked ? 'Approval required' : 'Approval off');
+        log('setting', e.target.checked ? __('Approval required', 'nibwp') : __('Approval off', 'nibwp'));
     });
 
     // The panel earns its space while you are setting up and stops earning it
@@ -1016,16 +1488,25 @@
     function promptFor(item) {
         if (item.k === 'task') { return item.n; }
         if (item.k === 'skill') {
-            return 'Load the ' + item.n + ' skill with nibwp/get-skill and follow it for this task. '
-                + 'Work in the NibWP visual workspace so I can watch each step.';
+            /* translators: %s: the skill name, kept exactly as written */
+            return sprintf(__('Load the %s skill with nibwp/get-skill and follow it for this task. Work in the NibWP visual workspace so I can watch each step.', 'nibwp'), item.n);
         }
         if (item.k === 'workflow') {
-            return 'Run the NibWP workflow "' + item.n + '" on this site. Work in the NibWP visual '
-                + 'workspace so I can watch each step, and ask me before anything that changes something.';
+            /* translators: %s: the workflow name, kept exactly as written */
+            return sprintf(__('Run the NibWP workflow "%s" on this site. Work in the NibWP visual workspace so I can watch each step, and ask me before anything that changes something.', 'nibwp'), item.n);
         }
-        return 'Use ' + item.n + ' on this site, in the NibWP visual workspace so I can watch, '
-            + 'and tell me what you find.';
+        /* translators: %s: the ability name, e.g. nibwp/visual-audit */
+        return sprintf(__('Use %s on this site, in the NibWP visual workspace so I can watch, and tell me what you find.', 'nibwp'), item.n);
     }
+
+    // The kind of each search result, in words. The keys are the catalogue's
+    // own and never shown.
+    var KINDS = {
+        ability: _x('ability', 'search result kind', 'nibwp'),
+        workflow: _x('workflow', 'search result kind', 'nibwp'),
+        skill: _x('skill', 'search result kind', 'nibwp'),
+        task: _x('task', 'search result kind', 'nibwp')
+    };
 
     function rank(item, q) {
         var name = (item.n || '').toLowerCase();
@@ -1047,7 +1528,8 @@
 
         if (hits.length === 0) {
             findEl.innerHTML = '<p class="nw-vs-find__none"></p>';
-            findEl.firstChild.textContent = 'Nothing matches ' + String.fromCharCode(8220) + q + String.fromCharCode(8221) + '.';
+            /* translators: %s: what was typed into the search box */
+            findEl.firstChild.textContent = sprintf(__('Nothing matches “%s”.', 'nibwp'), q);
             findEl.hidden = false;
             return true;
         }
@@ -1062,11 +1544,12 @@
             row.type = 'button';
             row.className = 'nw-vs-find__row';
             row.setAttribute('data-vs-prompt', promptFor(hit.item));
+            row.setAttribute('data-copy-label', __('Copy', 'nibwp'));
+            row.setAttribute('data-copied-label', __('Copied', 'nibwp'));
             row.innerHTML = '<span class="nw-vs-find__kind"></span>'
                 + '<span class="nw-vs-find__body"><span class="nw-vs-find__label"></span>'
                 + '<span class="nw-vs-find__note"></span></span>';
-            row.querySelector('.nw-vs-find__kind').textContent =
-                hit.item.k === 'task' ? 'task' : hit.item.k;
+            row.querySelector('.nw-vs-find__kind').textContent = KINDS[hit.item.k] || hit.item.k;
             row.querySelector('.nw-vs-find__label').textContent = hit.item.l || hit.item.n;
             row.querySelector('.nw-vs-find__note').textContent = hit.item.d || hit.item.n;
             row.addEventListener('click', function () { copyText(row.getAttribute('data-vs-prompt'), row); });
@@ -1078,7 +1561,8 @@
         if (total > hits.length) {
             var more = document.createElement('p');
             more.className = 'nw-vs-find__none';
-            more.textContent = total - hits.length + ' more match. Type a little further.';
+            /* translators: %d: number of further results not shown */
+            more.textContent = sprintf(_n('%d more match. Type a little further.', '%d more matches. Type a little further.', total - hits.length, 'nibwp'), total - hits.length);
             findEl.appendChild(more);
         }
 
@@ -1155,7 +1639,7 @@
     if (checkBtn && checkOut) {
         checkBtn.addEventListener('click', function () {
             yieldPoll();
-            checkOut.textContent = 'Checking…';
+            checkOut.textContent = __('Checking…', 'nibwp');
             checkOut.className = 'nw-vs-checkout';
             api('check', {})
                 .then(function (r) { return r.json(); })
@@ -1168,9 +1652,10 @@
                     // not the same as "cannot reach WordPress".
                     var listening = !standDown && (polling || (Date.now() - lastPoll) < 30000);
                     var rows = [
-                        [listening, 'This screen is listening', 'This screen is not reaching WordPress'],
-                        [d.abilities, 'AI Abilities are on', 'AI Abilities are switched off'],
-                        [d.connected, (d.clients || []).join(', ') + ' can reach this site', 'No AI client is connected']
+                        [listening, __('This screen is listening', 'nibwp'), __('This screen is not reaching WordPress', 'nibwp')],
+                        [d.abilities, __('AI Abilities are on', 'nibwp'), __('AI Abilities are switched off', 'nibwp')],
+                        /* translators: %s: comma-separated names of the connected AI clients */
+                        [d.connected, sprintf(__('%s can reach this site', 'nibwp'), (d.clients || []).join(', ')), __('No AI client is connected', 'nibwp')]
                     ];
                     checkOut.innerHTML = '';
                     rows.forEach(function (row) {
@@ -1183,14 +1668,129 @@
                         var a = document.createElement('a');
                         a.className = 'nw-vs-more';
                         a.href = d.connectUrl;
-                        a.textContent = 'Fix this on the Connect screen';
+                        a.textContent = __('Fix this on the Connect screen', 'nibwp');
                         checkOut.appendChild(a);
                     }
                 })
                 .catch(function () {
-                    checkOut.textContent = 'Could not reach WordPress from this screen.';
+                    checkOut.textContent = __('Could not reach WordPress from this screen.', 'nibwp');
                     checkOut.className = 'nw-vs-checkout is-bad';
                 });
+        });
+    }
+
+    /* --------------------------------------------- pairing a headless runner -- */
+    // The key is made here rather than handed out to whatever authenticates to
+    // the API, and that is the guard rather than a convenience: this screen is
+    // behind a logged-in cookie, which only a real sign-in produces, so asking
+    // for a key is something a person does and an application password cannot.
+    // Without it the runner's stored credential would be enough on its own to
+    // mint browser cookies for the account.
+    var pairBtn = document.getElementById('nw-vs-pair');
+    var pairOut = document.getElementById('nw-vs-pair-out');
+    var pairSched = document.getElementById('nw-vs-pair-sched');
+    var pairRevoke = document.getElementById('nw-vs-pair-revoke');
+
+    function pairFailed() {
+        if (!pairOut) { return; }
+        pairOut.textContent = __('Could not reach WordPress from this screen.', 'nibwp');
+        pairOut.className = 'nw-vs-checkout is-bad';
+    }
+
+    /**
+     * Show a key once.
+     *
+     * Written with textContent and a node per part, never innerHTML: the value
+     * is a credential, and the one place it is ever displayed is not the place
+     * to start concatenating it into markup.
+     */
+    function showPass(d) {
+        pairOut.className = 'nw-vs-checkout';
+        pairOut.textContent = '';
+
+        var key = document.createElement('code');
+        key.className = 'nw-vs-pair__key';
+        key.textContent = d.pass;
+        pairOut.appendChild(key);
+
+        var copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'nw-vs-more nw-vs-more--btn';
+        copy.textContent = __('Copy the key', 'nibwp');
+        copy.addEventListener('click', function () {
+            var done = function () {
+                copy.textContent = __('Copied', 'nibwp');
+                setTimeout(function () { copy.textContent = __('Copy the key', 'nibwp'); }, 1600);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(d.pass).then(done, done);
+            } else {
+                // Plain http, and older browsers, where the async clipboard is
+                // unavailable. Selecting it is the fallback that always works.
+                var range = document.createRange();
+                range.selectNodeContents(key);
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        });
+        pairOut.appendChild(copy);
+
+        // Two facts a person needs before they walk away from this screen: it
+        // will not be shown again, and it does not last forever.
+        var when = document.createElement('span');
+        when.className = 'nw-vs-pair__when';
+        when.textContent = d.scheduled
+            ? sprintf(
+                /* translators: %s: a date and time */
+                __('Shown once. Reusable for scheduled runs until you revoke it, or until %s.', 'nibwp'),
+                new Date(d.expires * 1000).toLocaleString()
+            )
+            : sprintf(
+                /* translators: %s: a date and time */
+                __('Shown once, good for one run, and only until %s.', 'nibwp'),
+                new Date(d.expires * 1000).toLocaleString()
+            );
+        pairOut.appendChild(when);
+
+        if (pairRevoke) { pairRevoke.hidden = false; }
+    }
+
+    if (pairBtn && pairOut) {
+        pairBtn.addEventListener('click', function () {
+            yieldPoll();
+            pairOut.className = 'nw-vs-checkout';
+            pairOut.textContent = __('Creating…', 'nibwp');
+
+            api('pair', { scheduled: pairSched && pairSched.checked ? '1' : '0' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d || !d.pass) { throw new Error('no key'); }
+                    showPass(d);
+                })
+                .catch(pairFailed);
+        });
+    }
+
+    if (pairRevoke && pairOut) {
+        pairRevoke.addEventListener('click', function () {
+            yieldPoll();
+            pairOut.className = 'nw-vs-checkout';
+            pairOut.textContent = __('Revoking…', 'nibwp');
+
+            api('pair', { revoke: '1' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d || typeof d.revoked !== 'number') { throw new Error('no answer'); }
+                    // Revoking ends the sessions those keys opened, so say so:
+                    // a runner that goes quiet a minute later is otherwise a
+                    // mystery rather than the thing that was just asked for.
+                    pairOut.textContent = d.revoked > 0
+                        ? __('Revoked. Any runner signed in with one of those keys is now signed out.', 'nibwp')
+                        : __('There was nothing to revoke.', 'nibwp');
+                    pairRevoke.hidden = true;
+                })
+                .catch(pairFailed);
         });
     }
 
@@ -1202,7 +1802,7 @@
                 btn.classList.add('is-copied');
                 var tag = btn.querySelector('.nw-vs-starter__copy');
                 var was = tag ? tag.textContent : '';
-                if (tag) { tag.textContent = 'Copied'; }
+                if (tag) { tag.textContent = __('Copied', 'nibwp'); }
                 setTimeout(function () {
                     btn.classList.remove('is-copied');
                     if (tag) { tag.textContent = was; }
@@ -1298,7 +1898,7 @@
             var next = currentTheme() === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
             try { window.localStorage.setItem(THEME_KEY, next); } catch (e) { /* private mode */ }
-            var says = next === 'dark' ? 'Switch to light' : 'Switch to dark';
+            var says = next === 'dark' ? __('Switch to light', 'nibwp') : __('Switch to dark', 'nibwp');
             themeBtn.setAttribute('aria-label', says);
             themeBtn.setAttribute('data-tip', says);
         });
@@ -1521,8 +2121,8 @@
                 + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
                 + '<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
         document.getElementById('nw-vs-up-eyebrow').textContent = item.ready && item.kind === 'skill'
-            ? 'Ready to switch on'
-            : 'Not included in your plan';
+            ? __('Ready to switch on', 'nibwp')
+            : __('Not included in your plan', 'nibwp');
         document.getElementById('nw-vs-up-title').textContent = item.title || '';
         document.getElementById('nw-vs-up-line').textContent = item.line || '';
 
@@ -1540,7 +2140,8 @@
 
         var go = document.getElementById('nw-vs-up-go');
         go.href = item.url || '#';
-        go.textContent = item.price ? (item.cta + ' — ' + item.price) : item.cta;
+        /* translators: 1: call to action, e.g. "Unlock Etch", 2: price, e.g. $49 */
+        go.textContent = item.price ? sprintf(__('%1$s — %2$s', 'nibwp'), item.cta, item.price) : item.cta;
 
         up.hidden = false;
         document.getElementById('nw-vs-up-not').focus();
@@ -1587,7 +2188,7 @@
     }
 
     function copyText(text, el) {
-        var done = function () { if (el) { flash(el, 'Copied'); } };
+        var done = function () { if (el) { flash(el, __('Copied', 'nibwp')); } };
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(done, done);
             return;
@@ -1669,13 +2270,14 @@
         recheck.addEventListener('click', function () {
             yieldPoll();
             said.className = 'nw-vs-start__said';
-            said.textContent = 'Checking…';
+            said.textContent = __('Checking…', 'nibwp');
             api('check', {})
                 .then(function (r) { return r.json(); })
                 .then(function (d) {
                     if (d.connected) {
                         said.className = 'nw-vs-start__said is-ok';
-                        said.textContent = (d.clients || []).join(', ') + ' can reach this site. Loading the workspace…';
+                        /* translators: %s: comma-separated names of the connected AI clients */
+                        said.textContent = sprintf(__('%s can reach this site. Loading the workspace…', 'nibwp'), (d.clients || []).join(', '));
                         // Reload rather than patching the screen: the panel, the
                         // status and the starting points are all rendered
                         // against "connected", and half of them updating is
@@ -1685,12 +2287,12 @@
                     }
                     said.className = 'nw-vs-start__said is-bad';
                     said.textContent = d.abilities
-                        ? 'Nothing has connected yet. Finish the sign-in in your assistant, then check again.'
-                        : 'AI Abilities are switched off on this site, so nothing can connect until they are on.';
+                        ? __('Nothing has connected yet. Finish the sign-in in your assistant, then check again.', 'nibwp')
+                        : __('AI Abilities are switched off on this site, so nothing can connect until they are on.', 'nibwp');
                 })
                 .catch(function () {
                     said.className = 'nw-vs-start__said is-bad';
-                    said.textContent = 'Could not reach WordPress from this screen.';
+                    said.textContent = __('Could not reach WordPress from this screen.', 'nibwp');
                 });
         });
     }
@@ -1704,7 +2306,7 @@
     if (recheckBar) {
         recheckBar.addEventListener('click', function () {
             var says = recheckBar.querySelector('.nw-vs-ibtn__text');
-            if (says) { says.textContent = 'Checking…'; }
+            if (says) { says.textContent = __('Checking…', 'nibwp'); }
             recheckBar.disabled = true;
             yieldPoll();
 
@@ -1720,10 +2322,10 @@
                 .then(function (r) { return r.json(); })
                 .then(function (d) {
                     if (d.connected) { hardReload(); return; }
-                    if (says) { says.textContent = 'Still nothing'; }
-                    log('check', (d.abilities ? 'No client has connected yet' : 'AI Abilities are switched off'), 'bad');
+                    if (says) { says.textContent = __('Still nothing', 'nibwp'); }
+                    log('check', (d.abilities ? __('No client has connected yet', 'nibwp') : __('AI Abilities are switched off', 'nibwp')), 'bad');
                     setTimeout(function () {
-                        if (says) { says.textContent = 'It is connected'; }
+                        if (says) { says.textContent = __('It is connected', 'nibwp'); }
                         recheckBar.disabled = false;
                     }, 2200);
                 })
@@ -1743,6 +2345,8 @@
             case 'open': return openPage(p.url, p.title);
             case 'read': return readPage(p);
             case 'click': return clickIt(p);
+            case 'hover': return hoverIt(p);
+            case 'screenshot': return shootIt(p);
             case 'fill': return fillIt(p);
             case 'audit': return auditPage(p);
             case 'viewport': return setViewport(p);
@@ -1806,8 +2410,13 @@
 
         return gate.then(function (allowed) {
             if (!allowed) {
-                log(cmd.command, 'refused', 'bad');
-                return { error: 'The person watching refused this action.' };
+                log(cmd.command, __('refused', 'nibwp'), 'bad');
+                return {
+                    error: window.__nibwpHeadless
+                        ? 'This workspace is running headless, so there is nobody to approve "' + cmd.command
+                            + '". Run it with Agent View open, or turn the approval gate off if this site is meant to run unattended.'
+                        : 'The person watching refused this action.'
+                };
             }
             setStatus(cmd.command + '…', true);
             return Promise.resolve()
@@ -1833,15 +2442,22 @@
 
     function summaryOf(cmd, data) {
         if (!data) { return ''; }
-        if (cmd.command === 'audit') { return data.total + ' issue(s)'; }
-        if (cmd.command === 'read') { return (data.elements || []).length + ' element(s)'; }
+        if (cmd.command === 'audit') {
+            /* translators: %d: number of problems the audit found */
+            return sprintf(_n('%d issue', '%d issues', data.total, 'nibwp'), data.total);
+        }
+        if (cmd.command === 'read') {
+            var count = (data.elements || []).length;
+            /* translators: %d: number of elements read from the page */
+            return sprintf(_n('%d element', '%d elements', count, 'nibwp'), count);
+        }
         if (data.url) { return data.url; }
         return '';
     }
 
     // Idle is not a problem, and "Waiting for the agent" read as one. What the
     // bar should distinguish is whether anything can reach the site at all.
-    var IDLE = cfg.connected ? 'Ready' : 'No AI client connected';
+    var IDLE = cfg.connected ? __('Ready', 'nibwp') : __('No AI client connected', 'nibwp');
 
     var backoff = 250;
     var lastPoll = 0;
@@ -1872,7 +2488,7 @@
             .catch(function () {
                 // Back off rather than hammering a server that just refused us —
                 // a tab retrying every 250ms through an outage makes it worse.
-                setStatus('Reconnecting…', false);
+                setStatus(__('Reconnecting…', 'nibwp'), false);
                 backoff = Math.min(backoff * 2, 15000);
             })
             .then(function () {
@@ -1882,7 +2498,7 @@
     }
 
     function showTakenOver() {
-        setStatus('This workspace was opened somewhere else', false);
+        setStatus(__('This workspace was opened somewhere else', 'nibwp'), false);
 
         var panel = document.createElement('div');
         panel.className = 'nw-vs-stood';
@@ -1894,13 +2510,14 @@
             + '<path d="M18 8h4v8a2 2 0 0 1-2 2h-2"/></svg></span>'
             + '<h2></h2><p></p>'
             + '<div class="nw-vs-stood__acts">'
-            + '<button type="button" class="nw-vs-stood__go">Take it back</button>'
-            + '<button type="button" class="nw-vs-stood__alt">Connect another assistant</button>'
+            + '<button type="button" class="nw-vs-stood__go"></button>'
+            + '<button type="button" class="nw-vs-stood__alt"></button>'
             + '</div>';
 
-        panel.children[1].textContent = 'This workspace is open in another tab';
-        panel.children[2].textContent = 'Only one workspace can take the agent'
-            + String.fromCharCode(8217) + 's commands at a time, so this one stopped listening.';
+        panel.children[1].textContent = __('This workspace is open in another tab', 'nibwp');
+        panel.children[2].textContent = __('Only one workspace can take the agent’s commands at a time, so this one stopped listening.', 'nibwp');
+        panel.querySelector('.nw-vs-stood__go').textContent = __('Take it back', 'nibwp');
+        panel.querySelector('.nw-vs-stood__alt').textContent = __('Connect another assistant', 'nibwp');
 
         // Reloading is what takes it back — the claim goes to whoever asks last.
         panel.querySelector('.nw-vs-stood__go').addEventListener('click', function () {

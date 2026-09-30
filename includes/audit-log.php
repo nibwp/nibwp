@@ -321,15 +321,16 @@ function nibwp_render_audit_log_page(): void
     <div class="wrap nibwp-wrap">
         <div class="nibwp-page-header">
             <div>
-                <h1><?php esc_html_e('Audit Log', domain: 'nibwp'); ?></h1>
-                <p class="nibwp-subtitle"><?php esc_html_e('Every MCP tool call is recorded here for review and debugging.', domain: 'nibwp'); ?></p>
+                <h1><?php esc_html_e('Audit Log', 'nibwp'); ?></h1>
+                <p class="nibwp-subtitle"><?php esc_html_e('Every MCP tool call is recorded here for review and debugging.', 'nibwp'); ?></p>
             </div>
         </div>
 
         <?php if ($cleanup_result !== null): ?>
             <div class="notice notice-success is-dismissible"><p><?php
                 printf(
-                    esc_html__('%d old log entries deleted.', domain: 'nibwp'),
+                    /* translators: %d: number of deleted log entries */
+                    esc_html(_n('%d old log entry deleted.', '%d old log entries deleted.', $cleanup_result, 'nibwp')),
                     $cleanup_result,
                 );
             ?></p></div>
@@ -340,23 +341,26 @@ function nibwp_render_audit_log_page(): void
         <div class="nibwp-audit-stats">
             <div class="nibwp-audit-stat">
                 <div class="nibwp-audit-stat-number"><?php echo esc_html(number_format_i18n($stats['total_calls'])); ?></div>
-                <div class="nibwp-audit-stat-label"><?php esc_html_e('Total Calls', domain: 'nibwp'); ?></div>
+                <div class="nibwp-audit-stat-label"><?php esc_html_e('Total Calls', 'nibwp'); ?></div>
             </div>
             <div class="nibwp-audit-stat">
                 <div class="nibwp-audit-stat-number"><?php echo esc_html(number_format_i18n($stats['calls_today'])); ?></div>
-                <div class="nibwp-audit-stat-label"><?php esc_html_e("Today's Calls", domain: 'nibwp'); ?></div>
+                <div class="nibwp-audit-stat-label"><?php esc_html_e("Today's Calls", 'nibwp'); ?></div>
             </div>
             <div class="nibwp-audit-stat">
                 <div class="nibwp-audit-stat-number <?php echo $stats['error_rate'] > 10 ? 'is-error' : ''; ?>">
-                    <?php echo esc_html($stats['error_rate'] . '%'); ?>
+                    <?php
+                    /* translators: %s: error rate as a number; %% is a literal percent sign */
+                    echo esc_html(sprintf(__('%s%%', 'nibwp'), number_format_i18n((float) $stats['error_rate'], fmod((float) $stats['error_rate'], 1.0) === 0.0 ? 0 : 1)));
+                    ?>
                 </div>
-                <div class="nibwp-audit-stat-label"><?php esc_html_e('Error Rate', domain: 'nibwp'); ?></div>
+                <div class="nibwp-audit-stat-label"><?php esc_html_e('Error Rate', 'nibwp'); ?></div>
             </div>
             <div class="nibwp-audit-stat">
                 <div class="nibwp-audit-stat-number" style="font-size:16px; padding-top:6px;">
                     <?php echo esc_html($most_used); ?>
                 </div>
-                <div class="nibwp-audit-stat-label"><?php esc_html_e('Most Used Tool', domain: 'nibwp'); ?></div>
+                <div class="nibwp-audit-stat-label"><?php esc_html_e('Most Used Tool', 'nibwp'); ?></div>
             </div>
         </div>
 
@@ -364,16 +368,16 @@ function nibwp_render_audit_log_page(): void
         <form method="get" class="nibwp-audit-filters">
             <input type="hidden" name="page" value="nibwp-audit-log" />
             <input type="text" name="tool" value="<?php echo esc_attr($tool_filter ?? ''); ?>"
-                   placeholder="<?php esc_attr_e('Filter by tool name...', domain: 'nibwp'); ?>"
+                   placeholder="<?php esc_attr_e('Filter by tool name...', 'nibwp'); ?>"
                    style="width:220px;" />
             <select name="status">
-                <option value=""><?php esc_html_e('All statuses', domain: 'nibwp'); ?></option>
-                <option value="success" <?php selected($status_filter, 'success'); ?>><?php esc_html_e('Success', domain: 'nibwp'); ?></option>
-                <option value="error" <?php selected($status_filter, 'error'); ?>><?php esc_html_e('Error', domain: 'nibwp'); ?></option>
+                <option value=""><?php esc_html_e('All statuses', 'nibwp'); ?></option>
+                <option value="success" <?php selected($status_filter, 'success'); ?>><?php esc_html_e('Success', 'nibwp'); ?></option>
+                <option value="error" <?php selected($status_filter, 'error'); ?>><?php esc_html_e('Error', 'nibwp'); ?></option>
             </select>
-            <button type="submit" class="button button-primary"><?php esc_html_e('Filter', domain: 'nibwp'); ?></button>
+            <button type="submit" class="button button-primary"><?php esc_html_e('Filter', 'nibwp'); ?></button>
             <?php if ($tool_filter !== null || $status_filter !== null): ?>
-                <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-audit-log')); ?>" class="button"><?php esc_html_e('Clear', domain: 'nibwp'); ?></a>
+                <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-audit-log')); ?>" class="button"><?php esc_html_e('Clear', 'nibwp'); ?></a>
             <?php endif; ?>
         </form>
 
@@ -388,19 +392,19 @@ function nibwp_render_audit_log_page(): void
                         <line x1="16" y1="32" x2="26" y2="32"/>
                     </svg>
                 </div>
-                <h3><?php esc_html_e('No log entries found.', domain: 'nibwp'); ?></h3>
-                <p><?php esc_html_e('MCP tool calls will appear here once AI agents start using the server.', domain: 'nibwp'); ?></p>
+                <h3><?php esc_html_e('No log entries found.', 'nibwp'); ?></h3>
+                <p><?php esc_html_e('MCP tool calls will appear here once AI agents start using the server.', 'nibwp'); ?></p>
             </div>
         <?php else: ?>
             <table class="nibwp-abilities-table">
                 <thead>
                     <tr>
-                        <th style="width:170px;"><?php esc_html_e('Timestamp', domain: 'nibwp'); ?></th>
-                        <th><?php esc_html_e('Tool', domain: 'nibwp'); ?></th>
-                        <th style="width:90px;"><?php esc_html_e('Status', domain: 'nibwp'); ?></th>
-                        <th style="width:100px;"><?php esc_html_e('Time (ms)', domain: 'nibwp'); ?></th>
-                        <th style="width:120px;"><?php esc_html_e('User', domain: 'nibwp'); ?></th>
-                        <th style="width:130px;"><?php esc_html_e('IP Address', domain: 'nibwp'); ?></th>
+                        <th style="width:170px;"><?php esc_html_e('Timestamp', 'nibwp'); ?></th>
+                        <th><?php esc_html_e('Tool', 'nibwp'); ?></th>
+                        <th style="width:90px;"><?php esc_html_e('Status', 'nibwp'); ?></th>
+                        <th style="width:100px;"><?php esc_html_e('Time (ms)', 'nibwp'); ?></th>
+                        <th style="width:120px;"><?php esc_html_e('User', 'nibwp'); ?></th>
+                        <th style="width:130px;"><?php esc_html_e('IP Address', 'nibwp'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -428,7 +432,11 @@ function nibwp_render_audit_log_page(): void
                             <td><span class="nibwp-audit-tool-name"><?php echo esc_html($entry->tool_name); ?></span></td>
                             <td>
                                 <span class="nibwp-audit-badge <?php echo $is_error ? 'is-error' : 'is-success'; ?>">
-                                    <?php echo esc_html($entry->result_status); ?>
+                                    <?php echo esc_html(match ((string) $entry->result_status) {
+                                        'success' => __('success', 'nibwp'),
+                                        'error' => __('error', 'nibwp'),
+                                        default => (string) $entry->result_status,
+                                    }); ?>
                                 </span>
                             </td>
                             <td><?php echo esc_html(number_format((float) $entry->execution_time_ms, 1)); ?></td>
@@ -450,7 +458,8 @@ function nibwp_render_audit_log_page(): void
             <?php if ($total_pages > 1): ?>
                 <div class="nibwp-pagination">
                     <span><?php printf(
-                        esc_html__('Showing %1$d-%2$d of %3$d entries', domain: 'nibwp'),
+                        /* translators: 1: first entry shown, 2: last entry shown, 3: total number of entries */
+                        esc_html__('Showing %1$d-%2$d of %3$d entries', 'nibwp'),
                         (($current_page - 1) * $per_page) + 1,
                         min($current_page * $per_page, $total),
                         $total,
@@ -490,14 +499,14 @@ function nibwp_render_audit_log_page(): void
 
         <!-- Cleanup Form -->
         <form method="post" class="nibwp-audit-cleanup-form"
-              onsubmit="return confirm('<?php echo esc_js(__('Delete old log entries? This cannot be undone.', domain: 'nibwp')); ?>');">
+              onsubmit="return confirm('<?php echo esc_js(__('Delete old log entries? This cannot be undone.', 'nibwp')); ?>');">
             <?php wp_nonce_field('nibwp_audit_cleanup'); ?>
-            <label for="nibwp-retention-days"><?php esc_html_e('Clear entries older than', domain: 'nibwp'); ?></label>
+            <label for="nibwp-retention-days"><?php esc_html_e('Clear entries older than', 'nibwp'); ?></label>
             <input type="number" id="nibwp-retention-days" name="nibwp_retention_days"
                    value="30" min="1" max="365" />
-            <span><?php esc_html_e('days', domain: 'nibwp'); ?></span>
+            <span><?php esc_html_e('days', 'nibwp'); ?></span>
             <button type="submit" name="nibwp_audit_cleanup" class="button nibwp-btn-danger">
-                <?php esc_html_e('Clear Old Logs', domain: 'nibwp'); ?>
+                <?php esc_html_e('Clear Old Logs', 'nibwp'); ?>
             </button>
         </form>
     </div>

@@ -32,7 +32,7 @@ function nibwp_templates_register_abilities(): void
     if (! nibwp_has_ability('nibwp/templates-list')) {
         wp_register_ability('nibwp/templates-list', [
             'label'       => __('Templates — List', 'nibwp'),
-            'description' => __('List ready-to-apply templates (form / acf / post / page / menu / crm). Each template ships with a target ability + pre-filled parameters so a single templates-apply call creates the asset. Filter by category if known.', 'nibwp'),
+            'description' => 'List ready-to-apply templates (form / acf / post / page / menu / crm). Each template ships with a target ability + pre-filled parameters so a single templates-apply call creates the asset. Filter by category if known.',
             'category'    => 'nibwp',
             'input_schema' => [
                 'type' => 'object',
@@ -60,7 +60,7 @@ function nibwp_templates_register_abilities(): void
     if (! nibwp_has_ability('nibwp/templates-apply')) {
         wp_register_ability('nibwp/templates-apply', [
             'label'       => __('Templates — Apply', 'nibwp'),
-            'description' => __('Apply a named starter template. Single call creates: contact form, newsletter signup, SEO ACF group, product spec ACF group, blog post layout, BuddyPress group, etc. Pass `overrides` to tweak titles/labels before persistence.', 'nibwp'),
+            'description' => 'Apply a named starter template. Single call creates: contact form, newsletter signup, SEO ACF group, product spec ACF group, blog post layout, BuddyPress group, etc. Pass `overrides` to tweak titles/labels before persistence.',
             'category'    => 'nibwp',
             'input_schema' => [
                 'type' => 'object',

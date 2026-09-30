@@ -27,7 +27,7 @@ return [
     'tagline'        => 'Convert HTML, URLs, images, or screenshots into native, editable Elementor pages — containers and widgets, not raw HTML',
     'description'    => 'Paste raw HTML, drop a screenshot, or share a URL — the agent rebuilds it as a clean, native Elementor page: modern flexbox containers first, then real widgets (heading, text-editor, image, button, icon-box, image-box, video, tabs, accordion, and any Pro/add-on widget your site actually has). Every widget type and control id is checked against the LIVE Elementor registry on your site, so nothing is invented. Styling maps to Elementor controls (padding, gap, background, typography, colors) — not a wall of custom CSS. A hard validator rejects unknown widget types, invalid control names, broken hierarchy and duplicate ids; the persister writes the data the way Elementor needs it (correctly slashed, edit-mode enabled, CSS regenerated) with a round-trip guard so a page is never saved truncated.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.0',
+    'version'        => '1.0.2',
     'category'       => 'page-builders',
     'premium'        => true,
     'price'          => 49,
@@ -57,11 +57,22 @@ return [
     'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>',
 
     // ─── v2 routing contract ──────────────────────────────────────────────
+    // What this skill OWNS, in the words a model can reason about. The
+    // regexes below are a fast path; this sentence is the boundary.
+    'use_when' => 'The user wants anything built, rebuilt or restyled in Elementor on this site - a section, page or template - including V4 atomic elements. Owns it however it is phrased. Always read the live widget registry before authoring; never guess a widget name or control id.',
+
     'triggers' => [
         '/(?i)\b(?:convert|rebuild|port|turn|make|build)\b[^.\n]{0,40}\belementor\b/',
         '/(?i)\belementor\b[^.\n]{0,40}\b(?:page|layout|template|section|container|widget|landing)\b/',
         '/(?i)\b(?:html|url|page|image|screenshot|figma)\b[^.\n]{0,40}\b(?:to|into|as)\b[^.\n]{0,20}\belementor\b/',
         '/(?i)\b(?:elementorify|html to elementor)\b/',
+        // Order-agnostic build intent. The patterns above all require the
+        // builder's name BEFORE the thing being built, so the most natural way
+        // anyone phrases it — "create a hero section with X" — matched nothing,
+        // the skill never loaded, and the agent improvised a tree with no
+        // classes and no styles. That is what a customer reported.
+        '/(?i)\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b[^.\n]{0,80}\b(?:elementor)\b/',
+        '/(?i)\b(?:elementor)\b[^.\n]{0,80}\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b/',
     ],
     'commands' => [
         '/elementorify'      => ['description' => 'Convert HTML / URL / image to a validated, native Elementor page.'],
@@ -76,7 +87,7 @@ return [
             [
                 'ability'       => 'nibwp/design-direction',
                 'args_template' => ['purpose' => '{what the user asked for, in their words}'],
-                'why'           => 'Decide how this site should look before building: colour roles with contrast already checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if the Design Skills skill is switched off.',
+                'why'           => 'Decide how this site should look before building: color roles with contrast already checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if the Design Skills skill is switched off.',
             ],
             [
                 'ability'       => 'nibwp/skill-preflight',

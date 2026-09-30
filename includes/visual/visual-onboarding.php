@@ -214,9 +214,9 @@ function nibwp_visual_ability_prompts(): array
     }
 
     $interesting = [
-        'nibwp/visual-audit' => ['Audit this page', 'Contrast, alt text, labels, heading order, overflow.'],
-        'nibwp/visual-read' => ['Read this page', 'Text, headings and every clickable thing on it.'],
-        'nibwp/visual-console' => ['Find JavaScript errors', 'Whatever the page threw since it loaded.'],
+        'nibwp/visual-audit' => [__('Audit this page', 'nibwp'), __('Contrast, alt text, labels, heading order, overflow.', 'nibwp')],
+        'nibwp/visual-read' => [__('Read this page', 'nibwp'), __('Text, headings and every clickable thing on it.', 'nibwp')],
+        'nibwp/visual-console' => [__('Find JavaScript errors', 'nibwp'), __('Whatever the page threw since it loaded.', 'nibwp')],
     ];
 
     foreach ($interesting as $name => $meta) {
@@ -328,11 +328,13 @@ function nibwp_visual_catalogue(): array
             if ($post->post_status !== 'publish') {
                 continue;
             }
+            // The name goes into the prompt as written, because the agent
+            // runs the workflow by that name. Only what is shown translates.
             $out[] = [
                 'k' => 'workflow',
                 'n' => (string) $post->post_title,
-                'l' => (string) $post->post_title,
-                'd' => (string) get_post_meta($post->ID, 'nibwp_wf_summary', true),
+                'l' => nibwp_i18n_data((string) $post->post_title),
+                'd' => nibwp_i18n_data((string) get_post_meta($post->ID, 'nibwp_wf_summary', true)),
             ];
         }
     }
@@ -346,7 +348,7 @@ function nibwp_visual_catalogue(): array
                 'k' => 'skill',
                 'n' => $skill['label'],
                 'l' => $skill['label'],
-                'd' => $skill['tagline'],
+                'd' => nibwp_i18n_data((string) $skill['tagline']),
             ];
         }
     }
@@ -432,10 +434,11 @@ function nibwp_visual_send_bundle(): void
         ],
     ];
 
-    $readme = "This bundle points Claude Desktop at:\n\n    {$mcp}\n\n"
-        . "It contains no password. The first time it connects, your browser opens\n"
-        . "and you approve exactly what it may do — so this file is safe to keep,\n"
-        . "and useless to anyone who cannot sign in to the site.\n";
+    $readme = sprintf(
+        /* translators: %s: this site's MCP address */
+        __("This bundle points Claude Desktop at:\n\n    %s\n\nIt contains no password. The first time it connects, your browser opens\nand you approve exactly what it may do — so this file is safe to keep,\nand useless to anyone who cannot sign in to the site.\n", 'nibwp'),
+        $mcp
+    );
 
     $bytes = nibwp_zip_store_bytes([
         'manifest.json' => (string) wp_json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
@@ -578,7 +581,7 @@ function nibwp_visual_render_panel(): void
             <div class="nw-vs-panel__body">
             <div class="nw-vs-jobs nw-vs-jobs--cage">
                 <?php foreach ($tasks as $task): ?>
-                    <button type="button" class="nw-vs-job" data-vs-prompt="<?php echo esc_attr($task['prompt']); ?>">
+                    <button type="button" class="nw-vs-job" data-copy-label="<?php esc_attr_e('Copy', 'nibwp'); ?>" data-copied-label="<?php esc_attr_e('Copied', 'nibwp'); ?>" data-vs-prompt="<?php echo esc_attr($task['prompt']); ?>">
                         <span class="nw-vs-job__label"><?php echo esc_html($task['label']); ?></span>
                     </button>
                 <?php endforeach; ?>
@@ -612,10 +615,10 @@ function nibwp_visual_render_panel(): void
                 <p class="nw-vs-panel__note"><?php esc_html_e('Copy one into your assistant.', 'nibwp'); ?></p>
                 <div class="nw-vs-jobs nw-vs-jobs--cage">
                     <?php foreach ($jobs as $job): ?>
-                        <button type="button" class="nw-vs-job" data-vs-prompt="<?php echo esc_attr($job['prompt']); ?>">
-                            <span class="nw-vs-job__label"><?php echo esc_html($job['label']); ?></span>
+                        <button type="button" class="nw-vs-job" data-copy-label="<?php esc_attr_e('Copy', 'nibwp'); ?>" data-copied-label="<?php esc_attr_e('Copied', 'nibwp'); ?>" data-vs-prompt="<?php echo esc_attr($job['prompt']); ?>">
+                            <span class="nw-vs-job__label"><?php echo esc_html(nibwp_i18n_data($job['label'])); ?></span>
                             <?php if ($job['note'] !== ''): ?>
-                                <span class="nw-vs-job__note"><?php echo esc_html($job['note']); ?></span>
+                                <span class="nw-vs-job__note"><?php echo esc_html(nibwp_i18n_data($job['note'])); ?></span>
                             <?php endif; ?>
                         </button>
                     <?php endforeach; ?>
@@ -645,7 +648,7 @@ function nibwp_visual_render_panel(): void
                     </p>
                     <div class="nw-vs-jobs nw-vs-jobs--cage">
                         <?php foreach ($skills as $skill): ?>
-                            <button type="button" class="nw-vs-job"
+                            <button type="button" class="nw-vs-job" data-copy-label="<?php esc_attr_e('Copy', 'nibwp'); ?>" data-copied-label="<?php esc_attr_e('Copied', 'nibwp'); ?>"
                                     data-vs-prompt="<?php echo esc_attr(sprintf(
                                         /* translators: %s: the skill name */
                                         __('Load the %s skill with nibwp/get-skill and follow it for this task.', 'nibwp'),
@@ -653,7 +656,7 @@ function nibwp_visual_render_panel(): void
                                     )); ?>">
                                 <span class="nw-vs-job__label"><?php echo esc_html($skill['label']); ?></span>
                                 <?php if ($skill['tagline'] !== ''): ?>
-                                    <span class="nw-vs-job__note"><?php echo esc_html($skill['tagline']); ?></span>
+                                    <span class="nw-vs-job__note"><?php echo esc_html(nibwp_i18n_data((string) $skill['tagline'])); ?></span>
                                 <?php endif; ?>
                             </button>
                         <?php endforeach; ?>
@@ -696,7 +699,7 @@ function nibwp_visual_render_panel(): void
                     if ($parts !== [] && in_array($reach['plan'], ['pro', 'bundle'], true)) {
                         printf(
                             /* translators: 1: total abilities, 2: e.g. "12 integrations and 4 skills", 3: plan name */
-                            esc_html__('%1$d on this site, including %2$s your %3$s licence unlocks. A few to start with:', 'nibwp'),
+                            esc_html__('%1$d on this site, including %2$s your %3$s license unlocks. A few to start with:', 'nibwp'),
                             (int) $reach['total'],
                             esc_html(implode(__(' and ', 'nibwp'), $parts)),
                             esc_html($reach['plan'] === 'bundle' ? __('Bundle', 'nibwp') : __('Pro', 'nibwp'))
@@ -719,7 +722,7 @@ function nibwp_visual_render_panel(): void
                 </p>
                 <div class="nw-vs-jobs nw-vs-jobs--cage">
                     <?php foreach ($abilities as $job): ?>
-                        <button type="button" class="nw-vs-job" data-vs-prompt="<?php echo esc_attr($job['prompt']); ?>">
+                        <button type="button" class="nw-vs-job" data-copy-label="<?php esc_attr_e('Copy', 'nibwp'); ?>" data-copied-label="<?php esc_attr_e('Copied', 'nibwp'); ?>" data-vs-prompt="<?php echo esc_attr($job['prompt']); ?>">
                             <span class="nw-vs-job__label"><?php echo esc_html($job['label']); ?></span>
                             <span class="nw-vs-job__note"><?php echo esc_html($job['note']); ?></span>
                         </button>
@@ -767,6 +770,50 @@ function nibwp_visual_render_panel(): void
                 </div>
             </section>
         <?php endif; ?>
+
+        <?php
+        // Pairing a headless runner.
+        //
+        // The key is made here and nowhere else, because this screen is the one
+        // place a person has already proved they are a person: it opens behind a
+        // logged-in cookie, which only wp-login.php sets, and wp-login is where
+        // a site's two-factor or SSO challenge sits. Without that step the
+        // runner's application password would be enough on its own to mint
+        // browser cookies for the account — and an application password is
+        // precisely the credential WordPress promises cannot sign in to
+        // wp-admin, held on a build box where it is meant to be the safe thing
+        // to leave lying around.
+        $nw_vs_keys = function_exists('nibwp_visual_pass_count') ? nibwp_visual_pass_count((int) $me->ID) : 0;
+        ?>
+        <section class="nw-vs-panel" data-vs-group="runner">
+            <?php nibwp_visual_panel_heading(__('Headless runner', 'nibwp'), $nw_vs_keys, 'plug'); ?>
+            <div class="nw-vs-panel__body">
+                <p class="nw-vs-panel__note">
+                    <?php esc_html_e('Runs this workspace without a browser open, for screenshots and scheduled checks. It needs a pairing key from here as well as its application password.', 'nibwp'); ?>
+                </p>
+
+                <?php // A reusable key is the only way a nightly run can work, and
+                      // it is the riskier of the two, so it is the one you have to
+                      // ask for rather than the one you get by not reading. ?>
+                <label class="nw-vs-pair__opt">
+                    <input type="checkbox" id="nw-vs-pair-sched">
+                    <span><?php esc_html_e('For scheduled runs — reusable until revoked', 'nibwp'); ?></span>
+                </label>
+
+                <button type="button" class="nw-vs-check" id="nw-vs-pair">
+                    <?php echo nibwp_visual_icon('plug', 15); // phpcs:ignore WordPress.Security.EscapeOutput -- static markup ?>
+                    <span><?php esc_html_e('Create a pairing key', 'nibwp'); ?></span>
+                </button>
+
+                <?php // Shown once. Nothing here can read it back, because the site
+                      // only ever stored its fingerprint. ?>
+                <div class="nw-vs-checkout" id="nw-vs-pair-out" role="status" aria-live="polite"></div>
+
+                <button type="button" class="nw-vs-more nw-vs-more--btn" id="nw-vs-pair-revoke"<?php echo $nw_vs_keys > 0 ? '' : ' hidden'; ?>>
+                    <?php esc_html_e('Revoke pairing keys', 'nibwp'); ?>
+                </button>
+            </div>
+        </section>
 
         <?php
         // Locked things worth knowing about — and only the ones with a reason to
@@ -1009,7 +1056,7 @@ function nibwp_visual_render_connect_screen(bool $tucked): void
                   // leads to an empty stage, which is not a way out of anything. ?>
             <div class="nw-vs-start__backrow">
                 <button type="button" class="nw-vs-start__back" id="nw-vs-start-back" hidden>
-                    <?php esc_html_e('← Back to the site', 'nibwp'); ?>
+                    <span class="nw-rtl-flip" aria-hidden="true">←</span> <?php esc_html_e('Back to the site', 'nibwp'); ?>
                 </button>
             </div>
 
@@ -1085,7 +1132,7 @@ function nibwp_visual_render_connect_screen(bool $tucked): void
                     $off = !empty($cfg['unreachable']);
                     // The first client that can actually work here leads. On a
                     // local address that is never the browser assistants, so the
-                    // badge follows reality rather than a hard-coded favourite.
+                    // badge follows reality rather than a hard-coded favorite.
                     $first = $lead && !$off;
                     if ($first) {
                         $lead = false;

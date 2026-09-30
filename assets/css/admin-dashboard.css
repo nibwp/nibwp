@@ -139,29 +139,9 @@
                 margin-top: 2px;
             }
 
-            /* Cards in columns */
-            .nibwp-dash-card {
-                background: var(--nw-surface);
-                border: 1px solid var(--nw-border);
-                border-radius: 8px;
-                padding: 20px 24px;
-                margin: 0 0 20px;
-                color: var(--nw-text);
-            }
-            .nibwp-dash-card-title {
-                font-size: 16px;
-                font-weight: 600;
-                color: var(--nw-text);
-                margin: 0 0 14px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .nibwp-dash-card-title svg {
-                width: 20px;
-                height: 20px;
-                color: var(--nw-text-muted);
-            }
+            /* Cards in columns — .nibwp-dash-card and its title now live in
+               admin.css, which loads on every NIBWP page, so other pages can
+               use the same card. Defined once, there. */
 
             /* Quick Connect */
             .nibwp-connect-row {
@@ -402,11 +382,14 @@
     height: 30px;
     color: #f59e0b;
     animation: nw-figma-promo-nudge 2.4s ease-in-out infinite;
+    /* Design flows into WordPress in reading order, so the arrow turns round in
+       RTL: here for reduced motion, in the keyframes otherwise. */
+    transform: none /*rtl:translateX(0) scaleX(-1)*/;
 }
 
 @keyframes nw-figma-promo-nudge {
-    0%, 100% { transform: translateX(0); }
-    50%      { transform: translateX(3px); }
+    0%, 100% { transform: translateX(0) /*rtl:translateX(0) scaleX(-1)*/; }
+    50%      { transform: translateX(3px) /*rtl:translateX(-3px) scaleX(-1)*/; }
 }
 
 .nw-figma-promo__wp {

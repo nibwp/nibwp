@@ -153,8 +153,35 @@ function nibwp_resolve_path($path, $must_exist = false)
     if ($must_exist) {
         $resolved = realpath($path);
         if ($resolved === false) {
-            return new WP_Error('path_not_found', sprintf(__('Path does not exist: %s', domain: 'nibwp'), $path));
+            return new WP_Error('path_not_found', sprintf(
+                /* translators: %s: filesystem path */
+                __('Path does not exist: %s', 'nibwp'),
+                $path,
+            ));
         }
+    } elseif (is_link($resolved) || file_exists($resolved)) {
+        // Only the parent was resolved above; the last segment was still the
+        // name the caller typed. A link sitting at the end of the path
+        // therefore passed the containment check on the strength of where it
+        // *lives* rather than where it *points*, and the operating system
+        // followed it straight afterwards — write-file wrote through it, and
+        // delete-file with recursive=true emptied the directory on the far side
+        // of it. Resolving the last segment too makes the check judge the file
+        // that is actually about to be touched.
+        $real_self = realpath($resolved);
+        if ($real_self === false) {
+            // A link whose target does not exist resolves to nothing, so there
+            // is no way to prove where it lands — and a write would still
+            // follow it and create the target wherever it points. Refusing is
+            // the only answer that cannot be wrong; falling back to the link's
+            // own location would re-open exactly the hole above.
+            return new WP_Error('path_unresolvable', sprintf(
+                /* translators: %s: filesystem path */
+                __('Path "%s" is a link whose target cannot be resolved.', 'nibwp'),
+                $resolved,
+            ));
+        }
+        $resolved = $real_self;
     }
 
     // Enforce base directory restriction.
@@ -166,14 +193,82 @@ function nibwp_resolve_path($path, $must_exist = false)
 
         if (!nibwp_path_within($resolved, $real_base)) {
             return new WP_Error('path_outside_base', sprintf(
-                __('Path "%s" is outside the allowed base directory "%s".', domain: 'nibwp'),
+                /* translators: 1: requested filesystem path, 2: allowed base directory */
+                __('Path "%1$s" is outside the allowed base directory "%2$s".', 'nibwp'),
                 $resolved,
                 $real_base,
             ));
         }
     }
 
+    // Inside the base directory is not the same as fair game. The credential
+    // files live inside it, so this check has to come after the containment one
+    // rather than instead of it.
+    if (nibwp_is_protected_file($resolved)) {
+        return new WP_Error('protected_file', sprintf(
+            /* translators: %s: filesystem path */
+            __('Path "%s" holds site credentials and cannot be read or written through NIBWP.', 'nibwp'),
+            $resolved,
+        ));
+    }
+
     return $resolved;
+}
+
+/**
+ * Files no ability may open, whatever the caller's role.
+ *
+ * wp-config.php holds the database password and every authentication salt, and
+ * a .env or .htpasswd beside it holds the same class of secret. Whoever reads
+ * one can sign a cookie for any user on the site and connect to the database
+ * directly, which is a long way past "administer this site" — and on Multisite
+ * it is every sibling site on the install as well. Writing one is worse still:
+ * a single line appended to wp-config.php then runs on every request.
+ *
+ * The match is on the file name, because that is what the secret is kept in
+ * wherever an install chooses to put it, and the same name is used by hosts
+ * that split the config into wp-config-local.php or wp-config-staging.php.
+ *
+ * This is deliberately not an authorisation decision — it does not ask who is
+ * calling. It removes a low-friction credential dump from the file abilities
+ * for everyone. Work that genuinely has to change site configuration goes
+ * through execute-php, which is gated on network authority and audited.
+ *
+ * @param string $path Absolute path, already resolved.
+ * @return bool
+ */
+function nibwp_is_protected_file(string $path): bool
+{
+    $name = strtolower(basename($path));
+
+    if (
+        $name === 'wp-config.php'
+        // wp-config-local.php, wp-config-staging.php, wp-config-sample.php …
+        || str_starts_with($name, 'wp-config-')
+        || $name === '.env'
+        // .env.local, .env.production …
+        || str_starts_with($name, '.env.')
+        || $name === '.htpasswd'
+    ) {
+        return true;
+    }
+
+    /**
+     * Filter extra file names to protect.
+     *
+     * Names are added to the built-in list, never subtracted from it: a filter
+     * that could unprotect wp-config.php would be the hole this closes.
+     *
+     * @param string[] $extra Additional file names (basename only).
+     */
+    $extra = (array) apply_filters('nibwp_protected_files', []);
+    foreach ($extra as $candidate) {
+        if (is_string($candidate) && $candidate !== '' && strtolower($candidate) === $name) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -254,7 +349,7 @@ function nibwp_validate_sandbox_path($resolved)
     $sandbox_dir = nibwp_get_sandbox_dir();
     $real_sandbox = realpath($sandbox_dir);
     if ($real_sandbox === false) {
-        return new WP_Error('sandbox_not_found', __('The sandbox directory does not exist.', domain: 'nibwp'));
+        return new WP_Error('sandbox_not_found', __('The sandbox directory does not exist.', 'nibwp'));
     }
 
     $real_resolved = realpath($resolved);
@@ -265,7 +360,7 @@ function nibwp_validate_sandbox_path($resolved)
     if (!str_starts_with($real_resolved, $real_sandbox . DIRECTORY_SEPARATOR)) {
         return new WP_Error('outside_sandbox', sprintf(
             /* translators: %s: sandbox directory path */
-            __('Only files inside the sandbox (%s) can be modified.', domain: 'nibwp'),
+            __('Only files inside the sandbox (%s) can be modified.', 'nibwp'),
             $sandbox_dir,
         ));
     }
@@ -699,7 +794,7 @@ function nibwp_app_passwords_status(): array
             'reason' => 'unsupported',
             'message' => __(
                 'Application Passwords require HTTPS or WP_ENVIRONMENT_TYPE set to "local".',
-                domain: 'nibwp',
+                'nibwp',
             ),
         ];
     }
@@ -709,7 +804,7 @@ function nibwp_app_passwords_status(): array
         'reason' => 'filtered',
         'message' => __(
             'Application Passwords have been disabled on this site, likely by a security plugin. Check your security plugin settings (e.g. Solid Security, Wordfence, All In One WP Security) and re-enable Application Passwords to continue.',
-            domain: 'nibwp',
+            'nibwp',
         ),
     ];
 }
@@ -742,6 +837,60 @@ function nibwp_get_datetime_format($fallback = 'Y-m-d H:i:s')
 function nibwp_permission_callback()
 {
     return current_user_can('manage_options');
+}
+
+/**
+ * Permission callback for the abilities that reach the server filesystem, and
+ * for raw PHP execution.
+ *
+ * manage_options is the right bar on a single site. An administrator there can
+ * already install a plugin, and a plugin is arbitrary code running as the web
+ * server on the same box, so reading and writing files grants nothing the role
+ * did not already carry.
+ *
+ * On Multisite it is the wrong bar. A site administrator there runs one site
+ * inside an install somebody else owns: the filesystem, the database and every
+ * sibling site belong to the network, not to them. WordPress core draws the
+ * same line — map_meta_cap() refuses edit_files, edit_plugins, edit_themes and
+ * install_plugins to anyone who is not a Super Admin on Multisite — and these
+ * abilities are that same authority arriving by another road. Left on
+ * manage_options, a site administrator could read wp-config.php over the
+ * abilities REST route or MCP, take the database credentials and the
+ * authentication salts, and from there reach every other site on the network.
+ *
+ * @return bool
+ */
+function nibwp_filesystem_permission_callback()
+{
+    return nibwp_user_can_filesystem(get_current_user_id());
+}
+
+/**
+ * The same rule as nibwp_filesystem_permission_callback(), asked about a named
+ * user rather than the current one.
+ *
+ * A signed upload link is redeemed by an anonymous request, so there is no
+ * current user to ask at the moment the bytes land — only the id the link was
+ * minted for. Both callers share this one function so the two can never drift
+ * into disagreeing about who may write to the server.
+ *
+ * @param int $user_id
+ * @return bool
+ */
+function nibwp_user_can_filesystem(int $user_id): bool
+{
+    if ($user_id <= 0 || !user_can($user_id, 'manage_options')) {
+        return false;
+    }
+
+    if (!is_multisite()) {
+        return true;
+    }
+
+    // Either spelling of "runs this network": the capability, or the Super
+    // Admin flag it is derived from, so an install that filters capabilities
+    // unusually still resolves to the same small set of people.
+    return user_can($user_id, 'manage_network_options') || is_super_admin($user_id);
 }
 
 /**
@@ -1135,7 +1284,7 @@ function nibwp_studio_nav_items(): array
     if (function_exists('nibwp_visual_url')) {
         $items[] = [
             'slug'  => 'nibwp-visual',
-            'label' => __('Agent View', domain: 'nibwp'),
+            'label' => __('Agent View', 'nibwp'),
             'icon'  => nibwp_visual_spark_svg(18, 'nibwp-nav-spark'),
         ];
     }
@@ -1145,7 +1294,7 @@ function nibwp_studio_nav_items(): array
     if ($figma_on) {
         $items[] = [
             'slug'  => 'nibwp-figma',
-            'label' => __('Figma', domain: 'nibwp'),
+            'label' => __('Figma', 'nibwp'),
             'icon'  => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H8.5a3.5 3.5 0 000 7H12z"/><path d="M12 2h3.5a3.5 3.5 0 110 7H12z"/><path d="M12 9H8.5a3.5 3.5 0 000 7H12z"/><path d="M12 16H8.5A3.5 3.5 0 1012 19.5z"/><circle cx="15.5" cy="12.5" r="3.5"/></svg>',
         ];
     }
@@ -1162,6 +1311,18 @@ function nibwp_studio_nav_items(): array
  * Render the full custom app shell: sidebar + topbar + content area opener.
  * Every admin page calls this at the top, then renders content, then calls nibwp_render_admin_footer().
  */
+/**
+ * Where anything a user writes to us goes.
+ *
+ * One function rather than the same apply_filters() copied at each call site,
+ * so changing the address changes it everywhere instead of everywhere someone
+ * remembered to look.
+ */
+function nibwp_support_email(): string
+{
+    return (string) apply_filters('nibwp_support_email', 'support@nibwp.com');
+}
+
 function nibwp_render_admin_header(): void
 {
     nibwp_render_admin_styles();
@@ -1179,40 +1340,51 @@ function nibwp_render_admin_header(): void
         [
             'section' => '',
             'items' => [
-                ['slug' => 'nibwp-dashboard', 'label' => __('Dashboard', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5.5" height="5.5" rx="1.2"/><rect x="10.5" y="2" width="5.5" height="5.5" rx="1.2"/><rect x="2" y="10.5" width="5.5" height="5.5" rx="1.2"/><rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1.2"/></svg>'],
-                ['slug' => 'nibwp-connect', 'label' => __('Connect', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2v4M5.5 4.5L7 6m4 0l1.5-1.5M3 9h12"/><path d="M5 10a4 4 0 008 0"/></svg>'],
-                ['slug' => 'nibwp-integrations', 'label' => __('Integrations', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7"/><path d="M17.5 14v7"/></svg>'],
-                ['slug' => 'nibwp', 'label' => __('AI Abilities', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.6 8 18 9.5 13.6 11 12 15.5 10.4 11 6 9.5 10.4 8 12 3.5Z"/><path d="M19 4v3M17.5 5.5h3M5 17v3M3.5 18.5h3"/></svg>'],
-                ['slug' => 'nibwp-skills', 'label' => __('Skills', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l3 6-9 12L3 9l3-6z"/><path d="M3 9h18"/><path d="m10 3-2 6 4 12 4-12-2-6"/></svg>'],
-                ['slug' => 'nibwp-workflows', 'label' => __('Workflows', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 2 2 4-4"/><path d="m3 14 2 2 4-4"/><path d="M13 6h8"/><path d="M13 14h8"/><path d="M13 20h8"/><path d="M3 20h2"/></svg>'],
-                ['slug' => 'nibwp-jobs', 'label' => __('Jobs', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M3 12h18"/></svg>'],
+                ['slug' => 'nibwp-dashboard', 'label' => __('Dashboard', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5.5" height="5.5" rx="1.2"/><rect x="10.5" y="2" width="5.5" height="5.5" rx="1.2"/><rect x="2" y="10.5" width="5.5" height="5.5" rx="1.2"/><rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1.2"/></svg>'],
+                ['slug' => 'nibwp-connect', 'label' => __('Connect', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2v4M5.5 4.5L7 6m4 0l1.5-1.5M3 9h12"/><path d="M5 10a4 4 0 008 0"/></svg>'],
+                ['slug' => 'nibwp-integrations', 'label' => __('Integrations', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 17.5h7"/><path d="M17.5 14v7"/></svg>'],
+                ['slug' => 'nibwp', 'label' => __('AI Abilities', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.6 8 18 9.5 13.6 11 12 15.5 10.4 11 6 9.5 10.4 8 12 3.5Z"/><path d="M19 4v3M17.5 5.5h3M5 17v3M3.5 18.5h3"/></svg>'],
+                ['slug' => 'nibwp-skills', 'label' => __('Skills', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l3 6-9 12L3 9l3-6z"/><path d="M3 9h18"/><path d="m10 3-2 6 4 12 4-12-2-6"/></svg>'],
+                ['slug' => 'nibwp-workflows', 'label' => __('Workflows', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 2 2 4-4"/><path d="m3 14 2 2 4-4"/><path d="M13 6h8"/><path d="M13 14h8"/><path d="M13 20h8"/><path d="M3 20h2"/></svg>'],
+                ['slug' => 'nibwp-jobs', 'label' => __('Jobs', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M3 12h18"/></svg>'],
             ],
         ],
         // STUDIO — per-integration workspaces (design/content sources NibWP pulls
         // from). Figma today; Miro, Notion, Drive and friends land here next. The
         // section only renders when at least one such integration is activated.
         [
-            'section' => __('STUDIO', domain: 'nibwp'),
+            'section' => __('STUDIO', 'nibwp'),
             'items' => nibwp_studio_nav_items(),
         ],
         [
-            'section' => __('DATA', domain: 'nibwp'),
+            'section' => __('DATA', 'nibwp'),
             'items' => [
-                ['slug' => 'nibwp-memory', 'label' => __('Memory', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="12" height="14" rx="1.5"/><path d="M6 2v14M12 2v14M3 9h12"/></svg>'],
-                ['slug' => 'nibwp-audit-log', 'label' => __('Audit Log', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2h8a1.5 1.5 0 011.5 1.5v11a1.5 1.5 0 01-1.5 1.5H5a1.5 1.5 0 01-1.5-1.5v-11A1.5 1.5 0 015 2z"/><path d="M7 6h4M7 9h4M7 12h2"/></svg>'],
-                ['slug' => 'nibwp-sandbox', 'label' => __('Sandbox', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="12" height="12" rx="1.5"/><rect x="6.5" y="6.5" width="5" height="5" rx="0.5"/></svg>'],
+                ['slug' => 'nibwp-memory', 'label' => __('Memory', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="12" height="14" rx="1.5"/><path d="M6 2v14M12 2v14M3 9h12"/></svg>'],
+                ['slug' => 'nibwp-audit-log', 'label' => __('Audit Log', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2h8a1.5 1.5 0 011.5 1.5v11a1.5 1.5 0 01-1.5 1.5H5a1.5 1.5 0 01-1.5-1.5v-11A1.5 1.5 0 015 2z"/><path d="M7 6h4M7 9h4M7 12h2"/></svg>'],
+                ['slug' => 'nibwp-sandbox', 'label' => __('Sandbox', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="12" height="12" rx="1.5"/><rect x="6.5" y="6.5" width="5" height="5" rx="0.5"/></svg>'],
             ],
         ],
         [
-            'section' => __('CONFIGURATION', domain: 'nibwp'),
+            'section' => __('CONFIGURATION', 'nibwp'),
             'items' => [
-                ['slug' => 'nibwp-license', 'label' => __('License', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'],
-                ['slug' => 'nibwp-user-access', 'label' => __('User access', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/></svg>'],
-                ['slug' => 'nibwp-status', 'label' => __('Status', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>', 'dot' => function_exists('nibwp_status_nav_state') ? nibwp_status_nav_state() : ''],
-                ['slug' => 'nibwp-settings', 'label' => __('Settings', domain: 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>'],
+                ['slug' => 'nibwp-license', 'label' => __('License', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'],
+                ['slug' => 'nibwp-user-access', 'label' => __('User access', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/></svg>'],
+                ['slug' => 'nibwp-status', 'label' => __('Status', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>', 'dot' => function_exists('nibwp_status_nav_state') ? nibwp_status_nav_state() : ''],
+                ['slug' => 'nibwp-settings', 'label' => __('Settings', 'nibwp'), 'icon' => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>'],
             ],
         ],
     ];
+
+    // Affiliate program — last item under CONFIGURATION, below Settings.
+    // Appended rather than written inline because it is conditional: hidden
+    // for anyone who dismissed it, and when the program is paused.
+    if (function_exists('nibwp_affiliate_visible') && nibwp_affiliate_visible()) {
+        $nav_items[count($nav_items) - 1]['items'][] = [
+            'slug'  => 'nibwp-affiliate',
+            'label' => nibwp_affiliate_menu_label(),
+            'icon'  => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6"/><circle cx="9.5" cy="9.5" r="1.2"/><circle cx="14.5" cy="14.5" r="1.2"/></svg>',
+        ];
+    }
     // Menu visibility (includes/user-access.php). The WP sidebar is already
     // filtered at registration; this keeps NIBWP's own sidebar consistent for a
     // restricted administrator who arrived on a shared link.
@@ -1235,12 +1407,15 @@ function nibwp_render_admin_header(): void
         <aside class="nw-sidebar" id="nw-sidebar">
             <div class="nw-sidebar__inner">
                 <a class="nw-sidebar__logo" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-dashboard')); ?>">
-                    <div class="nw-logo-icon">
-                        <img src="<?php echo esc_url((string) NIBWP_PLUGIN_URL . 'assets/nibwp-logo.svg'); ?>" alt="NIBWP">
+                    <div class="nw-logo-row">
+                        <div class="nw-logo-icon">
+                            <img src="<?php echo esc_url((string) NIBWP_PLUGIN_URL . 'assets/nibwp-logo.svg'); ?>" alt="NIBWP">
+                        </div>
+                        <span class="nw-sidebar__version">v<?php echo esc_html(NIBWP_VERSION); ?></span>
                     </div>
                     <div class="nw-logo-sub"><?php esc_html_e('AI-POWERED WORDPRESS — A NEW ERA', 'nibwp'); ?></div>
                 </a>
-                <nav class="nw-nav" aria-label="NIBWP navigation">
+                <nav class="nw-nav" aria-label="<?php esc_attr_e('NIBWP navigation', 'nibwp'); ?>">
                     <?php foreach ($nav_items as $group): ?>
                         <?php if (empty($group['items'])) { continue; } // skip empty sections (e.g. STUDIO with no integration active) ?>
                         <?php if ($group['section'] !== ''): ?>
@@ -1258,8 +1433,8 @@ function nibwp_render_admin_header(): void
                                 <?php if (!empty($item['dot'])): ?>
                                     <?php
                                     $dot_title = $item['dot'] === 'fail'
-                                        ? __('Something is stopping connections', domain: 'nibwp')
-                                        : __('Something needs a look', domain: 'nibwp');
+                                        ? __('Something is stopping connections', 'nibwp')
+                                        : __('Something needs a look', 'nibwp');
                                     ?>
                                     <span class="nw-nav-dot is-<?php echo esc_attr($item['dot']); ?>"
                                           role="img"
@@ -1273,14 +1448,14 @@ function nibwp_render_admin_header(): void
                 <div class="nw-sidebar__footer">
                     <a href="https://www.nibwp.com/docs" target="_blank" rel="noopener">
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 2h6a1 1 0 011 1v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M5 5h4M5 7h4M5 9h2"/></svg>
-                        <?php esc_html_e('Documentation', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Documentation', 'nibwp'); ?>
                     </a>
                     <a href="https://www.nibwp.com/support" target="_blank" rel="noopener">
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="6"/><path d="M5 5.5a2 2 0 013.5 1.5c0 1-1.5 1.5-1.5 1.5"/><circle cx="7" cy="10.5" r="0.5" fill="currentColor"/></svg>
-                        <?php esc_html_e('Support', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Support', 'nibwp'); ?>
                     </a>
                     <div class="nw-sidebar__credits <?php echo $is_enabled ? '' : 'off'; ?>">
-                        <span class="lbl"><span class="dot"></span><?php esc_html_e('TOOLS', domain: 'nibwp'); ?></span>
+                        <span class="lbl"><span class="dot"></span><?php esc_html_e('TOOLS', 'nibwp'); ?></span>
                         <span class="num"><?php
                             $ability_groups = function_exists('nibwp_collect_public_abilities') ? nibwp_collect_public_abilities() : [];
                             $tool_count = 0;
@@ -1289,16 +1464,21 @@ function nibwp_render_admin_header(): void
                         ?></span>
                     </div>
                     <div class="nw-sidebar__rating">
-                        <span class="nw-rating-label"><?php esc_html_e('Enjoying NIBWP?', domain: 'nibwp'); ?></span>
+                        <span class="nw-rating-label"><?php esc_html_e('Enjoying NIBWP?', 'nibwp'); ?></span>
                         <div class="nw-rating-stars">
                             <?php for ($i = 1; $i <= 5; $i++): ?>
-                                <a href="https://wordpress.org/support/plugin/nibwp/reviews/#new-post" target="_blank" rel="noopener" aria-label="<?php printf(esc_attr__('Rate %d of 5', domain: 'nibwp'), $i); ?>">
+                                <a href="https://wordpress.org/support/plugin/nibwp/reviews/#new-post" target="_blank" rel="noopener" aria-label="<?php
+                                    printf(
+                                        /* translators: %d: star rating from 1 to 5 */
+                                        esc_attr__('Rate %d of 5', 'nibwp'),
+                                        (int) $i
+                                    );
+                                ?>">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                                 </a>
                             <?php endfor; ?>
                         </div>
                     </div>
-                    <div class="nw-sidebar__version">v<?php echo esc_html(NIBWP_VERSION); ?></div>
                 </div>
             </div>
         </aside>
@@ -1307,13 +1487,13 @@ function nibwp_render_admin_header(): void
         <div class="nw-main">
             <!-- Topbar -->
             <header class="nw-topbar">
-                <button type="button" class="nw-icon-btn nw-topbar__menu-btn" id="nw-menu-toggle" aria-label="<?php esc_attr_e('Toggle navigation', domain: 'nibwp'); ?>">
+                <button type="button" class="nw-icon-btn nw-topbar__menu-btn" id="nw-menu-toggle" aria-label="<?php esc_attr_e('Toggle navigation', 'nibwp'); ?>">
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 5h12M3 9h12M3 13h12"/></svg>
                 </button>
 
                 <button type="button" class="nw-search-trigger" id="nw-search-trigger">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
-                    <span class="nw-search-trigger__label"><?php esc_html_e('Search pages, actions, settings...', domain: 'nibwp'); ?></span>
+                    <span class="nw-search-trigger__label"><?php esc_html_e('Search pages, actions, settings...', 'nibwp'); ?></span>
                     <kbd class="nw-kbd">&#8984;K</kbd>
                 </button>
 
@@ -1321,30 +1501,30 @@ function nibwp_render_admin_header(): void
 
                     <span class="nw-topbar-status <?php echo $is_enabled ? 'is-on' : 'is-off'; ?>">
                         <?php echo $is_enabled
-                            ? esc_html__('NIBWP ON', domain: 'nibwp')
-                            : esc_html__('NIBWP OFF', domain: 'nibwp'); ?>
+                            ? esc_html__('NIBWP ON', 'nibwp')
+                            : esc_html__('NIBWP OFF', 'nibwp'); ?>
                     </span>
 
                     <span class="nw-topbar-chipwrap">
                         <span class="nw-topbar-chip nw-topbar-chip--menu" tabindex="0" aria-haspopup="true">
-                            <?php esc_html_e('Integrations:', domain: 'nibwp'); ?>
+                            <?php esc_html_e('Integrations:', 'nibwp'); ?>
                             <strong><?php echo esc_html((string) $active_integrations); ?></strong>
                             <svg class="nw-chip-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                         </span>
                         <div class="nw-topbar-menu" role="menu">
                             <div class="nw-topbar-menu__list">
                             <?php if ($active_integration_list === []): ?>
-                                <div class="nw-topbar-menu__empty"><?php esc_html_e('No active integrations yet.', domain: 'nibwp'); ?></div>
+                                <div class="nw-topbar-menu__empty"><?php esc_html_e('No active integrations yet.', 'nibwp'); ?></div>
                             <?php else: ?>
-                                <div class="nw-topbar-menu__head"><?php esc_html_e('Connected', domain: 'nibwp'); ?></div>
+                                <div class="nw-topbar-menu__head"><?php esc_html_e('Connected', 'nibwp'); ?></div>
                                 <?php foreach ($active_integration_list as $nw_intg): ?>
                                     <span class="nw-topbar-menu__item" role="menuitem"><span class="dot"></span><?php echo esc_html((string) ($nw_intg['name'] ?? '')); ?></span>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                             </div>
                             <a class="nw-topbar-menu__foot" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-integrations')); ?>">
-                                <?php esc_html_e('Manage integrations', domain: 'nibwp'); ?>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                <?php esc_html_e('Manage integrations', 'nibwp'); ?>
+                                <svg class="nw-rtl-flip" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                             </a>
                         </div>
                     </span>
@@ -1365,7 +1545,13 @@ function nibwp_render_admin_header(): void
                                     <?php esc_html_e('No jobs running right now.', 'nibwp'); ?>
                                 </div>
                             <?php else: ?>
-                                <div class="nw-jobs-menu__head"><?php printf(esc_html(_n('%d job running', '%d jobs running', $nw_run_n, 'nibwp')), (int) $nw_run_n); ?></div>
+                                <div class="nw-jobs-menu__head"><?php
+                                    printf(
+                                        /* translators: %s: number of jobs running now */
+                                        esc_html(_n('%s job running', '%s jobs running', $nw_run_n, 'nibwp')),
+                                        esc_html(number_format_i18n($nw_run_n))
+                                    );
+                                ?></div>
                                 <?php foreach ($nw_running as $nw_run):
                                     $nw_st = (string) $nw_run['status'];
                                     $nw_rs = ['queued' => __('Queued', 'nibwp'), 'running' => __('Running', 'nibwp'), 'awaiting_approval' => __('Needs you', 'nibwp')][$nw_st] ?? $nw_st;
@@ -1384,14 +1570,14 @@ function nibwp_render_admin_header(): void
                             </div>
                             <a class="nw-topbar-menu__foot nw-jobs-menu__foot" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-jobs')); ?>">
                                 <?php esc_html_e('See all Jobs', 'nibwp'); ?>
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                <svg class="nw-rtl-flip" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                             </a>
                         </div>
                     </span>
                     <style>
                     .nw-jobs-chip{text-decoration:none;position:relative;}
                     .nw-jobs-chip.is-live strong{color:var(--nw-ok);}
-                    .nw-jobs-chip__pulse{width:7px;height:7px;border-radius:50%;background:var(--nw-ok);margin-right:2px;box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:nw-jobs-chip-pulse 1.7s infinite;}
+                    .nw-jobs-chip__pulse{width:7px;height:7px;border-radius:50%;background:var(--nw-ok);margin-inline-end:2px;box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:nw-jobs-chip-pulse 1.7s infinite;}
                     @keyframes nw-jobs-chip-pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.45);}70%{box-shadow:0 0 0 6px rgba(22,163,74,0);}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);}}
                     /* scrollable list + sticky footer (scoped to Jobs menu) */
                     .nw-jobs-chipwrap .nw-jobs-menu{display:flex;flex-direction:column;max-height:440px;min-width:320px;padding:0;overflow:hidden;}
@@ -1421,16 +1607,16 @@ function nibwp_render_admin_header(): void
                     </style>
                     <?php endif; ?>
 
-                    <button type="button" class="nw-cta-btn" id="nw-run-setup" aria-label="<?php esc_attr_e('Run Setup', domain: 'nibwp'); ?>">
+                    <button type="button" class="nw-cta-btn" id="nw-run-setup" aria-label="<?php esc_attr_e('Run Setup', 'nibwp'); ?>">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        <span><?php esc_html_e('Run Setup', domain: 'nibwp'); ?></span>
+                        <span><?php esc_html_e('Run Setup', 'nibwp'); ?></span>
                     </button>
 
-                    <a class="nw-icon-btn" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-how-to')); ?>" aria-label="<?php esc_attr_e('How To', domain: 'nibwp'); ?>" title="<?php esc_attr_e('How To', domain: 'nibwp'); ?>">
+                    <a class="nw-icon-btn" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-how-to')); ?>" aria-label="<?php esc_attr_e('How To', 'nibwp'); ?>" title="<?php esc_attr_e('How To', 'nibwp'); ?>">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     </a>
 
-                    <button type="button" class="nw-icon-btn" id="nw-theme-toggle" aria-label="<?php esc_attr_e('Toggle dark mode', domain: 'nibwp'); ?>">
+                    <button type="button" class="nw-icon-btn" id="nw-theme-toggle" aria-label="<?php esc_attr_e('Toggle dark mode', 'nibwp'); ?>">
                         <svg class="nw-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                         <svg class="nw-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
                     </button>
@@ -1496,9 +1682,9 @@ function nibwp_render_onboarder_modal(): void
         'cline' => 'Cline',
         'roo-code' => 'Roo Code',
         'github-copilot' => 'GitHub Copilot',
-        'claude-code' => 'Claude Code (terminal)',
-        'gemini-cli' => 'Gemini CLI (terminal)',
-        'codex' => 'Codex (terminal)',
+        'claude-code' => __('Claude Code (terminal)', 'nibwp'),
+        'gemini-cli' => __('Gemini CLI (terminal)', 'nibwp'),
+        'codex' => __('Codex (terminal)', 'nibwp'),
         'zed' => 'Zed',
         'opencode' => 'OpenCode',
         'amazon-q' => 'Amazon Q',
@@ -1509,86 +1695,86 @@ function nibwp_render_onboarder_modal(): void
     // Plain-English, non-techy step-by-step per client.
     $client_instructions = [
         'claude-desktop' => [
-            __('Open the <strong>Claude Desktop</strong> app on your computer.', domain: 'nibwp'),
-            __('Click your name in the bottom-left corner, then choose <strong>Settings</strong>.', domain: 'nibwp'),
-            __('In Settings, click the <strong>Developer</strong> tab on the left.', domain: 'nibwp'),
-            __('Click the <strong>Edit Config</strong> button — your text editor opens automatically.', domain: 'nibwp'),
-            __('Paste the snippet above into that file, then <strong>save</strong> and <strong>fully restart Claude Desktop</strong>.', domain: 'nibwp'),
+            __('Open the <strong>Claude Desktop</strong> app on your computer.', 'nibwp'),
+            __('Click your name in the bottom-left corner, then choose <strong>Settings</strong>.', 'nibwp'),
+            __('In Settings, click the <strong>Developer</strong> tab on the left.', 'nibwp'),
+            __('Click the <strong>Edit Config</strong> button — your text editor opens automatically.', 'nibwp'),
+            __('Paste the snippet above into that file, then <strong>save</strong> and <strong>fully restart Claude Desktop</strong>.', 'nibwp'),
         ],
         'cursor' => [
-            __('Open <strong>Cursor</strong>.', domain: 'nibwp'),
-            __('Press <kbd>Cmd</kbd>+<kbd>,</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>,</kbd> (Windows/Linux) to open Settings.', domain: 'nibwp'),
-            __('In the search box, type <strong>MCP</strong>, then click <strong>Add new global MCP server</strong>.', domain: 'nibwp'),
-            __('Paste the snippet above into the file that opens. Save and reload Cursor.', domain: 'nibwp'),
+            __('Open <strong>Cursor</strong>.', 'nibwp'),
+            __('Press <kbd>Cmd</kbd>+<kbd>,</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>,</kbd> (Windows/Linux) to open Settings.', 'nibwp'),
+            __('In the search box, type <strong>MCP</strong>, then click <strong>Add new global MCP server</strong>.', 'nibwp'),
+            __('Paste the snippet above into the file that opens. Save and reload Cursor.', 'nibwp'),
         ],
         'vscode' => [
-            __('Open <strong>VS Code</strong>.', domain: 'nibwp'),
-            __('Press <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (Windows/Linux).', domain: 'nibwp'),
-            __('Type <strong>MCP: Open User Configuration</strong> and press Enter.', domain: 'nibwp'),
-            __('Paste the snippet above into the file that opens. Save and reload VS Code.', domain: 'nibwp'),
+            __('Open <strong>VS Code</strong>.', 'nibwp'),
+            __('Press <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (Mac) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (Windows/Linux).', 'nibwp'),
+            __('Type <strong>MCP: Open User Configuration</strong> and press Enter.', 'nibwp'),
+            __('Paste the snippet above into the file that opens. Save and reload VS Code.', 'nibwp'),
         ],
         'windsurf' => [
-            __('Open <strong>Windsurf</strong>.', domain: 'nibwp'),
-            __('Open the Cascade panel on the right side.', domain: 'nibwp'),
-            __('Click the hammer/tools icon, then choose <strong>Configure MCP</strong>.', domain: 'nibwp'),
-            __('Paste the snippet above. Save and restart Windsurf.', domain: 'nibwp'),
+            __('Open <strong>Windsurf</strong>.', 'nibwp'),
+            __('Open the Cascade panel on the right side.', 'nibwp'),
+            __('Click the hammer/tools icon, then choose <strong>Configure MCP</strong>.', 'nibwp'),
+            __('Paste the snippet above. Save and restart Windsurf.', 'nibwp'),
         ],
         'cline' => [
-            __('In VS Code, click the <strong>Cline</strong> icon in the sidebar.', domain: 'nibwp'),
-            __('At the top of Cline panel, click the ≡ menu and choose <strong>MCP Servers</strong>.', domain: 'nibwp'),
-            __('Click <strong>Configure MCP Servers</strong> — a JSON file opens.', domain: 'nibwp'),
-            __('Paste the snippet above. Save the file.', domain: 'nibwp'),
+            __('In VS Code, click the <strong>Cline</strong> icon in the sidebar.', 'nibwp'),
+            __('At the top of Cline panel, click the ≡ menu and choose <strong>MCP Servers</strong>.', 'nibwp'),
+            __('Click <strong>Configure MCP Servers</strong> — a JSON file opens.', 'nibwp'),
+            __('Paste the snippet above. Save the file.', 'nibwp'),
         ],
         'roo-code' => [
-            __('In VS Code, click the <strong>Roo Code</strong> icon in the sidebar.', domain: 'nibwp'),
-            __('Click the ≡ menu at the top, choose <strong>MCP Servers</strong>.', domain: 'nibwp'),
-            __('Click <strong>Edit MCP Settings</strong>. Paste the snippet. Save.', domain: 'nibwp'),
+            __('In VS Code, click the <strong>Roo Code</strong> icon in the sidebar.', 'nibwp'),
+            __('Click the ≡ menu at the top, choose <strong>MCP Servers</strong>.', 'nibwp'),
+            __('Click <strong>Edit MCP Settings</strong>. Paste the snippet. Save.', 'nibwp'),
         ],
         'github-copilot' => [
-            __('Open your project in <strong>VS Code</strong>.', domain: 'nibwp'),
-            __('Create a folder called <code>.github/copilot</code> in your project if it doesn\'t exist.', domain: 'nibwp'),
-            __('Inside it, create a file named <code>mcp.json</code>.', domain: 'nibwp'),
-            __('Paste the snippet above into that file. Save and reload Copilot.', domain: 'nibwp'),
+            __('Open your project in <strong>VS Code</strong>.', 'nibwp'),
+            __('Create a folder called <code>.github/copilot</code> in your project if it doesn\'t exist.', 'nibwp'),
+            __('Inside it, create a file named <code>mcp.json</code>.', 'nibwp'),
+            __('Paste the snippet above into that file. Save and reload Copilot.', 'nibwp'),
         ],
         'claude-code' => [
-            __('Open your <strong>Terminal</strong> (Mac) or <strong>PowerShell</strong> (Windows).', domain: 'nibwp'),
-            __('Make sure <strong>Claude Code</strong> is installed (<code>npm install -g @anthropic-ai/claude-code</code>).', domain: 'nibwp'),
-            __('Paste and run the command shown above. It registers the MCP server globally.', domain: 'nibwp'),
-            __('Open Claude Code — the NIBWP tools are now available.', domain: 'nibwp'),
+            __('Open your <strong>Terminal</strong> (Mac) or <strong>PowerShell</strong> (Windows).', 'nibwp'),
+            __('Make sure <strong>Claude Code</strong> is installed (<code>npm install -g @anthropic-ai/claude-code</code>).', 'nibwp'),
+            __('Paste and run the command shown above. It registers the MCP server globally.', 'nibwp'),
+            __('Open Claude Code — the NIBWP tools are now available.', 'nibwp'),
         ],
         'gemini-cli' => [
-            __('Open your <strong>Terminal</strong>.', domain: 'nibwp'),
-            __('Edit the file at <code>~/.gemini/settings.json</code> (create it if missing).', domain: 'nibwp'),
-            __('Paste the snippet above. Save the file. Restart Gemini CLI.', domain: 'nibwp'),
+            __('Open your <strong>Terminal</strong>.', 'nibwp'),
+            __('Edit the file at <code>~/.gemini/settings.json</code> (create it if missing).', 'nibwp'),
+            __('Paste the snippet above. Save the file. Restart Gemini CLI.', 'nibwp'),
         ],
         'codex' => [
-            __('Open your <strong>Terminal</strong>.', domain: 'nibwp'),
-            __('Edit the file at <code>~/.codex/config.toml</code> (create it if missing).', domain: 'nibwp'),
-            __('Paste the snippet above. Save the file.', domain: 'nibwp'),
+            __('Open your <strong>Terminal</strong>.', 'nibwp'),
+            __('Edit the file at <code>~/.codex/config.toml</code> (create it if missing).', 'nibwp'),
+            __('Paste the snippet above. Save the file.', 'nibwp'),
         ],
         'zed' => [
-            __('Open <strong>Zed</strong>.', domain: 'nibwp'),
-            __('Open Settings: <kbd>Cmd</kbd>+<kbd>,</kbd> (Mac) / <kbd>Ctrl</kbd>+<kbd>,</kbd> (Linux).', domain: 'nibwp'),
-            __('Merge the snippet above into your <code>settings.json</code>. Save.', domain: 'nibwp'),
+            __('Open <strong>Zed</strong>.', 'nibwp'),
+            __('Open Settings: <kbd>Cmd</kbd>+<kbd>,</kbd> (Mac) / <kbd>Ctrl</kbd>+<kbd>,</kbd> (Linux).', 'nibwp'),
+            __('Merge the snippet above into your <code>settings.json</code>. Save.', 'nibwp'),
         ],
         'opencode' => [
-            __('In your project root, create a file called <code>opencode.json</code>.', domain: 'nibwp'),
-            __('Paste the snippet above into that file. Save.', domain: 'nibwp'),
+            __('In your project root, create a file called <code>opencode.json</code>.', 'nibwp'),
+            __('Paste the snippet above into that file. Save.', 'nibwp'),
         ],
         'amazon-q' => [
-            __('Open <strong>Amazon Q</strong> in your IDE.', domain: 'nibwp'),
-            __('Open the MCP settings panel.', domain: 'nibwp'),
-            __('Paste the snippet above and save.', domain: 'nibwp'),
+            __('Open <strong>Amazon Q</strong> in your IDE.', 'nibwp'),
+            __('Open the MCP settings panel.', 'nibwp'),
+            __('Paste the snippet above and save.', 'nibwp'),
         ],
         'kilo-code' => [
-            __('In VS Code, click the <strong>Kilo Code</strong> sidebar icon.', domain: 'nibwp'),
-            __('Choose <strong>MCP Servers → Configure MCP Servers</strong>.', domain: 'nibwp'),
-            __('Paste the snippet. Save.', domain: 'nibwp'),
+            __('In VS Code, click the <strong>Kilo Code</strong> sidebar icon.', 'nibwp'),
+            __('Choose <strong>MCP Servers → Configure MCP Servers</strong>.', 'nibwp'),
+            __('Paste the snippet. Save.', 'nibwp'),
         ],
         'antigravity' => [
-            __('Open <strong>Antigravity</strong>.', domain: 'nibwp'),
-            __('Open MCP config from settings.', domain: 'nibwp'),
-            __('Paste the snippet above. Save and restart.', domain: 'nibwp'),
+            __('Open <strong>Antigravity</strong>.', 'nibwp'),
+            __('Open MCP config from settings.', 'nibwp'),
+            __('Paste the snippet above. Save and restart.', 'nibwp'),
         ],
     ];
 
@@ -1605,7 +1791,7 @@ function nibwp_render_onboarder_modal(): void
     <div class="nw-onboarder" id="nw-onboarder" role="dialog" aria-modal="true" aria-hidden="true">
         <div class="nw-onboarder__backdrop"></div>
         <div class="nw-onboarder__panel" role="document">
-            <button type="button" class="nw-onboarder__close" id="nw-onboarder-close" aria-label="<?php esc_attr_e('Close', domain: 'nibwp'); ?>">
+            <button type="button" class="nw-onboarder__close" id="nw-onboarder-close" aria-label="<?php esc_attr_e('Close', 'nibwp'); ?>">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
 
@@ -1617,15 +1803,15 @@ function nibwp_render_onboarder_modal(): void
                     <div class="nw-onb-step__icon">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
                     </div>
-                    <h2><?php esc_html_e('Enable AI Abilities', domain: 'nibwp'); ?></h2>
-                    <p><?php esc_html_e('Turns on the MCP endpoint so AI agents can connect to this WordPress site. Required first step.', domain: 'nibwp'); ?></p>
+                    <h2><?php esc_html_e('Enable AI Abilities', 'nibwp'); ?></h2>
+                    <p><?php esc_html_e('Turns on the MCP endpoint so AI agents can connect to this WordPress site. Required first step.', 'nibwp'); ?></p>
                     <div class="nw-onb-status nw-onb-status--<?php echo $is_enabled ? 'ok' : 'warn'; ?>" id="nw-onb-enable-status">
                         <?php echo $is_enabled
-                            ? esc_html__('✓ Already enabled — you can continue.', domain: 'nibwp')
-                            : esc_html__('Currently OFF. Click below to enable now.', domain: 'nibwp'); ?>
+                            ? esc_html__('✓ Already enabled — you can continue.', 'nibwp')
+                            : esc_html__('Currently OFF. Click below to enable now.', 'nibwp'); ?>
                     </div>
                     <button type="button" class="nw-onb-test-btn" id="nw-onb-enable-btn" <?php echo $is_enabled ? 'hidden' : ''; ?>>
-                        <?php esc_html_e('Enable AI Abilities now', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Enable AI Abilities now', 'nibwp'); ?>
                     </button>
                 </section>
 
@@ -1634,18 +1820,19 @@ function nibwp_render_onboarder_modal(): void
                     <div class="nw-onb-step__icon">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                     </div>
-                    <h2><?php esc_html_e('Create an App Password', domain: 'nibwp'); ?></h2>
+                    <h2><?php esc_html_e('Create an App Password', 'nibwp'); ?></h2>
                     <p><?php printf(
-                        esc_html__('Generates a WordPress Application Password for %s. AI clients use this to authenticate.', domain: 'nibwp'),
+                        /* translators: %s: WordPress username */
+                        esc_html__('Generates a WordPress Application Password for %s. AI clients use this to authenticate.', 'nibwp'),
                         '<strong>' . esc_html($username) . '</strong>'
                     ); ?></p>
                     <?php if (!$app_pass_supported): ?>
                         <div class="nw-onb-status nw-onb-status--warn">
-                            <?php esc_html_e('Application Passwords are disabled on this site. Enable them in WordPress core settings or contact your host.', domain: 'nibwp'); ?>
+                            <?php esc_html_e('Application Passwords are disabled on this site. Enable them in WordPress core settings or contact your host.', 'nibwp'); ?>
                         </div>
                     <?php else: ?>
                         <button type="button" class="nw-onb-test-btn" id="nw-onb-pass-btn">
-                            <?php esc_html_e('Generate App Password now', domain: 'nibwp'); ?>
+                            <?php esc_html_e('Generate App Password now', 'nibwp'); ?>
                         </button>
                         <div class="nw-onb-test-result" id="nw-onb-pass-result" hidden></div>
                     <?php endif; ?>
@@ -1656,11 +1843,11 @@ function nibwp_render_onboarder_modal(): void
                     <div class="nw-onb-step__icon">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                     </div>
-                    <h2><?php esc_html_e('Configure your AI client', domain: 'nibwp'); ?></h2>
-                    <p><?php esc_html_e('Pick your client. Copy the snippet below and paste it where indicated.', domain: 'nibwp'); ?></p>
+                    <h2><?php esc_html_e('Configure your AI client', 'nibwp'); ?></h2>
+                    <p><?php esc_html_e('Pick your client. Copy the snippet below and paste it where indicated.', 'nibwp'); ?></p>
 
                     <label class="nw-onb-client-label">
-                        <?php esc_html_e('AI client', domain: 'nibwp'); ?>
+                        <?php esc_html_e('AI client', 'nibwp'); ?>
                         <select id="nw-onb-client-select" class="nw-onb-client-select">
                             <?php foreach ($client_labels as $key => $label):
                                 if (!isset($client_configs[$key])) { continue; } ?>
@@ -1673,8 +1860,8 @@ function nibwp_render_onboarder_modal(): void
                         <div class="nw-onb-config-header">
                             <span id="nw-onb-config-hint"></span>
                             <button type="button" class="nw-onb-copy-btn" id="nw-onb-config-copy-btn">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                                <?php esc_html_e('Copy', domain: 'nibwp'); ?>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-inline-end:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                                <?php esc_html_e('Copy', 'nibwp'); ?>
                             </button>
                         </div>
                         <pre id="nw-onb-config-code"></pre>
@@ -1683,7 +1870,7 @@ function nibwp_render_onboarder_modal(): void
                     <div class="nw-onb-howto" id="nw-onb-howto"></div>
 
                     <p class="nw-onb-save-hint" id="nw-onb-pass-warn" hidden>
-                        ⚠ <?php esc_html_e('Generate the App Password in step 2 first — the snippet contains a placeholder until then.', domain: 'nibwp'); ?>
+                        ⚠ <?php esc_html_e('Generate the App Password in step 2 first — the snippet contains a placeholder until then.', 'nibwp'); ?>
                     </p>
                 </section>
 
@@ -1692,10 +1879,10 @@ function nibwp_render_onboarder_modal(): void
                     <div class="nw-onb-step__icon">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>
                     </div>
-                    <h2><?php esc_html_e('Test the connection', domain: 'nibwp'); ?></h2>
-                    <p><?php esc_html_e('Verify the MCP endpoint is reachable from this browser. This proves the route is live.', domain: 'nibwp'); ?></p>
+                    <h2><?php esc_html_e('Test the connection', 'nibwp'); ?></h2>
+                    <p><?php esc_html_e('Verify the MCP endpoint is reachable from this browser. This proves the route is live.', 'nibwp'); ?></p>
                     <button type="button" class="nw-onb-test-btn" id="nw-onb-test-btn">
-                        <?php esc_html_e('Run test now', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Run test now', 'nibwp'); ?>
                     </button>
                     <div class="nw-onb-test-result" id="nw-onb-test-result" hidden></div>
                 </section>
@@ -1705,21 +1892,21 @@ function nibwp_render_onboarder_modal(): void
                     <div class="nw-onb-step__icon nw-onb-step__icon--success">
                         <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 12 15 16 10"/></svg>
                     </div>
-                    <h2><?php esc_html_e('You\'re all set!', domain: 'nibwp'); ?></h2>
-                    <p><?php esc_html_e('NIBWP is ready. AI agents can now read files, execute PHP, and manage your WordPress site. Activate plugin integrations next to unlock more abilities.', domain: 'nibwp'); ?></p>
+                    <h2><?php esc_html_e('You\'re all set!', 'nibwp'); ?></h2>
+                    <p><?php esc_html_e('NIBWP is ready. AI agents can now read files, execute PHP, and manage your WordPress site. Activate plugin integrations next to unlock more abilities.', 'nibwp'); ?></p>
                     <a class="nw-onb-cta-link" href="<?php echo esc_url($integrations_url); ?>">
-                        <?php esc_html_e('Activate integrations →', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Activate integrations', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">→</span>
                     </a>
                 </section>
             </div>
 
             <div class="nw-onboarder__footer">
                 <button type="button" class="nw-onb-btn nw-onb-btn--ghost" id="nw-onb-back" disabled>
-                    <?php esc_html_e('Back', domain: 'nibwp'); ?>
+                    <?php esc_html_e('Back', 'nibwp'); ?>
                 </button>
                 <span class="nw-onb-count" id="nw-onb-count">1 / 5</span>
                 <button type="button" class="nw-onb-btn nw-onb-btn--primary" id="nw-onb-next">
-                    <?php esc_html_e('Next', domain: 'nibwp'); ?>
+                    <?php esc_html_e('Next', 'nibwp'); ?>
                 </button>
             </div>
         </div>
@@ -1739,8 +1926,8 @@ function nibwp_render_onboarder_modal(): void
         var countEl = document.getElementById('nw-onb-count');
         var progressEl = document.getElementById('nw-onboarder-progress');
         var closeBtn = document.getElementById('nw-onboarder-close');
-        var nextLabel = <?php echo wp_json_encode(__('Next', domain: 'nibwp')); ?>;
-        var doneLabel = <?php echo wp_json_encode(__('Done', domain: 'nibwp')); ?>;
+        var nextLabel = <?php echo wp_json_encode(__('Next', 'nibwp')); ?>;
+        var doneLabel = <?php echo wp_json_encode(__('Done', 'nibwp')); ?>;
         var restRoot = <?php echo wp_json_encode($rest_root); ?>;
         var restNonce = <?php echo wp_json_encode($rest_nonce); ?>;
         var enableEndpoint = <?php echo wp_json_encode(rest_url('nibwp/v1/onboarder/enable')); ?>;
@@ -1809,7 +1996,7 @@ function nibwp_render_onboarder_modal(): void
         if (enableBtn && enableStatus) {
             enableBtn.addEventListener('click', function () {
                 enableBtn.disabled = true;
-                enableBtn.textContent = <?php echo wp_json_encode(__('Enabling…', domain: 'nibwp')); ?>;
+                enableBtn.textContent = <?php echo wp_json_encode(__('Enabling…', 'nibwp')); ?>;
                 fetch(enableEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': restNonce },
@@ -1819,20 +2006,20 @@ function nibwp_render_onboarder_modal(): void
                     .then(function (res) {
                         if (res.ok && res.body && res.body.enabled) {
                             enableStatus.className = 'nw-onb-status nw-onb-status--ok';
-                            enableStatus.textContent = <?php echo wp_json_encode(__('✓ AI Abilities are now enabled.', domain: 'nibwp')); ?>;
+                            enableStatus.textContent = <?php echo wp_json_encode(__('✓ AI Abilities are now enabled.', 'nibwp')); ?>;
                             enableBtn.hidden = true;
                         } else {
                             enableStatus.className = 'nw-onb-status nw-onb-status--warn';
-                            enableStatus.textContent = (res.body && res.body.message) || <?php echo wp_json_encode(__('Could not enable. Try the Connect page manually.', domain: 'nibwp')); ?>;
+                            enableStatus.textContent = (res.body && res.body.message) || <?php echo wp_json_encode(__('Could not enable. Try the Connect page manually.', 'nibwp')); ?>;
                             enableBtn.disabled = false;
-                            enableBtn.textContent = <?php echo wp_json_encode(__('Try again', domain: 'nibwp')); ?>;
+                            enableBtn.textContent = <?php echo wp_json_encode(__('Try again', 'nibwp')); ?>;
                         }
                     })
                     .catch(function (err) {
                         enableStatus.className = 'nw-onb-status nw-onb-status--warn';
-                        enableStatus.textContent = <?php echo wp_json_encode(__('Network error: ', domain: 'nibwp')); ?> + (err && err.message ? err.message : err);
+                        enableStatus.textContent = <?php /* translators: %s: error message */ echo wp_json_encode(__('Network error: %s', 'nibwp')); ?>.replace('%s', err && err.message ? err.message : err);
                         enableBtn.disabled = false;
-                        enableBtn.textContent = <?php echo wp_json_encode(__('Try again', domain: 'nibwp')); ?>;
+                        enableBtn.textContent = <?php echo wp_json_encode(__('Try again', 'nibwp')); ?>;
                     });
             });
         }
@@ -1845,10 +2032,10 @@ function nibwp_render_onboarder_modal(): void
         if (passBtn && passResult) {
             passBtn.addEventListener('click', function () {
                 passBtn.disabled = true;
-                passBtn.textContent = <?php echo wp_json_encode(__('Generating…', domain: 'nibwp')); ?>;
+                passBtn.textContent = <?php echo wp_json_encode(__('Generating…', 'nibwp')); ?>;
                 passResult.hidden = false;
                 passResult.className = 'nw-onb-test-result is-loading';
-                passResult.textContent = <?php echo wp_json_encode(__('Creating application password…', domain: 'nibwp')); ?>;
+                passResult.textContent = <?php echo wp_json_encode(__('Creating application password…', 'nibwp')); ?>;
 
                 var appName = 'NIBWP Onboarder ' + new Date().toISOString().slice(0, 16).replace('T', ' ');
                 fetch(appPassEndpoint, {
@@ -1861,18 +2048,18 @@ function nibwp_render_onboarder_modal(): void
                         if (res.ok && res.body && res.body.password) {
                             generatedPassword = res.body.password;
                             passResult.className = 'nw-onb-test-result is-success';
-                            var saveMsg = <?php echo wp_json_encode(__('Password created. SAVE IT NOW — it cannot be shown again.', domain: 'nibwp')); ?>;
-                            var copyLabel = <?php echo wp_json_encode(__('Copy', domain: 'nibwp')); ?>;
+                            var saveMsg = <?php echo wp_json_encode(__('Password created. SAVE IT NOW — it cannot be shown again.', 'nibwp')); ?>;
+                            var copyLabel = <?php echo wp_json_encode(__('Copy', 'nibwp')); ?>;
                             passResult.innerHTML = '<strong>✓ ' + saveMsg + '</strong>'
                                 + '<div class="nw-onb-pass-box">'
                                 +   '<code id="nw-onb-pass-value">' + generatedPassword + '</code>'
                                 +   '<button type="button" class="nw-onb-copy-btn" data-copy="nw-onb-pass-value" id="nw-onb-pass-copy-inline">'
-                                +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>'
+                                +     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-inline-end:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>'
                                 +     copyLabel
                                 +   '</button>'
                                 + '</div>'
-                                + '<p class="nw-onb-save-hint">⚠ ' + <?php echo wp_json_encode(__('Store this in your password manager before continuing. WordPress will not show it again.', domain: 'nibwp')); ?> + '</p>';
-                            passBtn.textContent = <?php echo wp_json_encode(__('Generate another', domain: 'nibwp')); ?>;
+                                + '<p class="nw-onb-save-hint">⚠ ' + <?php echo wp_json_encode(__('Store this in your password manager before continuing. WordPress will not show it again.', 'nibwp')); ?> + '</p>';
+                            passBtn.textContent = <?php echo wp_json_encode(__('Generate another', 'nibwp')); ?>;
                             passBtn.disabled = false;
                             // Wire the inline copy button (created above)
                             var inlineCopy = document.getElementById('nw-onb-pass-copy-inline');
@@ -1894,16 +2081,16 @@ function nibwp_render_onboarder_modal(): void
                             if (typeof refreshClientConfig === 'function') { refreshClientConfig(); }
                         } else {
                             passResult.className = 'nw-onb-test-result is-error';
-                            passResult.innerHTML = '<strong>✗ ' + <?php echo wp_json_encode(__('Failed.', domain: 'nibwp')); ?> + '</strong> ' + ((res.body && res.body.message) || <?php echo wp_json_encode(__('Could not create application password.', domain: 'nibwp')); ?>);
+                            passResult.innerHTML = '<strong>✗ ' + <?php echo wp_json_encode(__('Failed.', 'nibwp')); ?> + '</strong> ' + ((res.body && res.body.message) || <?php echo wp_json_encode(__('Could not create application password.', 'nibwp')); ?>);
                             passBtn.disabled = false;
-                            passBtn.textContent = <?php echo wp_json_encode(__('Try again', domain: 'nibwp')); ?>;
+                            passBtn.textContent = <?php echo wp_json_encode(__('Try again', 'nibwp')); ?>;
                         }
                     })
                     .catch(function (err) {
                         passResult.className = 'nw-onb-test-result is-error';
-                        passResult.textContent = <?php echo wp_json_encode(__('Network error: ', domain: 'nibwp')); ?> + (err && err.message ? err.message : err);
+                        passResult.textContent = <?php /* translators: %s: error message */ echo wp_json_encode(__('Network error: %s', 'nibwp')); ?>.replace('%s', err && err.message ? err.message : err);
                         passBtn.disabled = false;
-                        passBtn.textContent = <?php echo wp_json_encode(__('Try again', domain: 'nibwp')); ?>;
+                        passBtn.textContent = <?php echo wp_json_encode(__('Try again', 'nibwp')); ?>;
                     });
             });
         }
@@ -1911,7 +2098,7 @@ function nibwp_render_onboarder_modal(): void
         // --- Step 3: Copy buttons (URL/user/password + full JSON config) ---
         function flashCopied(btn) {
             var orig = btn.textContent;
-            btn.textContent = <?php echo wp_json_encode(__('Copied!', domain: 'nibwp')); ?>;
+            btn.textContent = <?php echo wp_json_encode(__('Copied!', 'nibwp')); ?>;
             setTimeout(function () { btn.textContent = orig; }, 1200);
         }
         var copyBtns = modal.querySelectorAll('.nw-onb-copy-btn');
@@ -1955,23 +2142,23 @@ function nibwp_render_onboarder_modal(): void
             configCodeEl.textContent = renderConfigSnippet(cfg.code);
             if (configHintEl) {
                 configHintEl.textContent = cfg.isShell
-                    ? <?php echo wp_json_encode(__('Terminal command', domain: 'nibwp')); ?>
-                    : <?php echo wp_json_encode(__('Config snippet', domain: 'nibwp')); ?>;
+                    ? <?php echo wp_json_encode(__('Terminal command', 'nibwp')); ?>
+                    : <?php echo wp_json_encode(__('Config snippet', 'nibwp')); ?>;
             }
             if (howtoEl) {
                 var steps = clientInstructions[key] || [];
                 var helpUrl = clientHelpUrls[key] || '';
-                var html = '<div class="nw-onb-howto__title">' + <?php echo wp_json_encode(__('How to add it:', domain: 'nibwp')); ?> + '</div>';
+                var html = '<div class="nw-onb-howto__title">' + <?php echo wp_json_encode(__('How to add it:', 'nibwp')); ?> + '</div>';
                 if (steps.length) {
                     html += '<ol class="nw-onb-howto__list">';
                     steps.forEach(function (s) { html += '<li>' + s + '</li>'; });
                     html += '</ol>';
                 } else {
-                    html += '<p>' + <?php echo wp_json_encode(__('Open your client\'s MCP settings and paste the snippet above.', domain: 'nibwp')); ?> + '</p>';
+                    html += '<p>' + <?php echo wp_json_encode(__('Open your client\'s MCP settings and paste the snippet above.', 'nibwp')); ?> + '</p>';
                 }
                 if (helpUrl) {
                     html += '<a class="nw-onb-howto__help" href="' + helpUrl + '" target="_blank" rel="noopener">'
-                          + <?php echo wp_json_encode(__('Need help? Open official docs →', domain: 'nibwp')); ?>
+                          + <?php echo wp_json_encode(__('Need help? Open official docs', 'nibwp')); ?> + ' <span class="nw-rtl-flip" aria-hidden="true">\u2192</span>'
                           + '</a>';
                 }
                 howtoEl.innerHTML = html;
@@ -2003,10 +2190,10 @@ function nibwp_render_onboarder_modal(): void
         if (testBtn && testResult) {
             testBtn.addEventListener('click', function () {
                 testBtn.disabled = true;
-                testBtn.textContent = <?php echo wp_json_encode(__('Testing…', domain: 'nibwp')); ?>;
+                testBtn.textContent = <?php echo wp_json_encode(__('Testing…', 'nibwp')); ?>;
                 testResult.hidden = false;
                 testResult.className = 'nw-onb-test-result is-loading';
-                testResult.textContent = <?php echo wp_json_encode(__('Checking MCP endpoint…', domain: 'nibwp')); ?>;
+                testResult.textContent = <?php echo wp_json_encode(__('Checking MCP endpoint…', 'nibwp')); ?>;
 
                 fetch(restRoot, { headers: { 'Accept': 'application/json' } })
                     .then(function (r) { return r.json(); })
@@ -2017,19 +2204,19 @@ function nibwp_render_onboarder_modal(): void
                         });
                         if (hit) {
                             testResult.className = 'nw-onb-test-result is-success';
-                            testResult.innerHTML = '<strong>✓ ' + <?php echo wp_json_encode(__('Success!', domain: 'nibwp')); ?> + '</strong> ' + <?php echo wp_json_encode(__('MCP endpoint is live at /mcp/nibwp.', domain: 'nibwp')); ?>;
+                            testResult.innerHTML = '<strong>✓ ' + <?php echo wp_json_encode(__('Success!', 'nibwp')); ?> + '</strong> ' + <?php echo wp_json_encode(__('MCP endpoint is live at /mcp/nibwp.', 'nibwp')); ?>;
                         } else {
                             testResult.className = 'nw-onb-test-result is-error';
-                            testResult.innerHTML = '<strong>✗ ' + <?php echo wp_json_encode(__('Not found.', domain: 'nibwp')); ?> + '</strong> ' + <?php echo wp_json_encode(__('Enable AI Abilities on the Connect page first.', domain: 'nibwp')); ?>;
+                            testResult.innerHTML = '<strong>✗ ' + <?php echo wp_json_encode(__('Not found.', 'nibwp')); ?> + '</strong> ' + <?php echo wp_json_encode(__('Enable AI Abilities on the Connect page first.', 'nibwp')); ?>;
                         }
                     })
                     .catch(function (err) {
                         testResult.className = 'nw-onb-test-result is-error';
-                        testResult.textContent = <?php echo wp_json_encode(__('Network error: ', domain: 'nibwp')); ?> + (err && err.message ? err.message : err);
+                        testResult.textContent = <?php /* translators: %s: error message */ echo wp_json_encode(__('Network error: %s', 'nibwp')); ?>.replace('%s', err && err.message ? err.message : err);
                     })
                     .then(function () {
                         testBtn.disabled = false;
-                        testBtn.textContent = <?php echo wp_json_encode(__('Run test again', domain: 'nibwp')); ?>;
+                        testBtn.textContent = <?php echo wp_json_encode(__('Run test again', 'nibwp')); ?>;
                     });
             });
         }
@@ -2046,22 +2233,22 @@ function nibwp_render_admin_footer(): void
     // Build search items — icon is an SVG string for each item
     $icon = static fn(string $d) => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $d . '</svg>';
     $search_items = [
-        ['label' => 'Dashboard', 'desc' => 'Overview, stats, IDE configs', 'url' => admin_url('admin.php?page=nibwp-dashboard'), 'icon' => $icon('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>')],
-        ['label' => 'How To', 'desc' => 'Interactive walkthrough, IDE setup, sample prompts', 'url' => admin_url('admin.php?page=nibwp-how-to'), 'icon' => $icon('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>')],
-        ['label' => 'Skills Marketplace', 'desc' => 'Premium skill packs, license activation, image to component', 'url' => admin_url('admin.php?page=nibwp-skills'), 'icon' => $icon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>')],
-        ['label' => 'Activate License', 'desc' => 'Enter license key, unlock Pro skills, FluentCart', 'url' => admin_url('admin.php?page=nibwp-skills'), 'icon' => $icon('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>')],
-        ['label' => 'Connect', 'desc' => 'Enable MCP, passwords, client setup', 'url' => admin_url('admin.php?page=nibwp-connect'), 'icon' => $icon('<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>')],
-        ['label' => 'Integrations', 'desc' => 'Activate page builders, custom fields, WooCommerce, EtchWP', 'url' => admin_url('admin.php?page=nibwp-integrations'), 'icon' => $icon('<circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4M4.9 4.9l2.8 2.8m8.6 8.6l2.8 2.8M4.9 19.1l2.8-2.8m8.6-8.6l2.8-2.8"/>')],
-        ['label' => 'AI Abilities', 'desc' => 'All registered MCP tools list', 'url' => admin_url('admin.php?page=nibwp'), 'icon' => $icon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>')],
-        ['label' => 'Jobs', 'desc' => 'Outcome jobs, run now or schedule, approvals inbox, plain-English reports', 'url' => admin_url('admin.php?page=nibwp-jobs'), 'icon' => $icon('<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M3 12h18"/>')],
-        ['label' => 'Memory', 'desc' => 'Cross-session AI memory entries, store recall', 'url' => admin_url('admin.php?page=nibwp-memory'), 'icon' => $icon('<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 2v20M16 2v20M4 12h16"/>')],
-        ['label' => 'Audit Log', 'desc' => 'Tool call history stats debug', 'url' => admin_url('admin.php?page=nibwp-audit-log'), 'icon' => $icon('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>')],
-        ['label' => 'Sandbox', 'desc' => 'AI-generated PHP files manage', 'url' => admin_url('admin.php?page=nibwp-sandbox'), 'icon' => $icon('<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>')],
-        ['label' => 'Settings', 'desc' => 'Rate limits security content safety audit', 'url' => admin_url('admin.php?page=nibwp-settings'), 'icon' => $icon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>')],
-        ['label' => 'Enable MCP', 'desc' => 'Turn on AI Abilities activate', 'url' => admin_url('admin.php?page=nibwp-connect'), 'icon' => $icon('<path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>')],
-        ['label' => 'Generate App Password', 'desc' => 'Create credentials for AI clients authentication', 'url' => admin_url('admin.php?page=nibwp-connect'), 'icon' => $icon('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>')],
-        ['label' => 'WordPress Plugins', 'desc' => 'Manage installed plugins activate deactivate', 'url' => admin_url('plugins.php'), 'icon' => $icon('<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>')],
-        ['label' => 'WP Dashboard', 'desc' => 'Return to WordPress admin home', 'url' => admin_url(), 'icon' => $icon('<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>')],
+        ['label' => __('Dashboard', 'nibwp'), 'desc' => __('Overview, stats, IDE configs', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-dashboard'), 'icon' => $icon('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>')],
+        ['label' => __('How To', 'nibwp'), 'desc' => __('Interactive walkthrough, IDE setup, sample prompts', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-how-to'), 'icon' => $icon('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>')],
+        ['label' => __('Skills Marketplace', 'nibwp'), 'desc' => __('Premium skill packs, license activation, image to component', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-skills'), 'icon' => $icon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>')],
+        ['label' => __('Activate License', 'nibwp'), 'desc' => __('Enter license key, unlock Pro skills, FluentCart', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-skills'), 'icon' => $icon('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>')],
+        ['label' => __('Connect', 'nibwp'), 'desc' => __('Enable MCP, passwords, client setup', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-connect'), 'icon' => $icon('<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>')],
+        ['label' => __('Integrations', 'nibwp'), 'desc' => __('Activate page builders, custom fields, WooCommerce, EtchWP', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-integrations'), 'icon' => $icon('<circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4M4.9 4.9l2.8 2.8m8.6 8.6l2.8 2.8M4.9 19.1l2.8-2.8m8.6-8.6l2.8-2.8"/>')],
+        ['label' => __('AI Abilities', 'nibwp'), 'desc' => __('All registered MCP tools list', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp'), 'icon' => $icon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>')],
+        ['label' => __('Jobs', 'nibwp'), 'desc' => __('Outcome jobs, run now or schedule, approvals inbox, plain-English reports', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-jobs'), 'icon' => $icon('<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M3 12h18"/>')],
+        ['label' => __('Memory', 'nibwp'), 'desc' => __('Cross-session AI memory entries, store recall', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-memory'), 'icon' => $icon('<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 2v20M16 2v20M4 12h16"/>')],
+        ['label' => __('Audit Log', 'nibwp'), 'desc' => __('Tool call history stats debug', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-audit-log'), 'icon' => $icon('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>')],
+        ['label' => __('Sandbox', 'nibwp'), 'desc' => __('AI-generated PHP files manage', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-sandbox'), 'icon' => $icon('<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>')],
+        ['label' => __('Settings', 'nibwp'), 'desc' => __('Rate limits security content safety audit', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-settings'), 'icon' => $icon('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>')],
+        ['label' => __('Enable MCP', 'nibwp'), 'desc' => __('Turn on AI Abilities activate', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-connect'), 'icon' => $icon('<path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>')],
+        ['label' => __('Generate App Password', 'nibwp'), 'desc' => __('Create credentials for AI clients authentication', 'nibwp'), 'url' => admin_url('admin.php?page=nibwp-connect'), 'icon' => $icon('<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>')],
+        ['label' => __('WordPress Plugins', 'nibwp'), 'desc' => __('Manage installed plugins activate deactivate', 'nibwp'), 'url' => admin_url('plugins.php'), 'icon' => $icon('<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>')],
+        ['label' => __('WP Dashboard', 'nibwp'), 'desc' => __('Return to WordPress admin home', 'nibwp'), 'url' => admin_url(), 'icon' => $icon('<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>')],
     ];
     ?>
             </div><!-- .nw-content -->
@@ -2074,7 +2261,7 @@ function nibwp_render_admin_footer(): void
         <div class="nw-palette__panel">
             <div class="nw-palette__input-wrap">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5"/><path d="M12 12l4 4"/></svg>
-                <input type="text" class="nw-palette__input" id="nw-palette-input" placeholder="<?php esc_attr_e('Search pages, actions, settings...', domain: 'nibwp'); ?>" autocomplete="off">
+                <input type="text" class="nw-palette__input" id="nw-palette-input" placeholder="<?php esc_attr_e('Search pages, actions, settings...', 'nibwp'); ?>" autocomplete="off">
             </div>
             <div class="nw-palette__body" id="nw-palette-body">
                 <?php foreach ($search_items as $item): ?>
@@ -2086,7 +2273,7 @@ function nibwp_render_admin_footer(): void
                         </div>
                     </a>
                 <?php endforeach; ?>
-                <div class="nw-palette__empty" hidden><?php esc_html_e('No results found.', domain: 'nibwp'); ?></div>
+                <div class="nw-palette__empty" hidden><?php esc_html_e('No results found.', 'nibwp'); ?></div>
             </div>
         </div>
     </div>
@@ -2227,185 +2414,194 @@ function nibwp_render_admin_footer(): void
     <?php
     // ── Sticky Help Button ──
     $current_page = $_GET['page'] ?? '';
+    // How long a step or an article takes, as shown beside it.
+    $nw_min = static function (int $n): string {
+        /* translators: %d: number of minutes */
+        return sprintf(_n('%d min', '%d min', $n, 'nibwp'), $n);
+    };
+    $nw_sec = static function (int $n): string {
+        /* translators: %d: number of seconds */
+        return sprintf(_n('%d sec', '%d sec', $n, 'nibwp'), $n);
+    };
     $help = match ($current_page) {
         'nibwp-dashboard' => [
-            'title' => __('Reading the dashboard', domain: 'nibwp'),
-            'desc' => __('Stats, IDE configs, and quick access to all features.', domain: 'nibwp'),
+            'title' => __('Reading the dashboard', 'nibwp'),
+            'desc' => __('Stats, IDE configs, and quick access to all features.', 'nibwp'),
             'steps' => [
-                ['title' => 'Enable MCP in Connect', 'desc' => 'Turn on AI Abilities to activate the MCP server.', 'time' => '1 min'],
-                ['title' => 'Generate an App Password', 'desc' => 'Create credentials for your AI client to authenticate.', 'time' => '1 min'],
-                ['title' => 'Copy IDE config snippet', 'desc' => 'Select your client tab and paste the config.', 'time' => '2 min'],
+                ['title' => __('Enable MCP in Connect', 'nibwp'), 'desc' => __('Turn on AI Abilities to activate the MCP server.', 'nibwp'), 'time' => $nw_min(1)],
+                ['title' => __('Generate an App Password', 'nibwp'), 'desc' => __('Create credentials for your AI client to authenticate.', 'nibwp'), 'time' => $nw_min(1)],
+                ['title' => __('Copy IDE config snippet', 'nibwp'), 'desc' => __('Select your client tab and paste the config.', 'nibwp'), 'time' => $nw_min(2)],
             ],
             'articles' => [
-                ['title' => 'Connecting Claude Desktop', 'url' => 'https://www.nibwp.com/docs/claude-desktop', 'time' => '3 min'],
-                ['title' => 'Connecting Cursor / VS Code', 'url' => 'https://www.nibwp.com/docs/cursor', 'time' => '2 min'],
+                ['title' => __('Connecting Claude Desktop', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/claude-desktop', 'time' => $nw_min(3)],
+                ['title' => __('Connecting Cursor / VS Code', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/cursor', 'time' => $nw_min(2)],
             ],
             'related' => [
-                ['label' => 'Quick start', 'sub' => '5-minute setup', 'url' => 'https://www.nibwp.com/docs/getting-started', 'icon' => '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>'],
-                ['label' => 'Glossary', 'sub' => 'Every term', 'url' => 'https://www.nibwp.com/docs/glossary', 'icon' => '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>'],
+                ['label' => __('Quick start', 'nibwp'), 'sub' => __('5-minute setup', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/getting-started', 'icon' => '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>'],
+                ['label' => __('Glossary', 'nibwp'), 'sub' => __('Every term', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/glossary', 'icon' => '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>'],
             ],
         ],
         'nibwp-connect' => [
-            'title' => __('Setting up MCP connection', domain: 'nibwp'),
-            'desc' => __('Enable MCP, create credentials, and connect your AI client.', domain: 'nibwp'),
+            'title' => __('Setting up MCP connection', 'nibwp'),
+            'desc' => __('Enable MCP, create credentials, and connect your AI client.', 'nibwp'),
             'steps' => [
-                ['title' => 'Toggle AI Abilities ON', 'desc' => 'Activates the MCP endpoint on this site.', 'time' => '30 sec'],
-                ['title' => 'Generate App Password', 'desc' => 'Not your login password — a separate credential for AI.', 'time' => '30 sec'],
-                ['title' => 'Paste config or prompt', 'desc' => 'Copy the JSON config or paste the prompt into your AI chat.', 'time' => '1 min'],
+                ['title' => __('Toggle AI Abilities ON', 'nibwp'), 'desc' => __('Activates the MCP endpoint on this site.', 'nibwp'), 'time' => $nw_sec(30)],
+                ['title' => __('Generate App Password', 'nibwp'), 'desc' => __('Not your login password — a separate credential for AI.', 'nibwp'), 'time' => $nw_sec(30)],
+                ['title' => __('Paste config or prompt', 'nibwp'), 'desc' => __('Copy the JSON config or paste the prompt into your AI chat.', 'nibwp'), 'time' => $nw_min(1)],
             ],
             'articles' => [
-                ['title' => 'Supported AI clients list', 'url' => 'https://www.nibwp.com/docs/clients', 'time' => '2 min'],
-                ['title' => 'Troubleshooting connections', 'url' => 'https://www.nibwp.com/docs/troubleshooting', 'time' => '4 min'],
+                ['title' => __('Supported AI clients list', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/clients', 'time' => $nw_min(2)],
+                ['title' => __('Troubleshooting connections', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/troubleshooting', 'time' => $nw_min(4)],
             ],
             'related' => [],
         ],
         'nibwp-integrations' => [
-            'title' => __('Managing integrations', domain: 'nibwp'),
-            'desc' => __('Activate plugin integrations to expose their AI abilities.', domain: 'nibwp'),
+            'title' => __('Managing integrations', 'nibwp'),
+            'desc' => __('Activate plugin integrations to expose their AI abilities.', 'nibwp'),
             'steps' => [
-                ['title' => 'Install the WordPress plugin', 'desc' => 'The integration detects when the plugin is active.'],
-                ['title' => 'Toggle the integration ON', 'desc' => 'This loads the MCP tools for that plugin.'],
-                ['title' => 'Verify in AI Abilities', 'desc' => 'Check the AI Abilities page to confirm tools are registered.'],
+                ['title' => __('Install the WordPress plugin', 'nibwp'), 'desc' => __('The integration detects when the plugin is active.', 'nibwp')],
+                ['title' => __('Toggle the integration ON', 'nibwp'), 'desc' => __('This loads the MCP tools for that plugin.', 'nibwp')],
+                ['title' => __('Verify in AI Abilities', 'nibwp'), 'desc' => __('Check the AI Abilities page to confirm tools are registered.', 'nibwp')],
             ],
             'articles' => [
-                ['title' => 'All available integrations', 'url' => 'https://www.nibwp.com/docs/integrations', 'time' => '5 min'],
+                ['title' => __('All available integrations', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/integrations', 'time' => $nw_min(5)],
             ],
             'related' => [],
         ],
         'nibwp-figma' => [
-            'title' => __('Figma → WordPress', domain: 'nibwp'),
-            'desc' => __('Pull designs into a local library, then ask the AI agent to build them.', domain: 'nibwp'),
+            'title' => __('Figma → WordPress', 'nibwp'),
+            'desc' => __('Pull designs into a local library, then ask the AI agent to build them.', 'nibwp'),
             'steps' => [
-                ['title' => 'Connect Figma', 'desc' => 'Connection tab → paste a personal access token (File content: read-only). OAuth and Dev Mode MCP are alternatives — pick one.', 'time' => '2 min'],
-                ['title' => 'Pull a frame', 'desc' => 'In Figma, select a frame and copy its link. Paste it in the Pull tab. NibWP caches a 2× image plus the color palette and type ramp.', 'time' => '1 min'],
-                ['title' => 'Pull in bulk (optional)', 'desc' => 'A file link pulls every frame in it; a team or project link walks every file. Progress is live and you can stop between frames.'],
-                ['title' => 'Copy the handle', 'desc' => 'Each frame gets a name like @figma/hero-section. Click it in the Library to copy.'],
-                ['title' => 'Ask the agent to build it', 'desc' => 'Say what you want in plain English. NibWP picks the builder your site runs and saves a draft — it never overwrites a live page.', 'time' => '2 min'],
+                ['title' => __('Connect Figma', 'nibwp'), 'desc' => __('Connection tab → paste a personal access token (File content: read-only). OAuth and Dev Mode MCP are alternatives — pick one.', 'nibwp'), 'time' => $nw_min(2)],
+                ['title' => __('Pull a frame', 'nibwp'), 'desc' => __('In Figma, select a frame and copy its link. Paste it in the Pull tab. NibWP caches a 2× image plus the color palette and type ramp.', 'nibwp'), 'time' => $nw_min(1)],
+                ['title' => __('Pull in bulk (optional)', 'nibwp'), 'desc' => __('A file link pulls every frame in it; a team or project link walks every file. Progress is live and you can stop between frames.', 'nibwp')],
+                ['title' => __('Copy the handle', 'nibwp'), 'desc' => __('Each frame gets a name like @figma/hero-section. Click it in the Library to copy.', 'nibwp')],
+                ['title' => __('Ask the agent to build it', 'nibwp'), 'desc' => __('Say what you want in plain English. NibWP picks the builder your site runs and saves a draft — it never overwrites a live page.', 'nibwp'), 'time' => $nw_min(2)],
             ],
             'articles' => [
-                ['title' => 'Figma integration overview', 'url' => 'https://www.nibwp.com/docs/figma', 'time' => '4 min'],
-                ['title' => 'Connecting your Figma account', 'url' => 'https://www.nibwp.com/docs/figma-connect', 'time' => '2 min'],
-                ['title' => 'Pulling frames into the library', 'url' => 'https://www.nibwp.com/docs/figma-pull', 'time' => '3 min'],
-                ['title' => 'Converting a design to a page', 'url' => 'https://www.nibwp.com/docs/figma-convert', 'time' => '4 min'],
-                ['title' => 'Figma rate limits explained', 'url' => 'https://www.nibwp.com/docs/figma-rate-limits', 'time' => '2 min'],
+                ['title' => __('Figma integration overview', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/figma', 'time' => $nw_min(4)],
+                ['title' => __('Connecting your Figma account', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/figma-connect', 'time' => $nw_min(2)],
+                ['title' => __('Pulling frames into the library', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/figma-pull', 'time' => $nw_min(3)],
+                ['title' => __('Converting a design to a page', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/figma-convert', 'time' => $nw_min(4)],
+                ['title' => __('Figma rate limits explained', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/figma-rate-limits', 'time' => $nw_min(2)],
             ],
             'related' => [],
         ],
         'nibwp' => [
-            'title' => __('Understanding AI Abilities', domain: 'nibwp'),
-            'desc' => __('Every tool your AI agents can call via MCP.', domain: 'nibwp'),
+            'title' => __('Understanding AI Abilities', 'nibwp'),
+            'desc' => __('Every tool your AI agents can call via MCP.', 'nibwp'),
             'steps' => [
-                ['title' => 'Filter by type', 'desc' => 'Use Read-Only, Write, or Destructive filters to find safe vs dangerous tools.'],
-                ['title' => 'Disable risky tools', 'desc' => 'Go to Settings to prevent specific tools from being exposed.'],
-                ['title' => 'Export the list', 'desc' => 'Click Export JSON to download the full tool inventory.'],
+                ['title' => __('Filter by type', 'nibwp'), 'desc' => __('Use Read-Only, Write, or Destructive filters to find safe vs dangerous tools.', 'nibwp')],
+                ['title' => __('Disable risky tools', 'nibwp'), 'desc' => __('Go to Settings to prevent specific tools from being exposed.', 'nibwp')],
+                ['title' => __('Export the list', 'nibwp'), 'desc' => __('Click Export JSON to download the full tool inventory.', 'nibwp')],
             ],
             'articles' => [
-                ['title' => 'Tool permission model', 'url' => 'https://www.nibwp.com/docs/tools', 'time' => '3 min'],
+                ['title' => __('Tool permission model', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/tools', 'time' => $nw_min(3)],
             ],
             'related' => [],
         ],
         'nibwp-sandbox' => [
-            'title' => __('Using the Sandbox', domain: 'nibwp'),
-            'desc' => __('AI-generated PHP files that auto-load on every request.', domain: 'nibwp'),
+            'title' => __('Using the Sandbox', 'nibwp'),
+            'desc' => __('AI-generated PHP files that auto-load on every request.', 'nibwp'),
             'steps' => [
-                ['title' => 'View before enabling', 'desc' => 'Click View to inspect code before it runs.'],
-                ['title' => 'Disable to troubleshoot', 'desc' => 'Adds .disabled extension — file stays but doesn\'t load.'],
-                ['title' => 'Safe mode auto-activates', 'desc' => 'If a file causes a fatal error, all files are suspended.'],
+                ['title' => __('View before enabling', 'nibwp'), 'desc' => __('Click View to inspect code before it runs.', 'nibwp')],
+                ['title' => __('Disable to troubleshoot', 'nibwp'), 'desc' => __('Adds .disabled extension — file stays but doesn\'t load.', 'nibwp')],
+                ['title' => __('Safe mode auto-activates', 'nibwp'), 'desc' => __('If a file causes a fatal error, all files are suspended.', 'nibwp')],
             ],
             'articles' => [],
             'related' => [],
         ],
         'nibwp-settings' => [
-            'title' => __('Configuring settings', domain: 'nibwp'),
-            'desc' => __('Security, content safety, and audit configuration.', domain: 'nibwp'),
+            'title' => __('Configuring settings', 'nibwp'),
+            'desc' => __('Security, content safety, and audit configuration.', 'nibwp'),
             'steps' => [
-                ['title' => 'Set rate limits', 'desc' => 'Prevents runaway AI agents. 30-60 calls/min recommended.'],
-                ['title' => 'Enable Force Draft', 'desc' => 'All AI-created posts become drafts for review.'],
-                ['title' => 'Configure audit retention', 'desc' => 'How long to keep tool call logs. Default: 30 days.'],
+                ['title' => __('Set rate limits', 'nibwp'), 'desc' => __('Prevents runaway AI agents. 30-60 calls/min recommended.', 'nibwp')],
+                ['title' => __('Enable Force Draft', 'nibwp'), 'desc' => __('All AI-created posts become drafts for review.', 'nibwp')],
+                ['title' => __('Configure audit retention', 'nibwp'), 'desc' => __('How long to keep tool call logs. Default: 30 days.', 'nibwp')],
             ],
             'articles' => [],
             'related' => [],
         ],
         'nibwp-skills' => [
-            'title' => __('Skill packs', domain: 'nibwp'),
-            'desc' => __('Premium AI skill packs — image → component, HTML → builder, SEO, course builders, and more.', domain: 'nibwp'),
+            'title' => __('Skill packs', 'nibwp'),
+            'desc' => __('Premium AI skill packs — image → component, HTML → builder, SEO, course builders, and more.', 'nibwp'),
             'steps' => [
-                ['title' => 'Activate a license', 'desc' => 'Paste your key to unlock a skill — or the Bundle for every skill, current and future.'],
-                ['title' => 'Toggle a skill ON', 'desc' => 'An enabled, unlocked skill exposes its MCP abilities + playbook to your AI.'],
-                ['title' => 'Trigger it in chat', 'desc' => 'Say e.g. “convert this to Etch” — the skill routes through its validated preflight → build → check pipeline.'],
+                ['title' => __('Activate a license', 'nibwp'), 'desc' => __('Paste your key to unlock a skill — or the Bundle for every skill, current and future.', 'nibwp')],
+                ['title' => __('Toggle a skill ON', 'nibwp'), 'desc' => __('An enabled, unlocked skill exposes its MCP abilities + playbook to your AI.', 'nibwp')],
+                ['title' => __('Trigger it in chat', 'nibwp'), 'desc' => __('Say e.g. “convert this to Etch” — the skill routes through its validated preflight → build → check pipeline.', 'nibwp')],
             ],
             'articles' => [
-                ['title' => 'How skills work', 'url' => 'https://www.nibwp.com/docs/skills', 'time' => '3 min'],
+                ['title' => __('How skills work', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/skills', 'time' => $nw_min(3)],
             ],
             'related' => [],
         ],
         'nibwp-memory' => [
-            'title' => __('AI Memory store', domain: 'nibwp'),
-            'desc' => __('A namespaced key/value store your AI reads and writes to remember things across sessions.', domain: 'nibwp'),
+            'title' => __('AI Memory store', 'nibwp'),
+            'desc' => __('A namespaced key/value store your AI reads and writes to remember things across sessions.', 'nibwp'),
             'steps' => [
-                ['title' => 'Persists across sessions', 'desc' => 'The AI saves facts (project notes, preferences, IDs) here and recalls them in later chats.'],
-                ['title' => 'Namespaced keys', 'desc' => 'Group entries by namespace so different projects or topics stay separate.'],
-                ['title' => 'Review + clear here', 'desc' => 'Inspect, edit, or delete what the AI stored — it reads/writes via the memory abilities.'],
+                ['title' => __('Persists across sessions', 'nibwp'), 'desc' => __('The AI saves facts (project notes, preferences, IDs) here and recalls them in later chats.', 'nibwp')],
+                ['title' => __('Namespaced keys', 'nibwp'), 'desc' => __('Group entries by namespace so different projects or topics stay separate.', 'nibwp')],
+                ['title' => __('Review + clear here', 'nibwp'), 'desc' => __('Inspect, edit, or delete what the AI stored — it reads/writes via the memory abilities.', 'nibwp')],
             ],
             'articles' => [
-                ['title' => 'Using AI memory', 'url' => 'https://www.nibwp.com/docs/memory', 'time' => '2 min'],
+                ['title' => __('Using AI memory', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/memory', 'time' => $nw_min(2)],
             ],
             'related' => [],
         ],
         'nibwp-workflows' => [
-            'title' => __('Working with Workflows', domain: 'nibwp'),
-            'desc' => __('Saved operating playbooks — your rules, process, and standards — that your AI follows on this site.', domain: 'nibwp'),
+            'title' => __('Working with Workflows', 'nibwp'),
+            'desc' => __('Saved operating playbooks — your rules, process, and standards — that your AI follows on this site.', 'nibwp'),
             'steps' => [
-                ['title' => 'Auto-routing (default)', 'desc' => 'Your AI sees every workflow plus its “when to use” and loads the matching one automatically — no toggling. Write a clear, specific “when to use”.'],
-                ['title' => 'Pin = always-on', 'desc' => 'A pinned workflow is injected on every request and governs all work here. Pin 0–1 (your house rules); leave the rest unpinned so the AI picks the right one per task.'],
-                ['title' => 'Copy Prompt = force it', 'desc' => 'Run any workflow on demand: copy its prompt and paste it to your AI.'],
-                ['title' => 'Capture a good session', 'desc' => 'After a result you like, tell your AI “save this as a workflow” — it writes the playbook and you can refine it here.'],
+                ['title' => __('Auto-routing (default)', 'nibwp'), 'desc' => __('Your AI sees every workflow plus its “when to use” and loads the matching one automatically — no toggling. Write a clear, specific “when to use”.', 'nibwp')],
+                ['title' => __('Pin = always-on', 'nibwp'), 'desc' => __('A pinned workflow is injected on every request and governs all work here. Pin 0–1 (your house rules); leave the rest unpinned so the AI picks the right one per task.', 'nibwp')],
+                ['title' => __('Copy Prompt = force it', 'nibwp'), 'desc' => __('Run any workflow on demand: copy its prompt and paste it to your AI.', 'nibwp')],
+                ['title' => __('Capture a good session', 'nibwp'), 'desc' => __('After a result you like, tell your AI “save this as a workflow” — it writes the playbook and you can refine it here.', 'nibwp')],
             ],
             'articles' => [
-                ['title' => 'Workflows: pin vs auto-route', 'url' => 'https://www.nibwp.com/docs/workflows', 'time' => '3 min'],
-                ['title' => 'Writing a good “when to use”', 'url' => 'https://www.nibwp.com/docs/workflows-routing', 'time' => '2 min'],
+                ['title' => __('Workflows: pin vs auto-route', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/workflows', 'time' => $nw_min(3)],
+                ['title' => __('Writing a good “when to use”', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/workflows-routing', 'time' => $nw_min(2)],
             ],
             'related' => [],
         ],
         'nibwp-user-access' => [
-            'title' => __('Who sees NIBWP', domain: 'nibwp'),
-            'desc' => __('Decide, per administrator, which NIBWP screens appear in their menu.', domain: 'nibwp'),
+            'title' => __('Who sees NIBWP', 'nibwp'),
+            'desc' => __('Decide, per administrator, which NIBWP screens appear in their menu.', 'nibwp'),
             'steps' => [
-                ['title' => 'It hides menus, it does not lock pages', 'desc' => 'A hidden screen is still reachable by anyone holding its direct URL. That is the point — the client gets a clean admin, you keep a link that always works.'],
-                ['title' => 'Tick what each administrator sees', 'desc' => 'Every other administrator on the site gets their own row. Untick a screen and it leaves their menu on their next page load.', 'time' => '1 min'],
-                ['title' => 'Three screens stay with you', 'desc' => 'Settings, License and this page are never handed over — leaving a route back in would let someone undo the whole configuration.'],
-                ['title' => 'It fails open, on purpose', 'desc' => 'If your account goes, the licence lapses, or the configuration resolves to nothing, every menu comes back. Nobody gets locked out of a site they own.'],
+                ['title' => __('It hides menus, it does not lock pages', 'nibwp'), 'desc' => __('A hidden screen is still reachable by anyone holding its direct URL. That is the point — the client gets a clean admin, you keep a link that always works.', 'nibwp')],
+                ['title' => __('Tick what each administrator sees', 'nibwp'), 'desc' => __('Every other administrator on the site gets their own row. Untick a screen and it leaves their menu on their next page load.', 'nibwp'), 'time' => $nw_min(1)],
+                ['title' => __('Three screens stay with you', 'nibwp'), 'desc' => __('Settings, License and this page are never handed over — leaving a route back in would let someone undo the whole configuration.', 'nibwp')],
+                ['title' => __('It fails open, on purpose', 'nibwp'), 'desc' => __('If your account goes, the license lapses, or the configuration resolves to nothing, every menu comes back. Nobody gets locked out of a site they own.', 'nibwp')],
             ],
             'articles' => [
-                ['title' => 'Client-friendly access for agencies', 'url' => 'https://www.nibwp.com/docs/user-access', 'time' => '3 min'],
+                ['title' => __('Client-friendly access for agencies', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/user-access', 'time' => $nw_min(3)],
             ],
             'related' => [],
         ],
         'nibwp-status' => [
-            'title' => __('Reading Status', domain: 'nibwp'),
-            'desc' => __('Every check this site can answer about why a connection works, or does not.', domain: 'nibwp'),
+            'title' => __('Reading Status', 'nibwp'),
+            'desc' => __('Every check this site can answer about why a connection works, or does not.', 'nibwp'),
             'steps' => [
-                ['title' => 'Read the verdict, not the list', 'desc' => 'The banner at the top says whether anything is actually stopping a connection. Warnings below it are worth fixing, but they are not what is blocking you.'],
-                ['title' => 'Fix the first failure', 'desc' => 'Failures are ordered by what breaks a connection soonest. Each names the one thing to change rather than describing the subsystem.'],
-                ['title' => 'Site moved? Re-enable it', 'desc' => 'Abilities are pinned to the address they were switched on for, so a clone cannot inherit them. A host that hands out new URLs trips this routinely — the check offers the button.'],
-                ['title' => 'Copy the report for support', 'desc' => 'The report carries versions, environment and check results — never a password or a token.', 'time' => '30 sec'],
+                ['title' => __('Read the verdict, not the list', 'nibwp'), 'desc' => __('The banner at the top says whether anything is actually stopping a connection. Warnings below it are worth fixing, but they are not what is blocking you.', 'nibwp')],
+                ['title' => __('Fix the first failure', 'nibwp'), 'desc' => __('Failures are ordered by what breaks a connection soonest. Each names the one thing to change rather than describing the subsystem.', 'nibwp')],
+                ['title' => __('Site moved? Re-enable it', 'nibwp'), 'desc' => __('Abilities are pinned to the address they were switched on for, so a clone cannot inherit them. A host that hands out new URLs trips this routinely — the check offers the button.', 'nibwp')],
+                ['title' => __('Copy the report for support', 'nibwp'), 'desc' => __('The report carries versions, environment and check results — never a password or a token.', 'nibwp'), 'time' => $nw_sec(30)],
             ],
             'articles' => [
-                ['title' => 'Troubleshooting connections', 'url' => 'https://www.nibwp.com/docs/troubleshooting', 'time' => '4 min'],
-                ['title' => 'Why the REST API gets blocked', 'url' => 'https://www.nibwp.com/docs/rest-api', 'time' => '3 min'],
+                ['title' => __('Troubleshooting connections', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/troubleshooting', 'time' => $nw_min(4)],
+                ['title' => __('Why the REST API gets blocked', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/rest-api', 'time' => $nw_min(3)],
             ],
             'related' => [],
         ],
         default => [
-            'title' => __('Help', domain: 'nibwp'),
-            'desc' => __('Context-aware help for the current page.', domain: 'nibwp'),
+            'title' => __('Help', 'nibwp'),
+            'desc' => __('Context-aware help for the current page.', 'nibwp'),
             'steps' => [],
             'articles' => [
-                ['title' => 'NIBWP documentation', 'url' => 'https://www.nibwp.com/docs', 'time' => ''],
+                ['title' => __('NIBWP documentation', 'nibwp'), 'url' => 'https://www.nibwp.com/docs', 'time' => ''],
             ],
             'related' => [
-                ['label' => 'Quick start', 'sub' => '5-minute setup', 'url' => 'https://www.nibwp.com/docs/getting-started', 'icon' => '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>'],
-                ['label' => 'Glossary', 'sub' => 'Every term', 'url' => 'https://www.nibwp.com/docs/glossary', 'icon' => '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>'],
+                ['label' => __('Quick start', 'nibwp'), 'sub' => __('5-minute setup', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/getting-started', 'icon' => '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>'],
+                ['label' => __('Glossary', 'nibwp'), 'sub' => __('Every term', 'nibwp'), 'url' => 'https://www.nibwp.com/docs/glossary', 'icon' => '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>'],
             ],
         ],
     };
@@ -2444,11 +2640,11 @@ function nibwp_render_admin_footer(): void
             <div class="nw-confirm__icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
             </div>
-            <div class="nw-confirm__title"><?php esc_html_e('Are you sure?', domain: 'nibwp'); ?></div>
-            <div class="nw-confirm__msg" id="nw-confirm-msg"><?php esc_html_e('This action cannot be undone.', domain: 'nibwp'); ?></div>
+            <div class="nw-confirm__title"><?php esc_html_e('Are you sure?', 'nibwp'); ?></div>
+            <div class="nw-confirm__msg" id="nw-confirm-msg"><?php esc_html_e('This action cannot be undone.', 'nibwp'); ?></div>
             <div class="nw-confirm__actions">
-                <button type="button" class="button" id="nw-confirm-cancel"><?php esc_html_e('Cancel', domain: 'nibwp'); ?></button>
-                <a href="#" class="button nibwp-btn-danger" id="nw-confirm-ok" style="background:var(--nw-danger)!important;color:#fff!important;border-color:var(--nw-danger)!important;"><?php esc_html_e('Delete', domain: 'nibwp'); ?></a>
+                <button type="button" class="button" id="nw-confirm-cancel"><?php esc_html_e('Cancel', 'nibwp'); ?></button>
+                <a href="#" class="button nibwp-btn-danger" id="nw-confirm-ok" style="background:var(--nw-danger)!important;color:#fff!important;border-color:var(--nw-danger)!important;"><?php esc_html_e('Delete', 'nibwp'); ?></a>
             </div>
         </div>
     </div>
@@ -2515,7 +2711,10 @@ function nibwp_render_admin_footer(): void
             var name = btn.getAttribute('data-name') || '';
             window.nibwpConfirm({
                 url: btn.getAttribute('data-url') || btn.href,
-                message: '<?php echo esc_js(__('This will permanently delete', domain: 'nibwp')); ?> ' + (name ? '<code>' + name + '</code>' : '<?php echo esc_js(__('this item', domain: 'nibwp')); ?>') + '. <?php echo esc_js(__('This cannot be undone.', domain: 'nibwp')); ?>'
+                message: <?php
+                    /* translators: %s: name of the item being deleted, or "this item" */
+                    echo wp_json_encode(__('This will permanently delete %s. This cannot be undone.', 'nibwp'));
+                ?>.replace('%s', name ? '<code>' + name + '</code>' : <?php echo wp_json_encode(__('this item', 'nibwp')); ?>)
             });
         });
     })();
@@ -2524,7 +2723,7 @@ function nibwp_render_admin_footer(): void
     <!-- Help Tab (sticky right edge) -->
     <button type="button" class="nw-help-tab" id="nw-help-tab">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <?php esc_html_e('Help', domain: 'nibwp'); ?>
+        <?php esc_html_e('Help', 'nibwp'); ?>
     </button>
 
     <!-- Help Drawer Backdrop -->
@@ -2534,97 +2733,97 @@ function nibwp_render_admin_footer(): void
     // ── All topics for "Browse All" tab ──
     $all_topics = [
         'getting-started' => [
-            'label' => __('Getting Started', domain: 'nibwp'),
+            'label' => __('Getting Started', 'nibwp'),
             'icon' => '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
             'topics' => [
-                ['title' => 'What is NIBWP?', 'desc' => 'AI-powered WordPress via MCP protocol', 'page' => 'nibwp-dashboard'],
-                ['title' => '5-minute quickstart', 'desc' => 'Enable MCP → password → connect client', 'page' => 'nibwp-connect'],
-                ['title' => 'Supported AI clients', 'desc' => 'Claude, ChatGPT, Cursor, VS Code, more', 'page' => 'nibwp-dashboard'],
+                ['title' => __('What is NIBWP?', 'nibwp'), 'desc' => __('AI-powered WordPress via MCP protocol', 'nibwp'), 'page' => 'nibwp-dashboard'],
+                ['title' => __('5-minute quickstart', 'nibwp'), 'desc' => __('Enable MCP → password → connect client', 'nibwp'), 'page' => 'nibwp-connect'],
+                ['title' => __('Supported AI clients', 'nibwp'), 'desc' => __('Claude, ChatGPT, Cursor, VS Code, more', 'nibwp'), 'page' => 'nibwp-dashboard'],
             ],
         ],
         'connecting' => [
-            'label' => __('Connecting AI Clients', domain: 'nibwp'),
+            'label' => __('Connecting AI Clients', 'nibwp'),
             'icon' => '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>',
             'topics' => [
-                ['title' => 'Claude Desktop setup', 'desc' => 'Add MCP server to Claude config', 'page' => 'nibwp-connect'],
-                ['title' => 'Cursor / VS Code', 'desc' => 'mcp.json configuration', 'page' => 'nibwp-connect'],
-                ['title' => 'Generate App Password', 'desc' => 'WordPress credentials for AI', 'page' => 'nibwp-connect'],
-                ['title' => 'Connection troubleshooting', 'desc' => 'Common errors and fixes', 'page' => 'nibwp-connect'],
+                ['title' => __('Claude Desktop setup', 'nibwp'), 'desc' => __('Add MCP server to Claude config', 'nibwp'), 'page' => 'nibwp-connect'],
+                ['title' => __('Cursor / VS Code', 'nibwp'), 'desc' => __('mcp.json configuration', 'nibwp'), 'page' => 'nibwp-connect'],
+                ['title' => __('Generate App Password', 'nibwp'), 'desc' => __('WordPress credentials for AI', 'nibwp'), 'page' => 'nibwp-connect'],
+                ['title' => __('Connection troubleshooting', 'nibwp'), 'desc' => __('Common errors and fixes', 'nibwp'), 'page' => 'nibwp-connect'],
             ],
         ],
         'integrations' => [
-            'label' => __('Integrations', domain: 'nibwp'),
+            'label' => __('Integrations', 'nibwp'),
             'icon' => '<circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4M4.9 4.9l2.8 2.8m8.6 8.6l2.8 2.8M4.9 19.1l2.8-2.8m8.6-8.6l2.8-2.8"/>',
             'topics' => [
-                ['title' => 'Activate a plugin integration', 'desc' => 'Toggle ON in Integrations page', 'page' => 'nibwp-integrations'],
-                ['title' => 'Page builders', 'desc' => 'Elementor, Bricks, EtchWP, ACSS', 'page' => 'nibwp-integrations'],
-                ['title' => 'E-commerce', 'desc' => 'WooCommerce, FluentCart, EDD', 'page' => 'nibwp-integrations'],
-                ['title' => 'Custom fields', 'desc' => 'ACF, Meta Box, JetEngine, Pods', 'page' => 'nibwp-integrations'],
-                ['title' => 'Forms & CRM', 'desc' => 'Gravity, WPForms, FluentCRM', 'page' => 'nibwp-integrations'],
-                ['title' => 'LMS & memberships', 'desc' => 'LearnDash, LifterLMS, MemberPress', 'page' => 'nibwp-integrations'],
+                ['title' => __('Activate a plugin integration', 'nibwp'), 'desc' => __('Toggle ON in Integrations page', 'nibwp'), 'page' => 'nibwp-integrations'],
+                ['title' => __('Page builders', 'nibwp'), 'desc' => __('Elementor, Bricks, EtchWP, ACSS', 'nibwp'), 'page' => 'nibwp-integrations'],
+                ['title' => __('E-commerce', 'nibwp'), 'desc' => __('WooCommerce, FluentCart, EDD', 'nibwp'), 'page' => 'nibwp-integrations'],
+                ['title' => __('Custom fields', 'nibwp'), 'desc' => __('ACF, Meta Box, JetEngine, Pods', 'nibwp'), 'page' => 'nibwp-integrations'],
+                ['title' => __('Forms & CRM', 'nibwp'), 'desc' => __('Gravity, WPForms, FluentCRM', 'nibwp'), 'page' => 'nibwp-integrations'],
+                ['title' => __('LMS & memberships', 'nibwp'), 'desc' => __('LearnDash, LifterLMS, MemberPress', 'nibwp'), 'page' => 'nibwp-integrations'],
             ],
         ],
         'security' => [
-            'label' => __('Security & Maintenance', domain: 'nibwp'),
+            'label' => __('Security & Maintenance', 'nibwp'),
             'icon' => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
             'topics' => [
-                ['title' => 'Verify WordPress core', 'desc' => 'Detect modified or injected files', 'page' => 'nibwp'],
-                ['title' => 'Scan for malware', 'desc' => '20+ malware pattern detection', 'page' => 'nibwp'],
-                ['title' => 'Database injection scan', 'desc' => 'Find injected scripts in posts/options', 'page' => 'nibwp'],
-                ['title' => 'Audit user accounts', 'desc' => 'Detect rogue admin accounts', 'page' => 'nibwp'],
-                ['title' => 'Site cleanup', 'desc' => 'Revisions, transients, spam, trash', 'page' => 'nibwp'],
-                ['title' => 'File permissions check', 'desc' => 'Audit and fix 644/755/440', 'page' => 'nibwp'],
+                ['title' => __('Verify WordPress core', 'nibwp'), 'desc' => __('Detect modified or injected files', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Scan for malware', 'nibwp'), 'desc' => __('20+ malware pattern detection', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Database injection scan', 'nibwp'), 'desc' => __('Find injected scripts in posts/options', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Audit user accounts', 'nibwp'), 'desc' => __('Detect rogue admin accounts', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Site cleanup', 'nibwp'), 'desc' => __('Revisions, transients, spam, trash', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('File permissions check', 'nibwp'), 'desc' => __('Audit and fix 644/755/440', 'nibwp'), 'page' => 'nibwp'],
             ],
         ],
         'content' => [
-            'label' => __('Content Workflow', domain: 'nibwp'),
+            'label' => __('Content Workflow', 'nibwp'),
             'icon' => '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
             'topics' => [
-                ['title' => 'Schedule posts', 'desc' => 'Set future dates with timezone support', 'page' => 'nibwp'],
-                ['title' => 'Bulk content import', 'desc' => 'Import from RSS, URLs, sitemaps', 'page' => 'nibwp'],
-                ['title' => 'Content rewriter', 'desc' => 'Summarize, expand, bullet points', 'page' => 'nibwp'],
-                ['title' => 'Editorial calendar', 'desc' => 'View scheduled posts by date', 'page' => 'nibwp'],
-                ['title' => 'Draft manager', 'desc' => 'Priority and editorial notes', 'page' => 'nibwp'],
+                ['title' => __('Schedule posts', 'nibwp'), 'desc' => __('Set future dates with timezone support', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Bulk content import', 'nibwp'), 'desc' => __('Import from RSS, URLs, sitemaps', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Content rewriter', 'nibwp'), 'desc' => __('Summarize, expand, bullet points', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Editorial calendar', 'nibwp'), 'desc' => __('View scheduled posts by date', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Draft manager', 'nibwp'), 'desc' => __('Priority and editorial notes', 'nibwp'), 'page' => 'nibwp'],
             ],
         ],
         'seo' => [
-            'label' => __('SEO Tools', domain: 'nibwp'),
+            'label' => __('SEO Tools', 'nibwp'),
             'icon' => '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
             'topics' => [
-                ['title' => 'Image SEO audit', 'desc' => 'Alt text, dimensions, lazy loading', 'page' => 'nibwp'],
-                ['title' => 'Schema markup', 'desc' => 'JSON-LD for Article, Product, FAQ', 'page' => 'nibwp'],
-                ['title' => 'Broken link checker', 'desc' => 'Scan posts for 404/410/500', 'page' => 'nibwp'],
-                ['title' => 'Redirect manager', 'desc' => 'Create 301/302/307 redirects', 'page' => 'nibwp'],
-                ['title' => 'Internal linking', 'desc' => 'AI-suggested link opportunities', 'page' => 'nibwp'],
+                ['title' => __('Image SEO audit', 'nibwp'), 'desc' => __('Alt text, dimensions, lazy loading', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Schema markup', 'nibwp'), 'desc' => __('JSON-LD for Article, Product, FAQ', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Broken link checker', 'nibwp'), 'desc' => __('Scan posts for 404/410/500', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Redirect manager', 'nibwp'), 'desc' => __('Create 301/302/307 redirects', 'nibwp'), 'page' => 'nibwp'],
+                ['title' => __('Internal linking', 'nibwp'), 'desc' => __('AI-suggested link opportunities', 'nibwp'), 'page' => 'nibwp'],
             ],
         ],
         'memory' => [
-            'label' => __('Memory & Audit', domain: 'nibwp'),
+            'label' => __('Memory & Audit', 'nibwp'),
             'icon' => '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 2v20M16 2v20M4 12h16"/>',
             'topics' => [
-                ['title' => 'How AI Memory works', 'desc' => 'Cross-session context for agents', 'page' => 'nibwp-memory'],
-                ['title' => 'Storing project conventions', 'desc' => 'Save coding style, palette, APIs', 'page' => 'nibwp-memory'],
-                ['title' => 'Audit log explained', 'desc' => 'Every MCP tool call recorded', 'page' => 'nibwp-audit-log'],
-                ['title' => 'Log retention policy', 'desc' => 'Configure cleanup schedule', 'page' => 'nibwp-settings'],
+                ['title' => __('How AI Memory works', 'nibwp'), 'desc' => __('Cross-session context for agents', 'nibwp'), 'page' => 'nibwp-memory'],
+                ['title' => __('Storing project conventions', 'nibwp'), 'desc' => __('Save coding style, palette, APIs', 'nibwp'), 'page' => 'nibwp-memory'],
+                ['title' => __('Audit log explained', 'nibwp'), 'desc' => __('Every MCP tool call recorded', 'nibwp'), 'page' => 'nibwp-audit-log'],
+                ['title' => __('Log retention policy', 'nibwp'), 'desc' => __('Configure cleanup schedule', 'nibwp'), 'page' => 'nibwp-settings'],
             ],
         ],
         'sandbox' => [
-            'label' => __('Sandbox', domain: 'nibwp'),
+            'label' => __('Sandbox', 'nibwp'),
             'icon' => '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>',
             'topics' => [
-                ['title' => 'What is the sandbox?', 'desc' => 'AI-generated PHP that auto-loads', 'page' => 'nibwp-sandbox'],
-                ['title' => 'Safe mode', 'desc' => 'Auto-suspend on fatal errors', 'page' => 'nibwp-sandbox'],
-                ['title' => 'Disable vs delete', 'desc' => 'When to use each action', 'page' => 'nibwp-sandbox'],
+                ['title' => __('What is the sandbox?', 'nibwp'), 'desc' => __('AI-generated PHP that auto-loads', 'nibwp'), 'page' => 'nibwp-sandbox'],
+                ['title' => __('Safe mode', 'nibwp'), 'desc' => __('Auto-suspend on fatal errors', 'nibwp'), 'page' => 'nibwp-sandbox'],
+                ['title' => __('Disable vs delete', 'nibwp'), 'desc' => __('When to use each action', 'nibwp'), 'page' => 'nibwp-sandbox'],
             ],
         ],
         'settings' => [
-            'label' => __('Settings & Safety', domain: 'nibwp'),
+            'label' => __('Settings & Safety', 'nibwp'),
             'icon' => '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c0 .85.5 1.6 1.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
             'topics' => [
-                ['title' => 'Rate limiting', 'desc' => 'Cap MCP calls per minute', 'page' => 'nibwp-settings'],
-                ['title' => 'IP whitelist', 'desc' => 'Restrict MCP to specific IPs', 'page' => 'nibwp-settings'],
-                ['title' => 'Force Draft', 'desc' => 'All AI posts become drafts', 'page' => 'nibwp-settings'],
-                ['title' => 'Disable specific tools', 'desc' => 'Hide risky abilities from AI', 'page' => 'nibwp-settings'],
+                ['title' => __('Rate limiting', 'nibwp'), 'desc' => __('Cap MCP calls per minute', 'nibwp'), 'page' => 'nibwp-settings'],
+                ['title' => __('IP whitelist', 'nibwp'), 'desc' => __('Restrict MCP to specific IPs', 'nibwp'), 'page' => 'nibwp-settings'],
+                ['title' => __('Force Draft', 'nibwp'), 'desc' => __('All AI posts become drafts', 'nibwp'), 'page' => 'nibwp-settings'],
+                ['title' => __('Disable specific tools', 'nibwp'), 'desc' => __('Hide risky abilities from AI', 'nibwp'), 'page' => 'nibwp-settings'],
             ],
         ],
     ];
@@ -2638,31 +2837,31 @@ function nibwp_render_admin_footer(): void
             </button>
             <div class="nw-help-drawer__badge">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <?php esc_html_e('HELP CENTER', domain: 'nibwp'); ?>
+                <?php esc_html_e('HELP CENTER', 'nibwp'); ?>
             </div>
-            <div class="nw-help-drawer__title"><?php esc_html_e('How to use NIBWP', domain: 'nibwp'); ?></div>
-            <div class="nw-help-drawer__desc"><?php esc_html_e('Step-by-step guides for every feature.', domain: 'nibwp'); ?></div>
+            <div class="nw-help-drawer__title"><?php esc_html_e('How to use NIBWP', 'nibwp'); ?></div>
+            <div class="nw-help-drawer__desc"><?php esc_html_e('Step-by-step guides for every feature.', 'nibwp'); ?></div>
 
             <!-- Tabs -->
             <div class="nw-help-tabs" role="tablist">
                 <button type="button" class="nw-help-tab-btn is-active" data-tab="current">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/></svg>
-                    <?php esc_html_e('This Page', domain: 'nibwp'); ?>
+                    <?php esc_html_e('This Page', 'nibwp'); ?>
                 </button>
                 <button type="button" class="nw-help-tab-btn" data-tab="browse">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                    <?php esc_html_e('All Topics', domain: 'nibwp'); ?>
+                    <?php esc_html_e('All Topics', 'nibwp'); ?>
                 </button>
                 <button type="button" class="nw-help-tab-btn" data-tab="actions">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    <?php esc_html_e('Quick Actions', domain: 'nibwp'); ?>
+                    <?php esc_html_e('Quick Actions', 'nibwp'); ?>
                 </button>
             </div>
 
             <!-- Search -->
             <div class="nw-help-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="search" id="nw-help-search-input" placeholder="<?php esc_attr_e('Search how-tos, topics, actions...', domain: 'nibwp'); ?>" autocomplete="off">
+                <input type="search" id="nw-help-search-input" placeholder="<?php esc_attr_e('Search how-tos, topics, actions...', 'nibwp'); ?>" autocomplete="off">
             </div>
         </div>
 
@@ -2683,7 +2882,7 @@ function nibwp_render_admin_footer(): void
                 <?php if (!empty($help['steps'])): ?>
                     <div class="nw-help-section">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        <?php esc_html_e('How to', domain: 'nibwp'); ?>
+                        <?php esc_html_e('How to', 'nibwp'); ?>
                     </div>
                     <?php foreach ($help['steps'] as $i => $step): ?>
                         <div class="nw-help-step nw-searchable" data-search="<?php echo esc_attr(strtolower(($step['title'] ?? '') . ' ' . ($step['desc'] ?? ''))); ?>">
@@ -2702,7 +2901,7 @@ function nibwp_render_admin_footer(): void
                 <?php if (!empty($help['articles'])): ?>
                     <div class="nw-help-section">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-                        <?php esc_html_e('Docs articles', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Docs articles', 'nibwp'); ?>
                     </div>
                     <?php foreach ($help['articles'] as $article): ?>
                         <a class="nw-help-article nw-searchable" data-search="<?php echo esc_attr(strtolower($article['title'])); ?>" href="<?php echo esc_url($article['url']); ?>" target="_blank" rel="noopener">
@@ -2726,7 +2925,10 @@ function nibwp_render_admin_footer(): void
                             </div>
                             <div class="nw-help-accordion__title">
                                 <strong><?php echo esc_html($cat['label']); ?></strong>
-                                <span><?php printf(esc_html(_n('%d guide', '%d guides', count($cat['topics']), 'nibwp')), count($cat['topics'])); ?></span>
+                                <span><?php
+                                    /* translators: %d: number of guides in this help topic */
+                                    printf(esc_html(_n('%d guide', '%d guides', count($cat['topics']), 'nibwp')), count($cat['topics']));
+                                ?></span>
                             </div>
                             <svg class="nw-help-accordion__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                         </summary>
@@ -2750,65 +2952,65 @@ function nibwp_render_admin_footer(): void
             <div class="nw-help-tab-panel" data-panel="actions">
                 <div class="nw-help-section">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    <?php esc_html_e('Quick Actions', domain: 'nibwp'); ?>
+                    <?php esc_html_e('Quick Actions', 'nibwp'); ?>
                 </div>
-                <a class="nw-help-action nw-searchable" data-search="enable mcp activate ai abilities" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>">
+                <a class="nw-help-action nw-searchable" data-search="<?php /* translators: search keywords for a help-drawer quick action, lowercase, space-separated */ echo esc_attr(__('enable mcp activate ai abilities', 'nibwp')); ?>" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>">
                     <div class="nw-help-action__icon" style="background:var(--nw-ok-soft); color:var(--nw-ok);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
                     </div>
                     <div class="nw-help-action__text">
-                        <strong><?php esc_html_e('Enable MCP Server', domain: 'nibwp'); ?></strong>
-                        <span><?php esc_html_e('Turn on AI Abilities for this site', domain: 'nibwp'); ?></span>
+                        <strong><?php esc_html_e('Enable MCP Server', 'nibwp'); ?></strong>
+                        <span><?php esc_html_e('Turn on AI Abilities for this site', 'nibwp'); ?></span>
                     </div>
                     <svg class="nw-help-topic__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
-                <a class="nw-help-action nw-searchable" data-search="generate password app credentials" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>">
+                <a class="nw-help-action nw-searchable" data-search="<?php /* translators: search keywords for a help-drawer quick action, lowercase, space-separated */ echo esc_attr(__('generate password app credentials', 'nibwp')); ?>" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>">
                     <div class="nw-help-action__icon" style="background:var(--nw-brand-soft); color:var(--nw-brand);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                     </div>
                     <div class="nw-help-action__text">
-                        <strong><?php esc_html_e('Generate App Password', domain: 'nibwp'); ?></strong>
-                        <span><?php esc_html_e('Create credentials for AI clients', domain: 'nibwp'); ?></span>
+                        <strong><?php esc_html_e('Generate App Password', 'nibwp'); ?></strong>
+                        <span><?php esc_html_e('Create credentials for AI clients', 'nibwp'); ?></span>
                     </div>
                     <svg class="nw-help-topic__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
-                <a class="nw-help-action nw-searchable" data-search="security scan malware verify core" href="<?php echo esc_url(admin_url('admin.php?page=nibwp')); ?>">
+                <a class="nw-help-action nw-searchable" data-search="<?php /* translators: search keywords for a help-drawer quick action, lowercase, space-separated */ echo esc_attr(__('security scan malware verify core', 'nibwp')); ?>" href="<?php echo esc_url(admin_url('admin.php?page=nibwp')); ?>">
                     <div class="nw-help-action__icon" style="background:var(--nw-danger-soft); color:var(--nw-danger);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div class="nw-help-action__text">
-                        <strong><?php esc_html_e('Run Security Scan', domain: 'nibwp'); ?></strong>
-                        <span><?php esc_html_e('Detect malware & verify core files', domain: 'nibwp'); ?></span>
+                        <strong><?php esc_html_e('Run Security Scan', 'nibwp'); ?></strong>
+                        <span><?php esc_html_e('Detect malware & verify core files', 'nibwp'); ?></span>
                     </div>
                     <svg class="nw-help-topic__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
-                <a class="nw-help-action nw-searchable" data-search="activate integration plugin builder" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-integrations')); ?>">
+                <a class="nw-help-action nw-searchable" data-search="<?php /* translators: search keywords for a help-drawer quick action, lowercase, space-separated */ echo esc_attr(__('activate integration plugin builder', 'nibwp')); ?>" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-integrations')); ?>">
                     <div class="nw-help-action__icon" style="background:var(--nw-warn-soft); color:var(--nw-warn);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m-7-11h6m4 0h6"/></svg>
                     </div>
                     <div class="nw-help-action__text">
-                        <strong><?php esc_html_e('Activate Integrations', domain: 'nibwp'); ?></strong>
-                        <span><?php esc_html_e('Page builders, e-commerce, forms', domain: 'nibwp'); ?></span>
+                        <strong><?php esc_html_e('Activate Integrations', 'nibwp'); ?></strong>
+                        <span><?php esc_html_e('Page builders, e-commerce, forms', 'nibwp'); ?></span>
                     </div>
                     <svg class="nw-help-topic__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
-                <a class="nw-help-action nw-searchable" data-search="audit log history calls" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-audit-log')); ?>">
+                <a class="nw-help-action nw-searchable" data-search="<?php /* translators: search keywords for a help-drawer quick action, lowercase, space-separated */ echo esc_attr(__('audit log history calls', 'nibwp')); ?>" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-audit-log')); ?>">
                     <div class="nw-help-action__icon" style="background:var(--nw-surface-3); color:var(--nw-text-muted);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     </div>
                     <div class="nw-help-action__text">
-                        <strong><?php esc_html_e('View Audit Log', domain: 'nibwp'); ?></strong>
-                        <span><?php esc_html_e('See every tool call and result', domain: 'nibwp'); ?></span>
+                        <strong><?php esc_html_e('View Audit Log', 'nibwp'); ?></strong>
+                        <span><?php esc_html_e('See every tool call and result', 'nibwp'); ?></span>
                     </div>
                     <svg class="nw-help-topic__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
-                <a class="nw-help-action nw-searchable" data-search="settings configure rate limit" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-settings')); ?>">
+                <a class="nw-help-action nw-searchable" data-search="<?php /* translators: search keywords for a help-drawer quick action, lowercase, space-separated */ echo esc_attr(__('settings configure rate limit', 'nibwp')); ?>" href="<?php echo esc_url(admin_url('admin.php?page=nibwp-settings')); ?>">
                     <div class="nw-help-action__icon" style="background:var(--nw-surface-3); color:var(--nw-text-muted);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m-7-11h6m4 0h6"/></svg>
                     </div>
                     <div class="nw-help-action__text">
-                        <strong><?php esc_html_e('Configure Settings', domain: 'nibwp'); ?></strong>
-                        <span><?php esc_html_e('Rate limits, IP whitelist, safety', domain: 'nibwp'); ?></span>
+                        <strong><?php esc_html_e('Configure Settings', 'nibwp'); ?></strong>
+                        <span><?php esc_html_e('Rate limits, IP whitelist, safety', 'nibwp'); ?></span>
                     </div>
                     <svg class="nw-help-topic__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
@@ -2817,14 +3019,14 @@ function nibwp_render_admin_footer(): void
             <!-- No results -->
             <div class="nw-help-no-results" id="nw-help-no-results" hidden>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <p><?php esc_html_e('No matching topics found.', domain: 'nibwp'); ?></p>
+                <p><?php esc_html_e('No matching topics found.', 'nibwp'); ?></p>
             </div>
         </div>
 
         <div class="nw-help-drawer__foot">
-            <span><?php esc_html_e("Need more help?", domain: 'nibwp'); ?></span>
+            <span><?php esc_html_e("Need more help?", 'nibwp'); ?></span>
             <a href="https://www.nibwp.com/support" target="_blank" rel="noopener">
-                <?php esc_html_e('Chat with support', domain: 'nibwp'); ?>
+                <?php esc_html_e('Chat with support', 'nibwp'); ?>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </a>
         </div>
@@ -2909,4 +3111,92 @@ function nibwp_render_admin_footer(): void
     })();
     </script>
     <?php
+}
+
+/**
+ * Hand post content to wp_insert_post()/wp_update_post() the way core does.
+ *
+ * Both functions run wp_unslash() over the array they are given, so content
+ * passed to them must arrive slashed. This was passed through wp_kses_post()
+ * and nothing else, which is wrong twice over:
+ *
+ *   1. Unslashed content loses a backslash on the way in. Block markup is full
+ *      of them — serialize_block_attributes() escapes `&` as & and `--`
+ *      as -- so the block-delimiter comment stays valid HTML — so a
+ *      heading of "Verdict & recommendations" was stored as
+ *      "Verdict u0026amp; recommendations" and a class of `cell--name` as
+ *      `cellu002du002dname`, breaking the styling that depended on it. A
+ *      customer hit both and had to route writes around this ability.
+ *
+ *   2. wp_kses_post() re-encodes the `&` inside those attributes, turning
+ *      & into &amp; — a second, quieter corruption of the same
+ *      content. Applied to correctly-slashed markup it is worse still: kses
+ *      reads the escaped comment as malformed and drops the block attributes
+ *      wholesale, leaving `<!-- wp:heading -->` with no settings at all.
+ *
+ * Slashing and passing it on is what the block editor and the core REST API
+ * both do. Sanitising stays with core: wp_insert_post() applies the
+ * `content_save_pre` filters, which include wp_filter_post_kses for any user
+ * without `unfiltered_html` — verified against a contributor, whose <script>
+ * is still stripped. Users who do hold the capability get what core gives
+ * them, which is the same content they could save from the editor.
+ */
+function nibwp_wp_prepare_post_content($content): string {
+    return wp_slash((string) $content);
+}
+
+/**
+ * The CSS custom properties Automatic.css actually defines on this site,
+ * name => first declared value.
+ *
+ * Token names differ between ACSS versions, and a guessed name with a var()
+ * fallback renders the fallback without complaint: a build that validated
+ * could still paint invisible borders and brand-tinted greys. ACSS's own
+ * generated file is the one source that cannot drift from the site.
+ *
+ * Empty when ACSS files cannot be read. Callers treat empty as "cannot
+ * check", never as "this site defines nothing".
+ *
+ * @return array<string,string>
+ */
+function nibwp_acss_site_tokens(): array
+{
+    static $tokens = null;
+    if ($tokens !== null) {
+        return $tokens;
+    }
+
+    $tokens = [];
+    if (!function_exists('wp_upload_dir')) {
+        return $tokens;
+    }
+
+    $uploads = wp_upload_dir(null, false);
+    $dir = rtrim((string) ($uploads['basedir'] ?? ''), '/\\') . '/automatic-css/';
+
+    // ACSS 3 writes a variables file; newer versions split tokens out. The full
+    // stylesheet is the last resort because it is by far the largest.
+    foreach (['automatic-variables.css', 'automatic-tokens.css', 'automatic.css'] as $file) {
+        $css = is_readable($dir . $file) ? (string) file_get_contents($dir . $file) : '';
+        if ($css === '' || !preg_match_all('/(--[a-z0-9-]+)\s*:\s*([^;{}]+)/i', $css, $declarations, PREG_SET_ORDER)) {
+            continue;
+        }
+        foreach ($declarations as $declaration) {
+            $name = strtolower($declaration[1]);
+            if (!isset($tokens[$name])) {
+                $tokens[$name] = trim($declaration[2]);
+            }
+        }
+        if (count($tokens) >= 50) {
+            break;
+        }
+    }
+
+    // A handful of names is a partial read, not a design system; checking a
+    // payload against it would reject tokens that are perfectly real.
+    if (count($tokens) < 50) {
+        $tokens = [];
+    }
+
+    return $tokens;
 }

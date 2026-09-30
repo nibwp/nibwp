@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Workflow sharing — publish a workflow to the sites that share your licence.
+ * Workflow sharing — publish a workflow to the sites that share your license.
  *
  * Ticking "License Circle" used to write a post meta value and stop there, so a
  * workflow marked as shared never left the site it was made on. This is the
@@ -21,9 +21,9 @@ if (!defined('ABSPATH')) {
  *   because of it. The upload runs on a scheduled single event, so the save
  *   itself is exactly as fast and as reliable as it was before.
  *
- *   The circle is identified by a one-way hash of the licence key, never the
- *   key. Nothing in this file reads, writes or changes licence state — it only
- *   asks which licences are currently active.
+ *   The circle is identified by a one-way hash of the license key, never the
+ *   key. Nothing in this file reads, writes or changes license state — it only
+ *   asks which licenses are currently active.
  */
 
 /** Meta keys owned by this file. */
@@ -32,10 +32,10 @@ const NIBWP_WF_SHARE_STATUS     = '_nibwp_wf_share_status';
 const NIBWP_WF_REMOTE_ID        = '_nibwp_wf_remote_id';
 
 /**
- * One-way ids for every licence currently active on this site.
+ * One-way ids for every license currently active on this site.
  *
  * The hub matches installs to each other by this and stores nothing else about
- * the licence. Read-only: this asks the licence layer a question and changes
+ * the license. Read-only: this asks the license layer a question and changes
  * none of its state.
  *
  * @return array<int,string>
@@ -164,7 +164,7 @@ function nibwp_workflow_sharing_sync(int $post_id): void
         nibwp_workflow_share_set_status(
             $post_id,
             'needs_license',
-            __('Sharing needs an active licence — that is what identifies the sites you are sharing with.', 'nibwp')
+            __('Sharing needs an active license — that is what identifies the sites you are sharing with.', 'nibwp')
         );
         return;
     }
@@ -220,7 +220,7 @@ function nibwp_workflow_sharing_sync(int $post_id): void
         $pending_review ? 'pending_review' : 'shared',
         $pending_review
             ? __('Shared. Community copies are reviewed before they appear publicly.', 'nibwp')
-            : __('Shared with the sites on your licence.', 'nibwp')
+            : __('Shared with the sites on your license.', 'nibwp')
     );
 }
 
@@ -259,11 +259,18 @@ function nibwp_workflow_sharing_call(string $route, array $body)
     }
     if ($code < 200 || $code >= 300) {
         $msg = is_array($json) ? (string) ($json['message'] ?? '') : '';
+        if ($msg === '') {
+            return new WP_Error('hub_refused', sprintf(
+                /* translators: %d: HTTP status code */
+                __('The hub refused the workflow (HTTP %d).', 'nibwp'),
+                $code
+            ));
+        }
         return new WP_Error('hub_refused', sprintf(
             /* translators: 1: HTTP status code, 2: message from the hub */
-            __('The hub refused the workflow (HTTP %1$d)%2$s', 'nibwp'),
+            __('The hub refused the workflow (HTTP %1$d): %2$s', 'nibwp'),
             $code,
-            $msg !== '' ? ': ' . $msg : '.'
+            $msg
         ));
     }
     // A 200 that is not JSON is not a success. A parked domain, a maintenance
@@ -306,7 +313,7 @@ function nibwp_workflow_sharing_retry_pending(): void
 add_action('admin_init', 'nibwp_workflow_sharing_retry_pending', 20);
 
 /**
- * Workflows shared with this site's licence circle, for the Discover panel.
+ * Workflows shared with this site's license circle, for the Discover panel.
  *
  * @return array<int,array<string,mixed>>
  */

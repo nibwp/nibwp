@@ -927,10 +927,18 @@ function nibwp_status_check_auth_header(array $probe): array
         __('This server strips the Authorization header before PHP sees it.', 'nibwp'),
         __('The client sends correct credentials, the server discards them, and WordPress reports the request as logged out. It looks exactly like a wrong password, which is why this one costs people hours. Typical on CGI and FastCGI setups.', 'nibwp'),
         [
-            __('Apache: add "CGIPassAuth On" to .htaccess, or SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1', 'nibwp'),
+            // A button rather than advice, where writing it is provably safe.
+            function_exists('nibwp_oauth_can_fix_htaccess') && nibwp_oauth_can_fix_htaccess()
+                ? sprintf(
+                    /* translators: %s: URL of the one-click fix action */
+                    __('Apache/LiteSpeed: <a href="%s">apply the fix now</a> — one reversible line in .htaccess, removed again if the plugin is deactivated.', 'nibwp'),
+                    esc_url(wp_nonce_url(admin_url('admin-post.php?action=nibwp_fix_auth_header'), 'nibwp_fix_auth_header'))
+                )
+                : __('Apache: add "CGIPassAuth On" to .htaccess, or SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1', 'nibwp'),
             __('Nginx + PHP-FPM: add fastcgi_param HTTP_AUTHORIZATION $http_authorization; to the PHP location block.', 'nibwp'),
             __('LiteSpeed: enable "CGI Set ENV" / rewrite the header in .htaccess the same way as Apache.', 'nibwp'),
             __('On managed hosting, send your host this line: "PHP is not receiving the HTTP Authorization header on REST API requests."', 'nibwp'),
+            __('If sign-in discovery also fails: allow /.well-known/oauth-* to reach WordPress (nginx: location ^~ /.well-known/oauth- { try_files $uri /index.php?$args; }).', 'nibwp'),
         ],
         true
     );
@@ -950,6 +958,13 @@ function nibwp_status_check_auth_header(array $probe): array
 function nibwp_status_check_oauth(array $probe): ?array
 {
     if (!function_exists('nibwp_oauth_discovery_probes')) {
+        return null;
+    }
+
+    // Abilities off means discovery stands down on purpose. The master-switch
+    // check already says so; a second failing line here would name a
+    // consequence and read like a separate fault.
+    if (function_exists('nibwp_is_enabled') && !nibwp_is_enabled()) {
         return null;
     }
 
@@ -1023,7 +1038,13 @@ function nibwp_status_check_oauth(array $probe): ?array
             );
         }
 
-        $lines[] = sprintf('%s — %s: %s', (string) $p['label'], $state, (string) $p['url']);
+        $lines[] = sprintf(
+            /* translators: 1: name of the sign-in discovery address, 2: what it returned, 3: URL */
+            __('%1$s — %2$s: %3$s', 'nibwp'),
+            (string) $p['label'],
+            $state,
+            (string) $p['url']
+        );
     }
 
     $detail = implode("
@@ -1361,7 +1382,7 @@ function nibwp_status_check_wp(array $probe): array
             $current,
             $required
         ),
-        __('Older versions lack REST and Application Password behaviour NIBWP depends on.', 'nibwp'),
+        __('Older versions lack REST and Application Password behavior NIBWP depends on.', 'nibwp'),
         [
             __('Update WordPress from Dashboard → Updates, then re-run this diagnostic.', 'nibwp'),
         ],
@@ -1476,7 +1497,12 @@ function nibwp_status_check_security_plugins(array $probe): array
     $rest_broken = empty($probe['rest_ok']) || ($probe['auth_header_seen'] === false);
     $lines = [];
     foreach ($found as $name => $note) {
-        $lines[] = $name . ' — ' . $note;
+        $lines[] = sprintf(
+            /* translators: 1: security plugin name, 2: where to look in its settings */
+            __('%1$s — %2$s', 'nibwp'),
+            $name,
+            $note
+        );
     }
 
     return nibwp_status_result(

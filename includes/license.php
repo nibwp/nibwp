@@ -424,7 +424,7 @@ function nibwp_license_activate(string $license_key): array
 {
     $license_key = trim($license_key);
     if ($license_key === '') {
-        return ['ok' => false, 'message' => 'License key is required.'];
+        return ['ok' => false, 'message' => __('License key is required.', 'nibwp')];
     }
 
     $result = nibwp_license_request('activate', [
@@ -486,7 +486,7 @@ function nibwp_license_activate(string $license_key): array
 
     return [
         'ok'               => true,
-        'message'          => $license['message'] !== '' ? $license['message'] : 'License activated.',
+        'message'          => $license['message'] !== '' ? $license['message'] : __('License activated.', 'nibwp'),
         'license'          => $license,
         'pro_install'      => $package_installs[0] ?? null, // back-compat alias
         'package_installs' => $package_installs,
@@ -585,7 +585,8 @@ function nibwp_maybe_install_one_package(string $slug, string $package_url, stri
     if ($slug === 'nibwp-pro' && (defined('NIBWP_PREMIUM_AVAILABLE') || (defined('NIBWP_HAS_PREMIUM_CODE') && NIBWP_HAS_PREMIUM_CODE))) {
         $result['already_installed'] = true;
         $result['activated']         = true;
-        $result['message']           = sprintf('%s ships with this build — auto-install skipped.', $slug);
+        /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+        $result['message']           = sprintf(__('%s ships with this build — auto-install skipped.', 'nibwp'), $slug);
         return $result;
     }
 
@@ -603,12 +604,14 @@ function nibwp_maybe_install_one_package(string $slug, string $package_url, stri
     if (nibwp_build_already_ships_skill($slug)) {
         $result['already_installed'] = true;
         $result['activated']         = true;
-        $result['message']           = sprintf('%s is included in this build — auto-install skipped.', $slug);
+        /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+        $result['message']           = sprintf(__('%s is included in this build — auto-install skipped.', 'nibwp'), $slug);
         return $result;
     }
 
     if (!current_user_can('install_plugins') || !current_user_can('activate_plugins')) {
-        $result['message'] = sprintf('Current user cannot install plugins; install %s manually.', $slug);
+        /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+        $result['message'] = sprintf(__('Current user cannot install plugins; install %s manually.', 'nibwp'), $slug);
         return $result;
     }
 
@@ -638,11 +641,13 @@ function nibwp_maybe_install_one_package(string $slug, string $package_url, stri
         // erroring "destination folder already exists".
         $install = $upgrader->install($package_url, ['overwrite_package' => true]);
         if (is_wp_error($install)) {
-            $result['message'] = sprintf('%s install failed: %s', $slug, $install->get_error_message());
+            /* translators: 1: plugin package slug, 2: the installer's error message */
+            $result['message'] = sprintf(__('%1$s install failed: %2$s', 'nibwp'), $slug, $install->get_error_message());
             return $result;
         }
         if ($install === false) {
-            $result['message'] = sprintf('%s install failed: WordPress refused the package.', $slug);
+            /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+            $result['message'] = sprintf(__('%s install failed: WordPress refused the package.', 'nibwp'), $slug);
             return $result;
         }
         $result['installed'] = true;
@@ -653,7 +658,8 @@ function nibwp_maybe_install_one_package(string $slug, string $package_url, stri
         // the new files (including includes/premium/) and flip nibwp_is_pro()
         // to true automatically.
         $result['activated'] = true;
-        $result['message']   = sprintf('%s installed in-place — refresh to load Pro features.', $slug);
+        /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+        $result['message']   = sprintf(__('%s installed in-place — refresh to load Pro features.', 'nibwp'), $slug);
 
         // Ensure the entitlements cache is clean so the next request reads
         // fresh state instead of the pre-install "Free" snapshot.
@@ -674,11 +680,14 @@ function nibwp_maybe_install_one_package(string $slug, string $package_url, stri
             $activate = activate_plugin($plugin_file, '', false, true);
             $result['activated'] = !is_wp_error($activate);
             $result['message']   = $result['activated']
-                ? sprintf('%s was already installed — activated.', $slug)
-                : sprintf('%s is installed but could not be activated automatically.', $slug);
+                /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+                ? sprintf(__('%s was already installed — activated.', 'nibwp'), $slug)
+                /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+                : sprintf(__('%s is installed but could not be activated automatically.', 'nibwp'), $slug);
         } else {
             $result['activated'] = true;
-            $result['message']   = sprintf('%s already installed and active.', $slug);
+            /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+            $result['message']   = sprintf(__('%s already installed and active.', 'nibwp'), $slug);
         }
         return $result;
     }
@@ -689,11 +698,13 @@ function nibwp_maybe_install_one_package(string $slug, string $package_url, stri
     $install  = $upgrader->install($package_url);
 
     if (is_wp_error($install)) {
-        $result['message'] = sprintf('%s install failed: %s', $slug, $install->get_error_message());
+        /* translators: 1: plugin package slug, 2: the installer's error message */
+        $result['message'] = sprintf(__('%1$s install failed: %2$s', 'nibwp'), $slug, $install->get_error_message());
         return $result;
     }
     if ($install === false) {
-        $result['message'] = sprintf('%s install failed: WordPress refused the package.', $slug);
+        /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+        $result['message'] = sprintf(__('%s install failed: WordPress refused the package.', 'nibwp'), $slug);
         return $result;
     }
 
@@ -713,8 +724,10 @@ function nibwp_maybe_install_one_package(string $slug, string $package_url, stri
     $activate = activate_plugin($plugin_file, '', false, true);
     $result['activated'] = !is_wp_error($activate);
     $result['message']   = $result['activated']
-        ? sprintf('%s installed and activated.', $slug)
-        : sprintf('%s installed; activation failed — activate manually from the Plugins screen.', $slug);
+        /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+        ? sprintf(__('%s installed and activated.', 'nibwp'), $slug)
+        /* translators: %s: plugin package slug, e.g. nibwp-skill-etchwp-pro */
+        : sprintf(__('%s installed; activation failed — activate manually from the Plugins screen.', 'nibwp'), $slug);
 
     do_action('nibwp_package_auto_installed', $result, $response);
     return $result;
@@ -739,7 +752,7 @@ function nibwp_maybe_install_pro_plugin(array $response): array
         'activated'         => false,
         'already_installed' => false,
         'slug'              => (string) ($response['pro_plugin_slug'] ?? 'nibwp-pro'),
-        'message'           => 'No packages advertised by the server.',
+        'message'           => __('No packages advertised by the server.', 'nibwp'),
     ];
 }
 
@@ -766,18 +779,20 @@ function nibwp_maybe_install_pro_plugin_legacy(array $response): array
     if (defined('NIBWP_PREMIUM_AVAILABLE') || defined('NIBWP_HAS_PREMIUM_CODE') && NIBWP_HAS_PREMIUM_CODE) {
         $result['already_installed'] = true;
         $result['activated']         = true;
-        $result['message']           = 'Pro features ship with this build — no separate nibwp-pro plugin needed.';
+        /* translators: %s: plugin slug */
+        $result['message']           = sprintf(__('Pro features ship with this build — no separate %s plugin needed.', 'nibwp'), 'nibwp-pro');
         return $result;
     }
 
     $package_url = (string) ($response['pro_package_url'] ?? '');
     if ($package_url === '') {
-        $result['message'] = 'Server did not provide a Pro package URL — skipping auto-install.';
+        $result['message'] = __('Server did not provide a Pro package URL — skipping auto-install.', 'nibwp');
         return $result;
     }
 
     if (!current_user_can('install_plugins') || !current_user_can('activate_plugins')) {
-        $result['message'] = 'Current user cannot install plugins. Have a site admin install nibwp-pro manually.';
+        /* translators: %s: plugin slug */
+        $result['message'] = sprintf(__('Current user cannot install plugins. Have a site admin install %s manually.', 'nibwp'), 'nibwp-pro');
         return $result;
     }
 
@@ -802,11 +817,11 @@ function nibwp_maybe_install_pro_plugin_legacy(array $response): array
             $activate = activate_plugin($plugin_file, '', false, true);
             $result['activated'] = !is_wp_error($activate);
             $result['message'] = $result['activated']
-                ? 'NIBWP Pro was already installed — activated.'
-                : 'NIBWP Pro is installed but could not be activated automatically.';
+                ? __('NIBWP Pro was already installed — activated.', 'nibwp')
+                : __('NIBWP Pro is installed but could not be activated automatically.', 'nibwp');
         } else {
             $result['activated'] = true;
-            $result['message'] = 'NIBWP Pro already installed and active.';
+            $result['message'] = __('NIBWP Pro already installed and active.', 'nibwp');
         }
         return $result;
     }
@@ -817,13 +832,14 @@ function nibwp_maybe_install_pro_plugin_legacy(array $response): array
     $install  = $upgrader->install($package_url);
 
     if (is_wp_error($install)) {
-        $result['message']     = 'Pro install failed: ' . $install->get_error_message();
+        /* translators: %s: the installer's error message */
+        $result['message']     = sprintf(__('Pro install failed: %s', 'nibwp'), $install->get_error_message());
         $result['package_url'] = $package_url;
         return $result;
     }
 
     if ($install === false) {
-        $result['message']     = 'Pro install failed: WordPress refused the package.';
+        $result['message']     = __('Pro install failed: WordPress refused the package.', 'nibwp');
         $result['package_url'] = $package_url;
         return $result;
     }
@@ -846,8 +862,8 @@ function nibwp_maybe_install_pro_plugin_legacy(array $response): array
     $activate = activate_plugin($plugin_file, '', false, true);
     $result['activated'] = !is_wp_error($activate);
     $result['message']   = $result['activated']
-        ? 'NIBWP Pro installed and activated.'
-        : 'NIBWP Pro installed; activation failed — activate manually from the Plugins screen.';
+        ? __('NIBWP Pro installed and activated.', 'nibwp')
+        : __('NIBWP Pro installed; activation failed — activate manually from the Plugins screen.', 'nibwp');
 
     do_action('nibwp_pro_auto_installed', $result, $response);
 
@@ -866,14 +882,14 @@ function nibwp_license_deactivate(?string $license_key = null): array
     if ($license_key === null) {
         $first = nibwp_license_get();
         if ($first === null) {
-            return ['ok' => true, 'message' => 'No license to deactivate.'];
+            return ['ok' => true, 'message' => __('No license to deactivate.', 'nibwp')];
         }
         $license_key = (string) $first['key'];
     }
 
     $lic = nibwp_license_get($license_key);
     if ($lic === null) {
-        return ['ok' => true, 'message' => 'License not found locally.'];
+        return ['ok' => true, 'message' => __('License not found locally.', 'nibwp')];
     }
 
     $result = nibwp_license_request('deactivate', [
@@ -886,8 +902,9 @@ function nibwp_license_deactivate(?string $license_key = null): array
     return [
         'ok'      => true,
         'message' => $result['ok']
-            ? 'License deactivated.'
-            : 'Local copy cleared. Remote: ' . $result['message'],
+            ? __('License deactivated.', 'nibwp')
+            /* translators: %s: the license server's reply */
+            : sprintf(__('Local copy cleared. Remote: %s', 'nibwp'), $result['message']),
     ];
 }
 
@@ -899,7 +916,7 @@ function nibwp_license_check(string $license_key, bool $force = false): array
 {
     $lic = nibwp_license_get($license_key);
     if ($lic === null) {
-        return ['ok' => false, 'message' => 'License not found.'];
+        return ['ok' => false, 'message' => __('License not found.', 'nibwp')];
     }
 
     if (!$force && !empty($lic['last_check']) && (time() - (int) $lic['last_check']) < NIBWP_LICENSE_CHECK_TTL) {
@@ -1035,14 +1052,14 @@ function nibwp_account_request_otp(string $email): array
 {
     $email = sanitize_email(trim($email));
     if (!is_email($email)) {
-        return ['ok' => false, 'message' => 'Please enter a valid email address.'];
+        return ['ok' => false, 'message' => __('Please enter a valid email address.', 'nibwp')];
     }
     $result = nibwp_account_request('request-otp', ['email' => $email]);
     return [
         'ok'      => $result['ok'],
         'message' => $result['message'] !== ''
             ? $result['message']
-            : ($result['ok'] ? 'Verification code sent. Check your inbox.' : 'Could not send code.'),
+            : ($result['ok'] ? __('Verification code sent. Check your inbox.', 'nibwp') : __('Could not send code.', 'nibwp')),
     ];
 }
 
@@ -1064,10 +1081,10 @@ function nibwp_account_verify_otp(string $email, string $code): array
     $email = sanitize_email(trim($email));
     $code = preg_replace('/\D+/', '', trim($code));
     if (!is_email($email)) {
-        return ['ok' => false, 'message' => 'Invalid email.'];
+        return ['ok' => false, 'message' => __('Invalid email.', 'nibwp')];
     }
     if (strlen($code) < 4) {
-        return ['ok' => false, 'message' => 'Enter the verification code from your email.'];
+        return ['ok' => false, 'message' => __('Enter the verification code from your email.', 'nibwp')];
     }
 
     $result = nibwp_account_request('verify-otp', ['email' => $email, 'code' => $code]);
@@ -1090,7 +1107,11 @@ function nibwp_account_verify_otp(string $email, string $code): array
 
     return [
         'ok'       => true,
-        'message'  => 'Verified. ' . count($licenses) . ' license(s) found.',
+        'message'  => sprintf(
+            /* translators: %s: number of licenses found for the email address */
+            _n('Verified. %s license found.', 'Verified. %s licenses found.', count($licenses), 'nibwp'),
+            number_format_i18n(count($licenses))
+        ),
         'licenses' => array_values($licenses),
     ];
 }
@@ -1312,7 +1333,7 @@ function nibwp_license_cards(): array
         $active = nibwp_license_is_active_for_key((string) $key);
         $expires = (string) ($lic['expires_at'] ?? '');
         $expires_human = $expires === '' || $expires === 'lifetime'
-            ? __('Lifetime', domain: 'nibwp')
+            ? __('Lifetime', 'nibwp')
             : date_i18n(get_option('date_format'), strtotime($expires));
 
         $cards[] = [
@@ -1376,24 +1397,24 @@ if (!function_exists('nibwp_license_status_card')) {
             return [
                 'state'     => $any ? 'invalid' : 'none',
                 'title'     => $any
-                    ? __('License inactive', domain: 'nibwp')
-                    : __('No license active', domain: 'nibwp'),
+                    ? __('License inactive', 'nibwp')
+                    : __('No license active', 'nibwp'),
                 'subtitle'  => $any
-                    ? __('Domain mismatch or expired. Reactivate to restore premium features.', domain: 'nibwp')
-                    : __('Activate a Pro or Bundle license to unlock premium integrations, skills, and toolkits.', domain: 'nibwp'),
+                    ? __('Domain mismatch or expired. Reactivate to restore premium features.', 'nibwp')
+                    : __('Activate a Pro or Bundle license to unlock premium integrations, skills, and toolkits.', 'nibwp'),
                 'cta_label' => $any
-                    ? __('Reactivate', domain: 'nibwp')
-                    : __('Activate License', domain: 'nibwp'),
+                    ? __('Reactivate', 'nibwp')
+                    : __('Activate License', 'nibwp'),
             ];
         }
 
         // Build a card from the highest-tier active license.
         $plan = nibwp_license_plan_label();
         $title = match ($plan) {
-            'bundle' => __('NIBWP Bundle — Active', domain: 'nibwp'),
-            'pro'    => __('NIBWP Pro — Active', domain: 'nibwp'),
-            'skill'  => __('NIBWP Skill — Active', domain: 'nibwp'),
-            default  => __('NIBWP — Active', domain: 'nibwp'),
+            'bundle' => __('NIBWP Bundle — Active', 'nibwp'),
+            'pro'    => __('NIBWP Pro — Active', 'nibwp'),
+            'skill'  => __('NIBWP Skill — Active', 'nibwp'),
+            default  => __('NIBWP — Active', 'nibwp'),
         };
 
         // Earliest expiry across active licenses, for the subtitle.
@@ -1408,14 +1429,15 @@ if (!function_exists('nibwp_license_status_card')) {
             }
         }
         $subtitle = $earliest === null
-            ? __('Lifetime — never expires', domain: 'nibwp')
-            : sprintf(__('Earliest expiry: %s', domain: 'nibwp'), date_i18n(get_option('date_format'), $earliest));
+            ? __('Lifetime — never expires', 'nibwp')
+            /* translators: %s: date the first active license expires */
+            : sprintf(__('Earliest expiry: %s', 'nibwp'), date_i18n(get_option('date_format'), $earliest));
 
         return [
             'state'     => 'active',
             'title'     => $title,
             'subtitle'  => $subtitle,
-            'cta_label' => __('Manage Licenses', domain: 'nibwp'),
+            'cta_label' => __('Manage Licenses', 'nibwp'),
         ];
     }
 }

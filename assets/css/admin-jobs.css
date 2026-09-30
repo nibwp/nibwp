@@ -191,9 +191,14 @@
 .nw-gantt__scroll { overflow-x: auto; }
 .nw-gantt__inner { min-width: 720px; }
 .nw-gantt__ruler { position: relative; height: 26px; border-bottom: 1px solid var(--nw-border-2); background: var(--nw-surface-2); }
+/* Inside the track, time runs left to right in every language: the script
+   places ticks, bars and dots with inline left: percentages, so what is drawn
+   around them must not flip. The lane around the track (label column) does. */
+/*rtl:begin:ignore*/
 .nw-gantt__ruler .nw-gantt__cell { position: absolute; top: 0; bottom: 0; right: 0; }
 .nw-gantt__tick { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--nw-border); }
 .nw-gantt__tick span { position: absolute; top: 6px; left: 5px; font-size: 10px; color: var(--nw-text-muted-2); white-space: nowrap; }
+/*rtl:end:ignore*/
 .nw-gantt__run-head { display: flex; align-items: center; gap: 8px; padding: 7px 14px; background: var(--nw-surface-3); border-bottom: 1px solid var(--nw-border-2); font-size: 12px; font-weight: 700; color: var(--nw-text-2); }
 .nw-gantt__run-head .nw-pill { font-size: 10px; }
 .nw-gantt__lane { display: grid; grid-template-columns: 210px 1fr; align-items: center; border-bottom: 1px solid var(--nw-border-2); cursor: pointer; transition: background .1s; }
@@ -205,6 +210,7 @@
 .nw-gantt__actor.nw-actor--you { background: var(--nw-brand-soft); color: var(--nw-brand); }
 .nw-gantt__actor.nw-actor--agent { background: #f3e8ff; color: #7e22ce; }
 .nw-gantt__actor.nw-actor--system { background: var(--nw-surface-3); color: var(--nw-text-muted); }
+/*rtl:begin:ignore*/
 .nw-gantt__track { position: relative; height: 40px; background-image: linear-gradient(90deg, var(--nw-border-2) 1px, transparent 1px); background-size: 60px 100%; }
 .nw-gantt__bar { position: absolute; top: 11px; height: 18px; min-width: 6px; border-radius: 9px; display: flex; align-items: center; padding: 0 9px; font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.15); overflow: hidden; }
 .nw-gantt__bar::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: rgba(255,255,255,.55); border-radius: 9px 0 0 9px; }
@@ -213,6 +219,7 @@
 .nw-gantt__bar.is-done, .nw-gantt__bar.is-approved { background: linear-gradient(90deg, #15803d, var(--nw-ok)); }
 .nw-gantt__bar.is-failed, .nw-gantt__bar.is-denied { background: linear-gradient(90deg, #b91c1c, var(--nw-danger)); }
 .nw-gantt__bar.is-info { background: linear-gradient(90deg, #6366f1, #818cf8); }
+/*rtl:end:ignore*/
 @keyframes nw-gantt-glow { 0%,100% { box-shadow: 0 1px 2px rgba(0,0,0,.15); } 50% { box-shadow: 0 0 10px 1px rgba(59,130,246,.6); } }
 .nw-gantt__dot { position: absolute; top: 14px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--nw-surface); box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
 .nw-gantt__dot.is-you { background: var(--nw-brand); }

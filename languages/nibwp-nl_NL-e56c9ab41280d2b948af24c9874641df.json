@@ -1,0 +1,244 @@
+{
+    "translation-revision-date": "YEAR-MO-DA HO:MI+ZONE",
+    "generator": "WP-CLI\/2.12.0",
+    "source": "assets\/js\/visual-workspace.js",
+    "domain": "messages",
+    "locale_data": {
+        "messages": {
+            "": {
+                "domain": "messages",
+                "lang": "nl_NL",
+                "plural-forms": "nplurals=2; plural=(n != 1);"
+            },
+            "Copy": [
+                "Kopi\u00ebren"
+            ],
+            "Copied": [
+                "Gekopieerd"
+            ],
+            "%1$s \u2014 %2$s": [
+                "%1$s \u2014 %2$s"
+            ],
+            "Ready": [
+                "Klaar"
+            ],
+            "Connect another assistant": [
+                "Nog een assistent verbinden"
+            ],
+            "No AI client connected": [
+                "Geen AI-client verbonden"
+            ],
+            "It is connected": [
+                "Hij is verbonden"
+            ],
+            "This page refused to be framed": [
+                "Deze pagina weigerde in een frame te worden getoond"
+            ],
+            "A security plugin or server rule is sending X-Frame-Options: DENY, or a Content-Security-Policy frame-ancestors that excludes this site. Allow same-origin framing and reopen the page.": [
+                "Een beveiligingsplugin of serverregel stuurt X-Frame-Options: DENY, of een Content-Security-Policy frame-ancestors die deze site uitsluit. Sta framing vanaf dezelfde origin toe en open de pagina opnieuw."
+            ],
+            "showing %s": [
+                "toont %s"
+            ],
+            "reloaded %s": [
+                "%s herladen"
+            ],
+            "opening %s": [
+                "%s openen"
+            ],
+            "Click %s on this page.": [
+                "Klik op %s op deze pagina."
+            ],
+            "Click an element on this page.": [
+                "Klik op een element op deze pagina."
+            ],
+            "Hover over %s and report what changes.": [
+                "Hover over %s en meld wat er verandert."
+            ],
+            "Hover over an element and report what changes.": [
+                "Hover over een element en meld wat er verandert."
+            ],
+            "Take a screenshot of %s.": [
+                "Maak een screenshot van %s."
+            ],
+            "Take a screenshot of this page.": [
+                "Maak een screenshot van deze pagina."
+            ],
+            "a field": [
+                "een veld"
+            ],
+            "Type \u201c%1$s\u201d into %2$s, then submit the form.": [
+                "Typ \u201c%1$s\u201d in %2$s en verstuur daarna het formulier."
+            ],
+            "Type \u201c%1$s\u201d into %2$s.": [
+                "Typ \u201c%1$s\u201d in %2$s."
+            ],
+            "%d step in one go:": [
+                "%d stap in \u00e9\u00e9n keer:",
+                "%d stappen in \u00e9\u00e9n keer:"
+            ],
+            "Insert a %s block into the page being edited.": [
+                "Voeg een %s-blok in op de pagina die wordt bewerkt."
+            ],
+            "Insert a block into the page being edited.": [
+                "Voeg een blok in op de pagina die wordt bewerkt."
+            ],
+            "Change %1$s on block %2$s.": [
+                "Wijzig %1$s op blok %2$s."
+            ],
+            "Delete block %s and everything inside it.": [
+                "Verwijder blok %s en alles wat erin zit."
+            ],
+            "Open %s in the workspace.": [
+                "Open %s in de werkruimte."
+            ],
+            "Open a page in the workspace.": [
+                "Open een pagina in de werkruimte."
+            ],
+            "Read the current page.": [
+                "Lees de huidige pagina."
+            ],
+            "Check the current page for accessibility and layout problems.": [
+                "Controleer de huidige pagina op toegankelijkheids- en lay-outproblemen."
+            ],
+            "Approval off \u2014 turn it back on in the bar": [
+                "Goedkeuring uit \u2014 zet die weer aan in de balk"
+            ],
+            "Approval required": [
+                "Goedkeuring vereist"
+            ],
+            "Approval off": [
+                "Goedkeuring uit"
+            ],
+            "Load the %s skill with nibwp\/get-skill and follow it for this task. Work in the NibWP visual workspace so I can watch each step.": [
+                "Laad de skill %s met nibwp\/get-skill en volg die voor deze taak. Werk in de visuele werkruimte van NibWP zodat ik elke stap kan volgen."
+            ],
+            "Run the NibWP workflow \"%s\" on this site. Work in the NibWP visual workspace so I can watch each step, and ask me before anything that changes something.": [
+                "Voer de NibWP-workflow \"%s\" uit op deze site. Werk in de visuele werkruimte van NibWP zodat ik elke stap kan volgen, en vraag het me voordat je iets wijzigt."
+            ],
+            "Use %s on this site, in the NibWP visual workspace so I can watch, and tell me what you find.": [
+                "Gebruik %s op deze site, in de visuele werkruimte van NibWP zodat ik kan meekijken, en vertel me wat je vindt."
+            ],
+            "search result kind\u0004ability": [
+                "mogelijkheid"
+            ],
+            "search result kind\u0004workflow": [
+                "workflow"
+            ],
+            "search result kind\u0004skill": [
+                "skill"
+            ],
+            "search result kind\u0004task": [
+                "taak"
+            ],
+            "Nothing matches \u201c%s\u201d.": [
+                "Niets gevonden voor \u201c%s\u201d."
+            ],
+            "%d more match. Type a little further.": [
+                "Nog %d resultaat. Typ nog iets verder.",
+                "Nog %d resultaten. Typ nog iets verder."
+            ],
+            "Checking\u2026": [
+                "Controleren\u2026"
+            ],
+            "This screen is listening": [
+                "Dit scherm luistert"
+            ],
+            "This screen is not reaching WordPress": [
+                "Dit scherm bereikt WordPress niet"
+            ],
+            "AI Abilities are on": [
+                "AI-mogelijkheden staan aan"
+            ],
+            "AI Abilities are switched off": [
+                "AI-mogelijkheden staan uit"
+            ],
+            "%s can reach this site": [
+                "%s kan deze site bereiken"
+            ],
+            "No AI client is connected": [
+                "Geen AI-client verbonden"
+            ],
+            "Fix this on the Connect screen": [
+                "Los dit op via het scherm Verbinden"
+            ],
+            "Could not reach WordPress from this screen.": [
+                "Kon WordPress niet bereiken vanaf dit scherm."
+            ],
+            "Switch to light": [
+                "Licht thema"
+            ],
+            "Switch to dark": [
+                "Donker thema"
+            ],
+            "Ready to switch on": [
+                "Klaar om aan te zetten"
+            ],
+            "Not included in your plan": [
+                "Niet inbegrepen in je abonnement"
+            ],
+            "%s can reach this site. Loading the workspace\u2026": [
+                "%s kan deze site bereiken. Werkruimte laden\u2026"
+            ],
+            "Nothing has connected yet. Finish the sign-in in your assistant, then check again.": [
+                "Er is nog niets verbonden. Rond het inloggen in je assistent af en controleer het dan opnieuw."
+            ],
+            "AI Abilities are switched off on this site, so nothing can connect until they are on.": [
+                "AI-mogelijkheden staan uit op deze site, dus er kan niets verbinden totdat ze aan staan."
+            ],
+            "Still nothing": [
+                "Nog steeds niets"
+            ],
+            "No client has connected yet": [
+                "Er is nog geen client verbonden"
+            ],
+            "refused": [
+                "geweigerd"
+            ],
+            "%d issue": [
+                "%d probleem",
+                "%d problemen"
+            ],
+            "%d element": [
+                "%d element",
+                "%d elementen"
+            ],
+            "Reconnecting\u2026": [
+                "Opnieuw verbinden\u2026"
+            ],
+            "This workspace was opened somewhere else": [
+                "Deze werkruimte is ergens anders geopend"
+            ],
+            "This workspace is open in another tab": [
+                "Deze werkruimte is open in een ander tabblad"
+            ],
+            "Only one workspace can take the agent\u2019s commands at a time, so this one stopped listening.": [
+                "Er kan maar \u00e9\u00e9n werkruimte tegelijk commando's van de agent ontvangen, dus deze luistert niet meer."
+            ],
+            "Take it back": [
+                "Terugnemen"
+            ],
+            "Copy the key": [
+                "Kopieer de sleutel"
+            ],
+            "Shown once. Reusable for scheduled runs until you revoke it, or until %s.": [
+                "Wordt \u00e9\u00e9n keer weergegeven. Herbruikbaar voor geplande uitvoeringen tot je hem intrekt, of tot %s."
+            ],
+            "Shown once, good for one run, and only until %s.": [
+                "Wordt \u00e9\u00e9n keer weergegeven, geldig voor \u00e9\u00e9n uitvoering en alleen tot %s."
+            ],
+            "Creating\u2026": [
+                "Aanmaken\u2026"
+            ],
+            "Revoking\u2026": [
+                "Intrekken\u2026"
+            ],
+            "Revoked. Any runner signed in with one of those keys is now signed out.": [
+                "Ingetrokken. Elke runner die met een van die sleutels was ingelogd, is nu uitgelogd."
+            ],
+            "There was nothing to revoke.": [
+                "Er was niets om in te trekken."
+            ]
+        }
+    }
+}

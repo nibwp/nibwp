@@ -11,11 +11,8 @@ if (!defined('ABSPATH')) {
 }
 
 wp_register_ability('nibwp/list-directory', [
-    'label' => __('List Directory', domain: 'nibwp'),
-    'description' => __(
-        'Lists files and directories at a given path. Supports glob pattern filtering, recursive listing with configurable depth, and hidden file inclusion. Results are sorted with directories first, then alphabetically. Output is capped at a configurable limit to prevent oversized responses.',
-        domain: 'nibwp',
-    ),
+    'label' => __('List Directory', 'nibwp'),
+    'description' => 'Lists files and directories at a given path. Supports glob pattern filtering, recursive listing with configurable depth, and hidden file inclusion. Results are sorted with directories first, then alphabetically. Output is capped at a configurable limit to prevent oversized responses.',
     'category' => 'filesystem',
     'input_schema' => [
         'type' => 'object',
@@ -80,7 +77,9 @@ wp_register_ability('nibwp/list-directory', [
         ],
     ],
     'execute_callback' => 'nibwp_list_directory',
-    'permission_callback' => 'nibwp_permission_callback',
+    // See read-file: a directory listing names another network site's files
+    // just as plainly, so it answers to the same network-level gate.
+    'permission_callback' => 'nibwp_filesystem_permission_callback',
     'meta' => [
         'show_in_rest' => true,
         'mcp' => ['public' => true],

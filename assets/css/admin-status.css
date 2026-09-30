@@ -324,6 +324,12 @@
     min-width: 0;
     height: 34px;
     font-family: var(--nw-mono);
+    /* Holds an endpoint URL or a client ID. */
+    /*rtl:begin:ignore*/
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+    /*rtl:end:ignore*/
     font-size: 12.5px;
     padding: 0 11px;
     border: 1px solid var(--nw-border);
@@ -408,6 +414,12 @@
     width: 100%;
     margin-top: 6px;
     font-family: var(--nw-mono);
+    /* A plain-text report meant to be pasted into a support ticket. */
+    /*rtl:begin:ignore*/
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+    /*rtl:end:ignore*/
     font-size: 12px;
     line-height: 1.6;
     padding: 14px;

@@ -37,8 +37,8 @@ function nibwp_render_license_page(): void
     <div class="wrap nibwp-wrap">
         <div class="nibwp-page-header">
             <div>
-                <h1><?php esc_html_e('License', domain: 'nibwp'); ?></h1>
-                <p class="nibwp-subtitle"><?php esc_html_e('Activate, manage, and refresh your NIBWP Pro, Bundle, or Skill licenses.', domain: 'nibwp'); ?></p>
+                <h1><?php esc_html_e('License', 'nibwp'); ?></h1>
+                <p class="nibwp-subtitle"><?php esc_html_e('Activate, manage, and refresh your NIBWP Pro, Bundle, or Skill licenses.', 'nibwp'); ?></p>
             </div>
         </div>
 
@@ -60,6 +60,23 @@ function nibwp_render_license_panel_body(): void
     $is_pro = nibwp_is_pro();
     $rest_nonce = wp_create_nonce('wp_rest');
     $pricing_url = nibwp_pricing_url();
+
+    // The hero already branches on this state for its status line and its CSS
+    // class, but the field and its hint were written once for the unlicensed
+    // case and never followed. On an activated site that left the box saying
+    // "paste your license key" and the line under it asking "don't have a
+    // license yet?" — directly below a heading confirming the license is
+    // active. Keeping the three strings together is what stops one of them
+    // drifting out of step with the status again.
+    $copy = $is_pro
+        ? [
+            'placeholder' => __('Paste another license key', 'nibwp'),
+            'button'      => __('Add license', 'nibwp'),
+        ]
+        : [
+            'placeholder' => __('Paste your license key here', 'nibwp'),
+            'button'      => __('Activate', 'nibwp'),
+        ];
     ?>
     <div class="nibwp-license-tab"
          data-rest-nonce="<?php echo esc_attr($rest_nonce); ?>"
@@ -72,16 +89,17 @@ function nibwp_render_license_panel_body(): void
                 <?php if ($is_pro): ?>
                     <strong><?php
                         $plan = nibwp_license_plan_label();
-                        echo esc_html(sprintf(__('NIBWP %s — Active', domain: 'nibwp'), ucfirst($plan ?: 'Pro')));
+                        /* translators: %s: plan name (Pro, Bundle or Skill) */
+                        echo esc_html(sprintf(__('NIBWP %s — Active', 'nibwp'), ucfirst($plan ?: 'Pro')));
                     ?></strong>
-                    <span><?php esc_html_e('Premium integrations, toolkits, and skills are unlocked.', domain: 'nibwp'); ?></span>
+                    <span><?php esc_html_e('Premium integrations, toolkits, and skills are unlocked.', 'nibwp'); ?></span>
                 <?php else: ?>
-                    <strong><?php esc_html_e('Have a license? Activate it.', domain: 'nibwp'); ?></strong>
+                    <strong><?php esc_html_e('Have a license? Activate it.', 'nibwp'); ?></strong>
                     <span>
                         <?php if ($cards): ?>
-                            <?php esc_html_e('Stored license is inactive (domain mismatch or expired) — re-paste or refresh below.', domain: 'nibwp'); ?>
+                            <?php esc_html_e('Stored license is inactive (domain mismatch or expired) — re-paste or refresh below.', 'nibwp'); ?>
                         <?php else: ?>
-                            <?php esc_html_e('Paste your key below to unlock NIBWP Pro on this site.', domain: 'nibwp'); ?>
+                            <?php esc_html_e('Paste your key below to unlock NIBWP Pro on this site.', 'nibwp'); ?>
                         <?php endif; ?>
                     </span>
                 <?php endif; ?>
@@ -89,31 +107,44 @@ function nibwp_render_license_panel_body(): void
 
             <div class="nibwp-license-hero__form">
                 <label for="nibwp-license-paste-input" class="screen-reader-text">
-                    <?php esc_html_e('License key', domain: 'nibwp'); ?>
+                    <?php esc_html_e('License key', 'nibwp'); ?>
                 </label>
                 <input type="text"
                        id="nibwp-license-paste-input"
                        class="nibwp-license-hero__input"
-                       placeholder="<?php esc_attr_e('Paste your license key here', domain: 'nibwp'); ?>"
+                       placeholder="<?php echo esc_attr($copy['placeholder']); ?>"
                        spellcheck="false"
                        autocomplete="off" />
                 <button type="button"
                         class="button button-primary nibwp-license-hero__btn"
                         id="nibwp-license-paste-activate">
-                    <?php esc_html_e('Activate', domain: 'nibwp'); ?>
+                    <?php echo esc_html($copy['button']); ?>
                 </button>
             </div>
             <p class="nibwp-license-paste-msg" id="nibwp-license-paste-msg" hidden></p>
 
             <p class="nibwp-license-hero__hint">
-                <?php esc_html_e('Don\'t have a license yet?', domain: 'nibwp'); ?>
-                <a href="<?php echo esc_url($pricing_url); ?>" target="_blank" rel="noopener">
-                    <?php esc_html_e('Get NIBWP Pro from €49/yr →', domain: 'nibwp'); ?>
-                </a>
-                &nbsp;·&nbsp;
-                <a href="#" id="nibwp-toggle-email-lookup">
-                    <?php esc_html_e('Find my license by email', domain: 'nibwp'); ?>
-                </a>
+                <?php if ($is_pro): ?>
+                    <?php
+                    // One sentence with the link as a placeholder, so a translation can
+                    // put the link wherever its grammar needs it. Link and full stop
+                    // sit in the same string: whitespace between them renders as a gap.
+                    printf(
+                        /* translators: %s: link that opens the find-by-email panel */
+                        esc_html__('Have another license — a Skill or a Bundle? Enter it above, or %s.', 'nibwp'),
+                        '<a href="#" id="nibwp-toggle-email-lookup">' . esc_html__('find my licenses by email', 'nibwp') . '</a>'
+                    );
+                    ?>
+                <?php else: ?>
+                    <?php esc_html_e('Don\'t have a license yet?', 'nibwp'); ?>
+                    <a href="<?php echo esc_url($pricing_url); ?>" target="_blank" rel="noopener">
+                        <?php esc_html_e('Get NIBWP Pro from €49/yr', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">→</span>
+                    </a>
+                    &nbsp;·&nbsp;
+                    <a href="#" id="nibwp-toggle-email-lookup">
+                        <?php esc_html_e('Find my license by email', 'nibwp'); ?>
+                    </a>
+                <?php endif; ?>
             </p>
         </div>
 
@@ -123,7 +154,7 @@ function nibwp_render_license_panel_body(): void
                 <summary class="nibwp-license-card__summary">
                     <h4>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
-                        <?php esc_html_e('Manage stored licenses', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Manage stored licenses', 'nibwp'); ?>
                         <span class="nibwp-license-count"><?php echo count($cards); ?></span>
                     </h4>
                 </summary>
@@ -140,7 +171,7 @@ function nibwp_render_license_panel_body(): void
             <summary class="nibwp-license-card__summary">
                 <h4>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
-                    <?php esc_html_e('Find license by email', domain: 'nibwp'); ?>
+                    <?php esc_html_e('Find license by email', 'nibwp'); ?>
                     <?php if ($account !== null): ?>
                         <span class="nibwp-badge is-ok"><?php echo esc_html($account['masked']); ?></span>
                     <?php endif; ?>
@@ -148,47 +179,47 @@ function nibwp_render_license_panel_body(): void
             </summary>
             <div class="nibwp-license-card__body">
                 <p class="nibwp-license-card__desc">
-                    <?php esc_html_e('Forgot your key? Enter the email you used at checkout. If a license exists for that email, we send a 6-digit verification code (check your spam folder too). Once verified, every license tied to that email is listed below and can be activated with one click.', domain: 'nibwp'); ?>
+                    <?php esc_html_e('Forgot your key? Enter the email you used at checkout. If a license exists for that email, we send a 6-digit verification code (check your spam folder too). Once verified, every license tied to that email is listed below and can be activated with one click.', 'nibwp'); ?>
                 </p>
 
                 <div class="nibwp-account-block" id="nibwp-account-block">
                     <?php if ($account !== null): ?>
                         <div class="nibwp-account-connected">
                             <div>
-                                <span class="nibwp-badge is-ok"><?php esc_html_e('Connected', domain: 'nibwp'); ?></span>
+                                <span class="nibwp-badge is-ok"><?php esc_html_e('Connected', 'nibwp'); ?></span>
                                 <strong><?php echo esc_html($account['masked']); ?></strong>
                             </div>
                             <button type="button" class="button-link" id="nibwp-account-disconnect">
-                                <?php esc_html_e('Disconnect', domain: 'nibwp'); ?>
+                                <?php esc_html_e('Disconnect', 'nibwp'); ?>
                             </button>
                         </div>
                         <button type="button" class="button button-secondary" id="nibwp-account-relookup">
-                            <?php esc_html_e('Find my licenses again', domain: 'nibwp'); ?>
+                            <?php esc_html_e('Find my licenses again', 'nibwp'); ?>
                         </button>
                     <?php else: ?>
                         <div class="nibwp-account-step" data-step="email">
-                            <label for="nibwp-account-email" class="screen-reader-text"><?php esc_html_e('Email', domain: 'nibwp'); ?></label>
+                            <label for="nibwp-account-email" class="screen-reader-text"><?php esc_html_e('Email', 'nibwp'); ?></label>
                             <input type="email"
                                    id="nibwp-account-email"
-                                   placeholder="<?php esc_attr_e('your-email@example.com', domain: 'nibwp'); ?>"
+                                   placeholder="<?php esc_attr_e('your-email@example.com', 'nibwp'); ?>"
                                    autocomplete="email" />
                             <button type="button" class="button button-primary" id="nibwp-account-send-otp">
-                                <?php esc_html_e('Send code', domain: 'nibwp'); ?>
+                                <?php esc_html_e('Send code', 'nibwp'); ?>
                             </button>
                         </div>
                         <div class="nibwp-account-step" data-step="otp" hidden>
                             <p class="nibwp-account-sent-to"></p>
-                            <label for="nibwp-account-otp" class="screen-reader-text"><?php esc_html_e('Verification code', domain: 'nibwp'); ?></label>
+                            <label for="nibwp-account-otp" class="screen-reader-text"><?php esc_html_e('Verification code', 'nibwp'); ?></label>
                             <input type="text"
                                    id="nibwp-account-otp"
                                    inputmode="numeric"
                                    maxlength="6"
                                    placeholder="000000" />
                             <button type="button" class="button button-primary" id="nibwp-account-verify">
-                                <?php esc_html_e('Verify', domain: 'nibwp'); ?>
+                                <?php esc_html_e('Verify', 'nibwp'); ?>
                             </button>
                             <button type="button" class="button-link" id="nibwp-account-resend">
-                                <?php esc_html_e('Resend code', domain: 'nibwp'); ?>
+                                <?php esc_html_e('Resend code', 'nibwp'); ?>
                             </button>
                         </div>
                     <?php endif; ?>
@@ -196,10 +227,10 @@ function nibwp_render_license_panel_body(): void
                 </div>
 
                 <div class="nibwp-discovered-licenses" id="nibwp-discovered-licenses" hidden>
-                    <h5><?php esc_html_e('Licenses found for this email:', domain: 'nibwp'); ?></h5>
+                    <h5><?php esc_html_e('Licenses found for this email:', 'nibwp'); ?></h5>
                     <ul id="nibwp-discovered-list"></ul>
                     <button type="button" class="button button-primary" id="nibwp-discovered-activate-all">
-                        <?php esc_html_e('Activate all on this site', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Activate all on this site', 'nibwp'); ?>
                     </button>
                 </div>
             </div>
@@ -232,17 +263,19 @@ function nibwp_render_license_row(array $card): void
                 <code><?php echo esc_html((string) $card['masked_key']); ?></code>
                 <span class="nibwp-badge is-<?php echo $state === 'active' ? 'ok' : 'warn'; ?>">
                     <?php echo $state === 'active'
-                        ? esc_html__('Active', domain: 'nibwp')
-                        : esc_html__('Inactive', domain: 'nibwp'); ?>
+                        ? esc_html__('Active', 'nibwp')
+                        : esc_html__('Inactive', 'nibwp'); ?>
                 </span>
             </div>
             <div class="nibwp-license-row__meta">
                 <strong><?php echo esc_html(ucfirst((string) $card['product'])); ?></strong>
                 <span class="nibwp-license-row__expires"><?php echo esc_html((string) $card['expires']); ?></span>
                 <span class="nibwp-license-row__sites"><?php
+                    $allowed_sites = (int) ($card['allowed_sites'] ?? 1);
                     printf(
-                        esc_html__('%d site(s) allowed', domain: 'nibwp'),
-                        (int) ($card['allowed_sites'] ?? 1),
+                        /* translators: %s: number of sites the license can be activated on */
+                        esc_html(_n('%s site allowed', '%s sites allowed', $allowed_sites, 'nibwp')),
+                        esc_html(number_format_i18n($allowed_sites)),
                     );
                 ?></span>
             </div>
@@ -296,6 +329,33 @@ function nibwp_render_license_page_script(): void
         if (!root) return;
         var nonce = root.dataset.restNonce;
         var apiRoot = root.dataset.restRoot;
+        var nibwpLicenseI18n = <?php echo wp_json_encode([
+            'enter_email'       => __('Enter your email first.', 'nibwp'),
+            'sending_code'      => __('Sending verification code…', 'nibwp'),
+            /* translators: %s: the email address the code was sent to */
+            'code_on_its_way'   => __('If a license exists for %s, a 6-digit code is on its way. Check your inbox <em>and your spam folder</em>. The code expires in 5 minutes.', 'nibwp'),
+            'code_sent'         => __('Code sent. Enter it below to see your licenses.', 'nibwp'),
+            'send_failed'       => __('Could not send code.', 'nibwp'),
+            'enter_code'        => __('Enter the code from your email.', 'nibwp'),
+            'verifying'         => __('Verifying…', 'nibwp'),
+            'verified'          => __('Verified.', 'nibwp'),
+            'invalid_code'      => __('Invalid code.', 'nibwp'),
+            'no_licenses'       => __('No licenses found for this email yet.', 'nibwp'),
+            'license'           => __('license', 'nibwp'),
+            'lifetime'          => __('Lifetime', 'nibwp'),
+            'activate_here'     => __('Activate on this site', 'nibwp'),
+            'activating'        => __('Activating…', 'nibwp'),
+            'retry'             => __('Retry', 'nibwp'),
+            'activation_failed' => __('Activation failed.', 'nibwp'),
+            'paste_key'         => __('Paste your license key.', 'nibwp'),
+            'reactivating'      => __('Reactivating…', 'nibwp'),
+            'deactivating'      => __('Deactivating…', 'nibwp'),
+            'refreshing'        => __('Refreshing…', 'nibwp'),
+            'operation_failed'  => __('Operation failed. Check the license key and try again.', 'nibwp'),
+            'request_failed'    => __('Request failed — check your network and retry.', 'nibwp'),
+        ]); ?>;
+
+        function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
         function api(path, body, method) {
             method = method || 'POST';
@@ -332,9 +392,9 @@ function nibwp_render_license_page_script(): void
 
         function requestOtp() {
             var email = (emailInput.value || '').trim();
-            if (!email) { setMsg(msgEl, 'Enter your email first.', 'error'); return; }
+            if (!email) { setMsg(msgEl, nibwpLicenseI18n.enter_email, 'error'); return; }
             sendBtn.disabled = true;
-            setMsg(msgEl, 'Sending verification code…', 'info');
+            setMsg(msgEl, nibwpLicenseI18n.sending_code, 'info');
             api('account/request-otp', { email: email }).then(function (res) {
                 sendBtn.disabled = false;
                 if (res.ok) {
@@ -342,13 +402,16 @@ function nibwp_render_license_page_script(): void
                     otpStep.hidden = false;
                     var sentTo = otpStep.querySelector('.nibwp-account-sent-to');
                     if (sentTo) {
-                        sentTo.innerHTML = 'If a license exists for <strong>' + email + '</strong>, a 6-digit code is on its way. '
-                            + 'Check your inbox <em>and your spam folder</em>. The code expires in 5 minutes.';
+                        // A function replacement: a "$" in the address must not be
+                        // read as a replacement pattern.
+                        sentTo.innerHTML = nibwpLicenseI18n.code_on_its_way.replace('%s', function () {
+                            return '<strong>' + escHtml(email) + '</strong>';
+                        });
                     }
-                    setMsg(msgEl, 'Code sent. Enter it below to see your licenses.', 'success');
+                    setMsg(msgEl, nibwpLicenseI18n.code_sent, 'success');
                     if (otpInput) otpInput.focus();
                 } else {
-                    setMsg(msgEl, res.message || 'Could not send code.', 'error');
+                    setMsg(msgEl, res.message || nibwpLicenseI18n.send_failed, 'error');
                 }
             });
         }
@@ -359,16 +422,16 @@ function nibwp_render_license_page_script(): void
             verifyBtn.addEventListener('click', function () {
                 var email = (emailInput.value || '').trim();
                 var code = (otpInput.value || '').trim();
-                if (!code) { setMsg(msgEl, 'Enter the code from your email.', 'error'); return; }
+                if (!code) { setMsg(msgEl, nibwpLicenseI18n.enter_code, 'error'); return; }
                 verifyBtn.disabled = true;
-                setMsg(msgEl, 'Verifying…', 'info');
+                setMsg(msgEl, nibwpLicenseI18n.verifying, 'info');
                 api('account/verify-otp', { email: email, code: code }).then(function (res) {
                     verifyBtn.disabled = false;
                     if (res.ok) {
-                        setMsg(msgEl, res.message || 'Verified.', 'success');
+                        setMsg(msgEl, res.message || nibwpLicenseI18n.verified, 'success');
                         renderDiscovered(res.licenses || []);
                     } else {
-                        setMsg(msgEl, res.message || 'Invalid code.', 'error');
+                        setMsg(msgEl, res.message || nibwpLicenseI18n.invalid_code, 'error');
                     }
                 });
             });
@@ -378,7 +441,7 @@ function nibwp_render_license_page_script(): void
             if (!discovered || !discoveredList) return;
             if (!licenses.length) {
                 discovered.hidden = false;
-                discoveredList.innerHTML = '<li>No licenses found for this email yet.</li>';
+                discoveredList.innerHTML = '<li>' + escHtml(nibwpLicenseI18n.no_licenses) + '</li>';
                 if (discoveredActivateAll) discoveredActivateAll.hidden = true;
                 return;
             }
@@ -386,10 +449,10 @@ function nibwp_render_license_page_script(): void
             licenses.forEach(function (lic) {
                 var li = document.createElement('li');
                 li.dataset.key = lic.key;
-                li.innerHTML = '<div><strong>' + (lic.product || 'license') + '</strong> '
+                li.innerHTML = '<div><strong>' + (lic.product || escHtml(nibwpLicenseI18n.license)) + '</strong> '
                     + '<code>' + (lic.key || '') + '</code> '
-                    + '<span class="nibwp-license-row__expires">' + (lic.expires_at || 'Lifetime') + '</span></div>'
-                    + '<button type="button" class="button button-secondary nibwp-discovered-activate">Activate on this site</button>';
+                    + '<span class="nibwp-license-row__expires">' + (lic.expires_at || escHtml(nibwpLicenseI18n.lifetime)) + '</span></div>'
+                    + '<button type="button" class="button button-secondary nibwp-discovered-activate">' + escHtml(nibwpLicenseI18n.activate_here) + '</button>';
                 var btn = li.querySelector('.nibwp-discovered-activate');
                 btn.addEventListener('click', function () { activateKey(lic.key, btn); });
                 discoveredList.appendChild(li);
@@ -398,10 +461,10 @@ function nibwp_render_license_page_script(): void
         }
 
         function activateKey(key, btn) {
-            if (btn) { btn.disabled = true; btn.textContent = 'Activating…'; }
+            if (btn) { btn.disabled = true; btn.textContent = nibwpLicenseI18n.activating; }
             api('license/activate', { key: key }).then(function (res) {
                 if (res.ok) { reloadList(); }
-                else if (btn) { btn.disabled = false; btn.textContent = 'Retry'; setMsg(msgEl, res.message || 'Activation failed.', 'error'); }
+                else if (btn) { btn.disabled = false; btn.textContent = nibwpLicenseI18n.retry; setMsg(msgEl, res.message || nibwpLicenseI18n.activation_failed, 'error'); }
             });
         }
 
@@ -411,7 +474,7 @@ function nibwp_render_license_page_script(): void
                 var keys = Array.prototype.map.call(rows, function (li) { return li.dataset.key; });
                 if (!keys.length) return;
                 discoveredActivateAll.disabled = true;
-                discoveredActivateAll.textContent = 'Activating…';
+                discoveredActivateAll.textContent = nibwpLicenseI18n.activating;
                 Promise.all(keys.map(function (k) { return api('license/activate', { key: k }); }))
                     .then(reloadList);
             });
@@ -435,13 +498,13 @@ function nibwp_render_license_page_script(): void
         if (pasteBtn && pasteInput) {
             pasteBtn.addEventListener('click', function () {
                 var key = (pasteInput.value || '').trim();
-                if (!key) { setMsg(pasteMsg, 'Paste your license key.', 'error'); return; }
+                if (!key) { setMsg(pasteMsg, nibwpLicenseI18n.paste_key, 'error'); return; }
                 pasteBtn.disabled = true;
-                setMsg(pasteMsg, 'Activating…', 'info');
+                setMsg(pasteMsg, nibwpLicenseI18n.activating, 'info');
                 api('license/activate', { key: key }).then(function (res) {
                     pasteBtn.disabled = false;
                     if (res.ok) { reloadList(); }
-                    else { setMsg(pasteMsg, res.message || 'Activation failed.', 'error'); }
+                    else { setMsg(pasteMsg, res.message || nibwpLicenseI18n.activation_failed, 'error'); }
                 });
             });
         }
@@ -458,7 +521,7 @@ function nibwp_render_license_page_script(): void
             var origLabel = btn.querySelector('span') ? btn.querySelector('span').textContent : btn.textContent;
             btn.disabled = true;
             if (btn.querySelector('span')) {
-                btn.querySelector('span').textContent = action === 'reactivate' ? 'Reactivating…' : (action === 'deactivate' ? 'Deactivating…' : 'Refreshing…');
+                btn.querySelector('span').textContent = action === 'reactivate' ? nibwpLicenseI18n.reactivating : (action === 'deactivate' ? nibwpLicenseI18n.deactivating : nibwpLicenseI18n.refreshing);
             }
             var endpoint;
             switch (action) {
@@ -470,7 +533,7 @@ function nibwp_render_license_page_script(): void
                 if (res && res.ok === false) {
                     if (msg) {
                         msg.hidden = false;
-                        msg.textContent = res.message || 'Operation failed. Check the license key and try again.';
+                        msg.textContent = res.message || nibwpLicenseI18n.operation_failed;
                         msg.className = 'nibwp-license-row__msg is-error';
                     }
                     btn.disabled = false;
@@ -481,7 +544,7 @@ function nibwp_render_license_page_script(): void
             }).catch(function () {
                 if (msg) {
                     msg.hidden = false;
-                    msg.textContent = 'Request failed — check your network and retry.';
+                    msg.textContent = nibwpLicenseI18n.request_failed;
                     msg.className = 'nibwp-license-row__msg is-error';
                 }
                 btn.disabled = false;

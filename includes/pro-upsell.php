@@ -51,7 +51,7 @@ add_action(
         }
         // @mago-expect analysis:mixed-array-assignment
         $submenu['nibwp-dashboard'][] = [
-            '<span style="color:#f8ca50;font-weight:600;">' . esc_html__('Get Pro', domain: 'nibwp') . '</span>',
+            '<span style="color:#f8ca50;font-weight:600;">' . esc_html__('Get Pro', 'nibwp') . '</span>',
             'manage_options',
             esc_url(NIBWP_PRO_URL . '?utm_source=plugin&utm_medium=submenu'),
         ];
@@ -73,7 +73,7 @@ add_filter(
             '<a href="'
             . $url
             . '" target="_blank" rel="noopener">'
-            . esc_html__('Get Pro', domain: 'nibwp')
+            . esc_html__('Get Pro', 'nibwp')
             . '</a>';
         return $links;
     },
@@ -161,18 +161,18 @@ function nibwp_render_pro_welcome_notice(): void
     ?>
     <div class="notice notice-info is-dismissible nibwp-pro-notice" data-dismiss-url="<?php echo
         esc_url($dismiss_url)
-    ; ?>" style="border-left-color:#f8ca50;">
+    ; ?>" style="border-inline-start-color:#f8ca50;">
         <p style="font-size:14px;margin:10px 0;">
-            <strong><?php esc_html_e('NIBWP Pro is here.', domain: 'nibwp'); ?></strong>
+            <strong><?php esc_html_e('NIBWP Pro is here.', 'nibwp'); ?></strong>
             <?php esc_html_e(
                 'Elementor and Bricks abilities and memory between sessions, on top of NIBWP.',
-                domain: 'nibwp',
+                'nibwp',
             ); ?>
             &nbsp;
             <a href="<?php echo
                 $pro_url
             ; ?>" target="_blank" rel="noopener" class="button button-primary" style="background:#f8ca50;border-color:#f8ca50;color:#1a1a1a;">
-                <?php esc_html_e('Discover more', domain: 'nibwp'); ?>
+                <?php esc_html_e('Discover more', 'nibwp'); ?>
             </a>
         </p>
     </div>
@@ -202,23 +202,23 @@ function nibwp_render_pro_upsell_card(): void
     }
     $pro_url = esc_url(NIBWP_PRO_URL . '?utm_source=plugin&utm_medium=connect_card');
     ?>
-    <div class="nibwp-pro-card" style="margin:24px 0;padding:20px 24px;border:1px solid #e0e0e0;border-left:4px solid #f8ca50;border-radius:4px;background:#fffdf5;">
+    <div class="nibwp-pro-card" style="margin:24px 0;padding:20px 24px;border:1px solid #e0e0e0;border-inline-start:4px solid #f8ca50;border-radius:4px;background:#fffdf5;">
         <h2 style="margin:0 0 6px;font-size:16px;">
-            <?php esc_html_e('NIBWP Pro', domain: 'nibwp'); ?>
-            <span style="display:inline-block;margin-left:6px;padding:1px 8px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#f8ca50;color:#1a1a1a;border-radius:3px;vertical-align:middle;">
-                <?php esc_html_e('Beta', domain: 'nibwp'); ?>
+            <?php esc_html_e('NIBWP Pro', 'nibwp'); ?>
+            <span style="display:inline-block;margin-inline-start:6px;padding:1px 8px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#f8ca50;color:#1a1a1a;border-radius:3px;vertical-align:middle;">
+                <?php esc_html_e('Beta', 'nibwp'); ?>
             </span>
         </h2>
         <p style="margin:0 0 12px;color:#50575e;">
             <?php esc_html_e(
                 'Ready-made abilities for Elementor and Bricks, plus memory between sessions.',
-                domain: 'nibwp',
+                'nibwp',
             ); ?>
         </p>
         <a href="<?php echo
             $pro_url
         ; ?>" target="_blank" rel="noopener" class="button button-primary" style="background:#f8ca50;border-color:#f8ca50;color:#1a1a1a;">
-            <?php esc_html_e('Get NIBWP Pro', domain: 'nibwp'); ?>
+            <?php esc_html_e('Get NIBWP Pro', 'nibwp'); ?>
         </a>
     </div>
     <?php

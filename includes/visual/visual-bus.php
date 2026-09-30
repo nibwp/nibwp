@@ -110,6 +110,39 @@ function nibwp_visual_touch(int $user_id): void
     set_transient(NIBWP_VISUAL_HEARTBEAT_PREFIX . $user_id, time(), NIBWP_VISUAL_HEARTBEAT_TTL);
 }
 
+const NIBWP_VISUAL_KIND_PREFIX = 'nibwp_visual_kind_';
+
+/**
+ * What sort of workspace is listening.
+ *
+ * A browser tab and the headless runner speak the same protocol but cannot do
+ * the same things — a tab cannot photograph itself. Without this the difference
+ * only shows up as a failed capture partway through a QA run, which is the
+ * expensive place to discover it.
+ *
+ * Kept on the same clock as the heartbeat, so a workspace that stops answering
+ * stops claiming capabilities at the same moment.
+ */
+function nibwp_visual_set_kind(int $user_id, string $kind): void
+{
+    $kind = $kind === 'runner' ? 'runner' : 'browser';
+    set_transient(NIBWP_VISUAL_KIND_PREFIX . $user_id, $kind, NIBWP_VISUAL_HEARTBEAT_TTL);
+}
+
+function nibwp_visual_kind(int $user_id): string
+{
+    if (!nibwp_visual_is_open($user_id)) {
+        return '';
+    }
+
+    $kind = get_transient(NIBWP_VISUAL_KIND_PREFIX . $user_id);
+
+    // A workspace that never said is a browser tab: the runner always does, and
+    // guessing the more capable of the two is how you promise a screenshot that
+    // never arrives.
+    return is_string($kind) && $kind === 'runner' ? 'runner' : 'browser';
+}
+
 /**
  * Whether a workspace tab is currently open for this user.
  *
@@ -619,7 +652,10 @@ function nibwp_visual_needs_approval(string $command, array $payload = []): bool
     }
 
     // Reading blocks is reading. Inserting, changing or deleting one is not.
-    $safe = ['open', 'focus', 'close', 'reload', 'read', 'capture', 'viewport', 'audit', 'console', 'tabs', 'blocks', 'block-schema'];
+    // hover and screenshot observe and leave nothing behind, so they belong
+    // here — and them being here is what lets an unattended run do visual QA
+    // while click and fill still stop for a person.
+    $safe = ['open', 'focus', 'close', 'reload', 'read', 'hover', 'screenshot', 'capture', 'viewport', 'audit', 'console', 'tabs', 'blocks', 'block-schema'];
 
     // A batch is only as safe as the steps inside it. Judging it as one opaque
     // action would make batching a way around the prompt — ask if any step

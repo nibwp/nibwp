@@ -53,19 +53,21 @@ function nibwp_status_icon(string $name, int $size = 16): string
     }
 
     return sprintf(
-        '<svg class="nw-status-ico" width="%1$d" height="%1$d" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+        '<svg class="nw-status-ico%3$s" width="%1$d" height="%1$d" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
         . ' stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">%2$s</svg>',
         $size,
-        $paths[$name]
+        $paths[$name],
+        // The knock-on arrow points from cause to effect, the way the line reads.
+        $name === 'arrow' ? ' nw-rtl-flip' : ''
     );
 }
 
 /**
  * A copy-to-clipboard button.
  *
- * Confirmation is carried by the icon and the label, not by recolouring the
+ * Confirmation is carried by the icon and the label, not by recoloring the
  * text: this markup is used on both the ghost and the accent button, and a
- * green success colour on the accent's orange ground is close to unreadable.
+ * green success color on the accent's orange ground is close to unreadable.
  */
 function nibwp_status_copy_button(string $target, string $label, bool $primary = false): void
 {

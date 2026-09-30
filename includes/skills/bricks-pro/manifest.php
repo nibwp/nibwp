@@ -30,7 +30,7 @@ return [
     'tagline'        => 'Convert HTML, URLs, images, screenshots, or Figma frames into validated Bricks templates with ACSS tokens, global classes, query loops, and dynamic data',
     'description'    => 'Paste raw HTML, drop a screenshot, share a URL, or attach a Figma frame — the agent rebuilds it as a clean Bricks template or section. Loop detection turns repeated cards into a Bricks Query Loop + CPT + ACF fields. Native Bricks elements (form, video, nav-menu) replace raw <form> / <iframe> / nav HTML. Hard validator rejects unknown element names, inline styles, hardcoded colors / font-sizes outside var() fallback, missing global classes, and static text where dynamic data is available.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.2',
+    'version'        => '1.0.3',
     'category'       => 'page-builders',
     'premium'        => true,
     'price'          => 49,
@@ -66,12 +66,23 @@ return [
     'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
 
     // ─── v2 routing contract ──────────────────────────────────────────────
+    // What this skill OWNS, in the words a model can reason about. The
+    // regexes below are a fast path; this sentence is the boundary.
+    'use_when' => 'The user wants anything built, rebuilt, styled or restyled in Bricks on this site - a section, page, template, header or footer - from a description, an image, a URL, HTML or a Figma frame. Owns it however it is phrased. Do NOT write _bricks_page_* meta yourself; for a change to ONE existing element use nibwp/bricks-update-element instead of rebuilding.',
+
     'triggers' => [
         '/(?i)\b(?:convert|brickify|rebuild|port|turn|make)\b[^.\n]{0,40}\b(?:bricks|brickbuilder)\b/',
         '/(?i)\b(?:bricks|brickbuilder)\b[^.\n]{0,40}\b(?:template|section|component|page|element|header|footer|archive)\b/',
         '/(?i)\b(?:html|url|page|file|image|screenshot|figma|sketch)\b[^.\n]{0,40}\b(?:to|into|as)\b[^.\n]{0,20}\b(?:bricks)\b/',
         '/(?i)\b(?:brickify|bricks this|html to bricks)\b/',
         '/(?i)\b(?:create|build|generate)\b[^.\n]{0,20}\bbricks[^.\n]{0,30}\b(?:template|section|page|component|element|header|footer)\b/',
+        // Order-agnostic build intent. The patterns above all require the
+        // builder's name BEFORE the thing being built, so the most natural way
+        // anyone phrases it — "create a hero section with X" — matched nothing,
+        // the skill never loaded, and the agent improvised a tree with no
+        // classes and no styles. That is what a customer reported.
+        '/(?i)\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b[^.\n]{0,80}\b(?:bricks)\b/',
+        '/(?i)\b(?:bricks)\b[^.\n]{0,80}\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b/',
     ],
     'commands' => [
         '/brickify' => [
@@ -94,7 +105,7 @@ return [
             [
                 'ability'       => 'nibwp/design-direction',
                 'args_template' => ['purpose' => '{what the user asked for, in their words}'],
-                'why'           => 'Decide how this site should look before building: colour roles with contrast already checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if the Design Skills skill is switched off.',
+                'why'           => 'Decide how this site should look before building: color roles with contrast already checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if the Design Skills skill is switched off.',
             ],
             [
                 'ability'        => 'nibwp/skill-preflight',
@@ -156,17 +167,22 @@ return [
         [
             'key'        => 'push_mode',
             'prompt'     => 'How should it be persisted?',
-            'choices'    => ['new_template', 'replace_template', 'append_to_existing'],
+            'choices'    => ['new_template', 'replace_template'],
             'type'       => 'enum',
             'required'   => true,
             'cache_key'  => 'bricks_push_mode',
+            // Per build, not per site: a remembered mode or target was offered
+            // to the next task as a settled answer and could overwrite the
+            // previous task's template.
+            'cache'      => false,
         ],
         [
             'key'           => 'target_template_id',
-            'prompt'        => 'Existing template ID to update (only when push_mode is replace_template or append_to_existing)',
+            'prompt'        => 'Existing template ID to update (only when push_mode is replace_template)',
             'type'          => 'integer',
             'conditional_on'=> ['push_mode' => 'replace_template'],
             'cache_key'     => 'bricks_target_template_id',
+            'cache'         => false,
         ],
         [
             'key'           => 'new_template_title',

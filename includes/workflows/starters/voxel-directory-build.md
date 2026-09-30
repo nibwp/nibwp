@@ -8,7 +8,7 @@ Using **NibWP + the Voxel integration** and the **Voxel Pro** skill, take a list
 - A Voxel site where the templates were never built and everything renders as a bare WordPress page.
 
 ## The one law
-> **Every key you name must be read from this site.** Post types, fields, filters and taxonomies are stored per install. Voxel renders a key it does not recognise as an empty string — no error, no warning, just a blank line on every listing.
+> **Every key you name must be read from this site.** Post types, fields, filters and taxonomies are stored per install. Voxel renders a key it does not recognize as an empty string — no error, no warning, just a blank line on every listing.
 
 Read them with `nibwp/voxel-info` and `nibwp/voxel-pro-catalog { post_type }`. A template built against remembered field names validates and renders empty.
 
@@ -22,7 +22,7 @@ Read them with `nibwp/voxel-info` and `nibwp/voxel-pro-catalog { post_type }`. A
 
 ## Process
 1. **Read the site.** `nibwp/voxel-info` — post type keys, which modules are on, index health. Then `nibwp/voxel-post-types { action:"fields", post_type }` for what already exists.
-2. **Design direction.** `nibwp/design-direction { purpose }` — colour roles, type, spacing, and the generic defaults to refuse, before any visual decision.
+2. **Design direction.** `nibwp/design-direction { purpose }` — color roles, type, spacing, and the generic defaults to refuse, before any visual decision.
 3. **Fields and filters.** If the post type needs them: `nibwp/voxel-schema { action:"preview" }`, show the user the diff, then `{ action:"patch", confirm:true }`, then `{ action:"reindex" }` until `complete` is true. Skip entirely if the model is already right.
 4. **Preflight.** `nibwp/skill-preflight { skill_id:"voxel-pro" }` — brand, kind, post type, title. Mints the token every build needs.
 5. **Vocabulary.** `nibwp/load-skill-playbook { skill_id:"voxel-pro", element_type:"card" }` and `nibwp/voxel-pro-catalog { topic:"widgets", post_type }` — real widget names, real filter keys, real field keys.

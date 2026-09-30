@@ -37,6 +37,65 @@ const NIBWP_OAUTH_REFRESH_TTL = 180 * DAY_IN_SECONDS;
 // ---------------------------------------------------------------------------
 
 /**
+ * rest_url() that also works before WordPress has built $wp_rewrite.
+ *
+ * `determine_current_user` is not a late hook. It fires the first time anything
+ * asks who is logged in, and plugins ask during `plugins_loaded` — Elementor
+ * Pro calls is_user_logged_in() inside its own constructor. That is 41 lines of
+ * wp-settings.php BEFORE `$GLOBALS['wp_rewrite']` is created.
+ *
+ * core's get_rest_url() dereferences that global unguarded whenever a site has
+ * pretty permalinks:
+ *
+ *     if ( get_option( 'permalink_structure' ) ) {
+ *         global $wp_rewrite;
+ *         if ( $wp_rewrite->using_index_permalinks() ) {   // <- null at plugins_loaded
+ *
+ * so our audience check fataled the whole request with "Call to a member
+ * function using_index_permalinks() on null", and every authenticated MCP call
+ * came back as a 500. A customer read that as NibWP and Elementor Pro being
+ * incompatible and worked around it by deactivating one of them. It needed all
+ * three of: Elementor Pro (or any plugin that resolves the user that early),
+ * pretty permalinks, and a bearer token on the request — which is exactly a
+ * real tool call after sign-in, and never the connection test before it.
+ *
+ * Bailing out early instead is not an option: _wp_get_current_user() caches
+ * whatever the filter chain returns, so declining to resolve here would cache
+ * "logged out" for the rest of the request and leave the call unauthenticated.
+ * The URL has to be answerable at any point in the load, so this reproduces
+ * core's own construction without the global, and hands off to core once it
+ * exists.
+ */
+function nibwp_oauth_rest_url(string $path): string
+{
+    $structure     = (string) get_option('permalink_structure');
+    $rewrite_ready = isset($GLOBALS['wp_rewrite']) && $GLOBALS['wp_rewrite'] instanceof WP_Rewrite;
+
+    // core only reaches for $wp_rewrite on a site with pretty permalinks, so
+    // every other case is already safe and stays with core. Reproducing the URL
+    // ourselves is a last resort, not a replacement: the string is compared
+    // against the `resource` recorded on a token, and two constructions that
+    // drift apart would reject a perfectly good one.
+    if ($structure === '' || $rewrite_ready) {
+        return rest_url($path);
+    }
+
+    $path  = '/' . ltrim($path, '/');
+    // using_index_permalinks() is just this test against the same option.
+    $index = str_contains($structure, 'index.php') ? 'index.php/' : '';
+    $url   = home_url('/' . $index . rest_get_url_prefix() . $path, 'rest');
+
+    if (is_ssl() && isset($_SERVER['SERVER_NAME'])
+        && wp_parse_url(home_url(), PHP_URL_HOST) === $_SERVER['SERVER_NAME']
+    ) {
+        $url = set_url_scheme($url, 'https');
+    }
+
+    /** Part of the URL's identity — a site that moves its REST root does it here, and skipping it would return a different string than rest_url() does. */
+    return apply_filters('rest_url', $url, $path, null, 'rest');
+}
+
+/**
  * The canonical resource identifier for this site's MCP endpoint.
  *
  * Tokens are bound to this value (RFC 8707). A token minted for one site must
@@ -45,16 +104,110 @@ const NIBWP_OAUTH_REFRESH_TTL = 180 * DAY_IN_SECONDS;
  */
 function nibwp_oauth_resource_id(): string
 {
-    return untrailingslashit(rest_url('mcp/nibwp'));
+    return untrailingslashit(nibwp_oauth_rest_url('mcp/nibwp'));
 }
 
 /** Every endpoint this token is valid for — the primary route and its legacy alias. */
 function nibwp_oauth_valid_audiences(): array
 {
     return [
-        untrailingslashit(rest_url('mcp/nibwp')),
-        untrailingslashit(rest_url('mcp/mcp-adapter-default-server')),
+        untrailingslashit(nibwp_oauth_rest_url('mcp/nibwp')),
+        untrailingslashit(nibwp_oauth_rest_url('mcp/mcp-adapter-default-server')),
     ];
+}
+
+/**
+ * Reduce a URL to what actually identifies the endpoint it points at.
+ *
+ * Scheme and `www.` are dropped, the host is lowercased, a default port is
+ * removed, and every address WordPress can serve the same REST route on is
+ * folded to one path — the pretty form, the index.php form, and both
+ * ?rest_route= forms are the same endpoint reached four ways.
+ *
+ * @return array{host:string,route:string}|null Null when the URL is unusable.
+ */
+function nibwp_oauth_url_identity(string $url): ?array
+{
+    $parts = wp_parse_url(trim($url));
+    if (!is_array($parts) || empty($parts['host'])) {
+        return null;
+    }
+
+    $host = strtolower(trim((string) $parts['host'], '[]'));
+    // www is not a different site. Treating it as one is how a customer who
+    // pasted the address with the prefix their browser shows got refused.
+    $host = preg_replace('/^www\./', '', $host) ?? $host;
+
+    // A WordPress in a subfolder is a different site from one in a sibling
+    // folder on the same host, so the install root belongs to the identity of
+    // the site rather than to the route.
+    $home = wp_parse_url(home_url());
+    $base = rtrim((string) ($home['path'] ?? ''), '/');
+    $path = '/' . ltrim((string) ($parts['path'] ?? ''), '/');
+
+    // Is this URL actually inside our install? Claiming our folder for a URL
+    // that is not under it would fold a WordPress at the root of the same host
+    // onto ours — a different site, running a different MCP server.
+    $under = $base === '' || $path === $base || str_starts_with($path, $base . '/');
+    $root  = $under ? $base : '';
+
+    // ?rest_route=/mcp/nibwp names the route in the query instead of the path,
+    // and names it bare — there is nothing to strip off it.
+    parse_str((string) ($parts['query'] ?? ''), $query);
+    if (isset($query['rest_route']) && is_string($query['rest_route'])) {
+        $route = $query['rest_route'];
+    } else {
+        $route = $path;
+
+        // Order matters: the install root comes off first, or the prefixes
+        // below never match on a subfolder install.
+        if ($root !== '') {
+            $route = substr($route, strlen($root));
+        }
+
+        // What is left is addressing, not identity.
+        $prefix = trim((string) rest_get_url_prefix(), '/');
+        $route  = (string) preg_replace('#^/index\.php#', '', $route);
+        $route  = (string) preg_replace('#^/' . preg_quote($prefix, '#') . '(?=/|$)#', '', $route);
+    }
+
+    return [
+        'host'  => $host . $root,
+        'route' => '/' . trim($route, '/'),
+    ];
+}
+
+/**
+ * Is this `resource` one of our own MCP endpoints?
+ *
+ * RFC 8707 binds a token to the resource it was issued for, and that binding is
+ * what stops a hostile server the user also connected to from replaying their
+ * token here. It has to keep doing that — but it was implemented as byte
+ * equality against one string, and a client sends whatever address its user
+ * typed. `www.`, `https` where WordPress records `http` (a proxy terminating
+ * TLS upstream), and the ?rest_route= form of the very same route were all
+ * refused with `invalid_target`, which reaches the customer as nothing more
+ * than "couldn't connect".
+ *
+ * Matching on identity rather than spelling accepts every address that reaches
+ * THIS site's MCP endpoint and still rejects every address that does not: the
+ * host must be ours, so another origin never matches however it is written.
+ */
+function nibwp_oauth_audience_matches(string $resource): bool
+{
+    $asked = nibwp_oauth_url_identity($resource);
+    if ($asked === null) {
+        return false;
+    }
+
+    foreach (nibwp_oauth_valid_audiences() as $audience) {
+        $ours = nibwp_oauth_url_identity($audience);
+        if ($ours !== null && $ours['host'] === $asked['host'] && $ours['route'] === $asked['route']) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /** Issuer identifier. Must match the URL its metadata document is fetched from. */
@@ -65,7 +218,7 @@ function nibwp_oauth_issuer(): string
 
 function nibwp_oauth_metadata_url(): string
 {
-    return rest_url('nibwp/v1/oauth/protected-resource');
+    return nibwp_oauth_rest_url('nibwp/v1/oauth/protected-resource');
 }
 
 /**
@@ -82,6 +235,17 @@ function nibwp_oauth_metadata_url(): string
  */
 function nibwp_oauth_authorize_url(): string
 {
+    // Set only by the sign-in probe, on proof that the pretty path answers
+    // 404/403 while the admin-post handler works — a WAF or server rule
+    // blocking /nibwp-oauth/* outright. The metadata document is fetched at
+    // every sign-in, so switching what this returns heals every client on
+    // its next attempt without anyone touching anything. Cleared by the same
+    // probe the moment the pretty path answers again, because the query-string
+    // form has its own cost (see the docblock above).
+    if (get_option('nibwp_oauth_authorize_fallback')) {
+        return admin_url('admin-post.php?action=nibwp_oauth_authorize');
+    }
+
     if (get_option('permalink_structure')) {
         return home_url('/nibwp-oauth/authorize');
     }
@@ -702,7 +866,7 @@ function nibwp_oauth_determine_current_user($user_id)
     // usable here even if it is otherwise valid — this is what stops a hostile
     // server the user also connected to from replaying their token against us.
     $bound = (string) ($valid['record']['resource'] ?? '');
-    if ($bound !== '' && !in_array($bound, nibwp_oauth_valid_audiences(), true)) {
+    if ($bound !== '' && !nibwp_oauth_audience_matches($bound)) {
         return $user_id;
     }
 

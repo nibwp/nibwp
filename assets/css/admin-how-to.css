@@ -538,12 +538,15 @@
             content: '' !important;
             position: absolute !important;
             top: 50% !important;
+            /* A tick keeps its shape in right-to-left languages. */
+            /*rtl:begin:ignore*/
             left: 50% !important;
             width: 5px !important;
             height: 9px !important;
             border: solid #fff !important;
             border-width: 0 2px 2px 0 !important;
             transform: translate(-50%, -60%) rotate(45deg) !important;
+            /*rtl:end:ignore*/
             background: transparent !important;
             border-radius: 0 !important;
             box-shadow: none !important;
@@ -706,12 +709,15 @@
             content: '' !important;
             position: absolute !important;
             top: 50% !important;
+            /* A tick keeps its shape in right-to-left languages. */
+            /*rtl:begin:ignore*/
             left: 50% !important;
             width: 4px !important;
             height: 8px !important;
             border: solid #fff !important;
             border-width: 0 2px 2px 0 !important;
             transform: translate(-50%, -60%) rotate(45deg) !important;
+            /*rtl:end:ignore*/
             background: transparent !important;
             border-radius: 0 !important;
             opacity: 0;

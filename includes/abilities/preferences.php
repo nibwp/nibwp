@@ -32,7 +32,7 @@ function nibwp_preferences_register_abilities(): void
     if (! nibwp_has_ability('nibwp/preferences-get')) {
         wp_register_ability('nibwp/preferences-get', [
             'label'       => __('Preferences — Get', 'nibwp'),
-            'description' => __('Get the user\'s stored defaults: brand color, fonts, preferred form plugin, content tone, target builder, etc. Read these BEFORE any create_* call so generated assets match the user\'s established style without re-prompting.', 'nibwp'),
+            'description' => 'Get the user\'s stored defaults: brand color, fonts, preferred form plugin, content tone, target builder, etc. Read these BEFORE any create_* call so generated assets match the user\'s established style without re-prompting.',
             'category'    => 'nibwp',
             'input_schema' => [
                 'type' => 'object',
@@ -70,7 +70,7 @@ function nibwp_preferences_register_abilities(): void
     if (! nibwp_has_ability('nibwp/preferences-set')) {
         wp_register_ability('nibwp/preferences-set', [
             'label'       => __('Preferences — Set', 'nibwp'),
-            'description' => __('Store user defaults: brand color, fonts, preferred form plugin, default field types, content tone. Persists across sessions. Merges into existing preferences — pass only the keys you want to change.', 'nibwp'),
+            'description' => 'Store user defaults: brand color, fonts, preferred form plugin, default field types, content tone. Persists across sessions. Merges into existing preferences — pass only the keys you want to change.',
             'category'    => 'nibwp',
             'input_schema' => [
                 'type' => 'object',

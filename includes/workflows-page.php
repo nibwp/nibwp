@@ -100,7 +100,11 @@ add_action('admin_init', static function (): void {
         $post = nibwp_workflow_find((int) ($_POST['workflow_id'] ?? 0));
         if ($post) {
             $new = nibwp_workflow_save([
-                'title'   => $post->post_title . ' (copy)',
+                'title'   => sprintf(
+                    /* translators: %s: name of the workflow being duplicated */
+                    __('%s (copy)', 'nibwp'),
+                    $post->post_title
+                ),
                 'summary' => $post->post_excerpt,
                 'when'    => (string) get_post_meta($post->ID, '_nibwp_wf_when', true),
                 'tools'   => (array) get_post_meta($post->ID, '_nibwp_wf_tools', true),
@@ -136,14 +140,23 @@ function nibwp_render_workflows_page(): void
                     <?php if ($locked): ?>
                         <?php esc_html_e('Reusable operating playbooks — your rules, process, and standards, applied to every build. Unlock Pro to activate, edit, and let your AI create its own.', 'nibwp'); ?>
                     <?php else: ?>
-                        <?php esc_html_e('Your AI auto-follows the workflow that matches each task —', 'nibwp'); ?>
-                        <span id="nw-wf-stat-active"><?php echo (int) $wf_active; ?></span> <?php printf(esc_html__('of %d pinned as always-on.', 'nibwp'), (int) $wf_total); ?>
+                        <?php
+                        echo wp_kses(
+                            sprintf(
+                                /* translators: 1: number of pinned workflows, 2: total number of workflows */
+                                esc_html(_n('Your AI auto-follows the workflow that matches each task — %1$s of %2$s pinned as always-on.', 'Your AI auto-follows the workflow that matches each task — %1$s of %2$s pinned as always-on.', $wf_total, 'nibwp')),
+                                '<span id="nw-wf-stat-active">' . (int) $wf_active . '</span>',
+                                esc_html(number_format_i18n($wf_total))
+                            ),
+                            ['span' => ['id' => []]]
+                        );
+                        ?>
                     <?php endif; ?>
                 </p>
             </div>
             <div class="nw-page-search-wrap">
                 <?php if ($locked): ?>
-                    <a class="button button-primary" href="<?php echo esc_url(function_exists('nibwp_item_url') ? nibwp_item_url('pro') : 'https://nibwp.com/item/pro'); ?>" target="_blank" rel="noopener"><?php esc_html_e('Unlock with Pro', 'nibwp'); ?> &rarr;</a>
+                    <a class="button button-primary" href="<?php echo esc_url(function_exists('nibwp_item_url') ? nibwp_item_url('pro') : 'https://nibwp.com/item/pro'); ?>" target="_blank" rel="noopener"><?php esc_html_e('Unlock with Pro', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">&rarr;</span></a>
                 <?php else: ?>
                     <div class="nw-tier-filter" role="group" aria-label="<?php esc_attr_e('Filter by state', 'nibwp'); ?>">
                         <button type="button" class="nw-tier-pill is-active" data-filter="all"><?php esc_html_e('All', 'nibwp'); ?></button>
@@ -165,7 +178,7 @@ function nibwp_render_workflows_page(): void
                     <form method="post" style="display:inline">
                         <?php wp_nonce_field('nibwp_workflow'); ?>
                         <input type="hidden" name="nibwp_wf_action" value="restore_defaults">
-                        <button type="submit" class="button" title="<?php esc_attr_e('Re-add any NIBWP.COM default workflows you have deleted', 'nibwp'); ?>"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><?php esc_html_e('Restore defaults', 'nibwp'); ?></button>
+                        <button type="submit" class="button" title="<?php esc_attr_e('Re-add any NIBWP.COM default workflows you have deleted', 'nibwp'); ?>"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-inline-end:4px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><?php esc_html_e('Restore defaults', 'nibwp'); ?></button>
                     </form>
                     <button type="button" class="button button-primary" id="nw-wf-new"><?php esc_html_e('Add workflow', 'nibwp'); ?></button>
                 <?php endif; ?>
@@ -227,14 +240,14 @@ function nibwp_render_workflows_page(): void
                     <strong><?php esc_html_e('Make your AI follow your standards — every time.', 'nibwp'); ?></strong>
                     <p><?php esc_html_e('Workflows are saved operating playbooks — your rules, process, and standards. Consistent builds, and you never repeat yourself. Preview the fine-tuned starters below.', 'nibwp'); ?></p>
                     <ul class="nw-wf-banner__modes">
-                        <li><strong><?php esc_html_e('Auto-route', 'nibwp'); ?></strong> — <?php esc_html_e('the AI loads the matching playbook by its “when to use”.', 'nibwp'); ?></li>
-                        <li><strong><?php esc_html_e('Pin', 'nibwp'); ?></strong> — <?php esc_html_e('make a house-rule playbook always-on for every task.', 'nibwp'); ?></li>
-                        <li><strong><?php esc_html_e('Copy prompt', 'nibwp'); ?></strong> — <?php esc_html_e('run any workflow on demand.', 'nibwp'); ?></li>
+                        <li><?php echo wp_kses(__('<strong>Auto-route</strong> — the AI loads the matching playbook by its “when to use”.', 'nibwp'), ['strong' => []]); ?></li>
+                        <li><?php echo wp_kses(__('<strong>Pin</strong> — make a house-rule playbook always-on for every task.', 'nibwp'), ['strong' => []]); ?></li>
+                        <li><?php echo wp_kses(__('<strong>Copy prompt</strong> — run any workflow on demand.', 'nibwp'), ['strong' => []]); ?></li>
                     </ul>
                 </div>
                 <div class="nw-wf-banner__cta">
                     <a class="button button-primary button-hero" href="<?php echo esc_url(function_exists('nibwp_item_url') ? nibwp_item_url('pro') : 'https://nibwp.com/item/pro'); ?>" target="_blank" rel="noopener"><?php esc_html_e('Get Pro — €49/yr', 'nibwp'); ?></a>
-                    <a class="button" href="<?php echo esc_url(function_exists('nibwp_item_url') ? nibwp_item_url('bundle') : 'https://nibwp.com/item/bundle'); ?>" target="_blank" rel="noopener"><?php esc_html_e('Get the Bundle', 'nibwp'); ?> &rarr;</a>
+                    <a class="button" href="<?php echo esc_url(function_exists('nibwp_item_url') ? nibwp_item_url('bundle') : 'https://nibwp.com/item/bundle'); ?>" target="_blank" rel="noopener"><?php esc_html_e('Get the Bundle', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">&rarr;</span></a>
                     <span class="nw-wf-banner__note"><?php esc_html_e('Unlocks editing, pinning, sharing & AI-authored workflows.', 'nibwp'); ?></span>
                 </div>
             </div>
@@ -245,8 +258,18 @@ function nibwp_render_workflows_page(): void
             <div class="nw-wf-grid" id="nw-wf-grid">
                 <?php foreach ($workflows as $post):
                     $wf = nibwp_workflow_to_array($post, false);
-                    $wf_hay = strtolower(trim($wf['title'] . ' ' . $wf['summary'] . ' ' . $wf['when'] . ' ' . implode(' ', array_map(static fn ($t) => $t['key'], $wf['tools'])) . ' ' . $wf['source'] . ' ' . $wf['category']));
-                    $wf_cmd = sprintf('Use my "%s" NIBWP workflow (slug: %s) — load it with nibwp/get-workflow and follow it strictly.', $wf['title'], $wf['slug']);
+                    // The shipped starters are stored in English; show them in the
+                    // viewer's language. A workflow someone wrote comes back unchanged.
+                    $wf_title   = nibwp_i18n_data((string) $wf['title']);
+                    $wf_summary = nibwp_i18n_data((string) $wf['summary']);
+                    $wf_when    = nibwp_i18n_data((string) $wf['when']);
+                    $wf_hay = strtolower(trim($wf_title . ' ' . $wf_summary . ' ' . $wf_when . ' ' . implode(' ', array_map(static fn ($t) => $t['key'], $wf['tools'])) . ' ' . $wf['source'] . ' ' . $wf['category']));
+                    $wf_cmd = sprintf(
+                        /* translators: 1: workflow name, 2: workflow slug. Keep nibwp/get-workflow as it is: it is the ability the AI calls. */
+                        __('Use my "%1$s" NIBWP workflow (slug: %2$s) — load it with nibwp/get-workflow and follow it strictly.', 'nibwp'),
+                        $wf['title'],
+                        $wf['slug']
+                    );
                     $wf_vis = $wf['visibility'] ?? ['private'];
                     $wf_shared = !in_array('private', $wf_vis, true);
                     if (in_array('community', $wf_vis, true)) {
@@ -258,7 +281,11 @@ function nibwp_render_workflows_page(): void
                     }
                     $wf_vmap    = ['private' => __('Private', 'nibwp'), 'license' => __('License Circle', 'nibwp'), 'community' => __('Community', 'nibwp')];
                     $wf_vlabels = array_map(static fn ($k) => $wf_vmap[$k] ?? $k, $wf_vis);
-                    $wf_vtip    = sprintf(__('Visibility: %s', 'nibwp'), implode(' + ', $wf_vlabels));
+                    $wf_vtip    = sprintf(
+                        /* translators: %s: visibility scopes, e.g. "License Circle + Community" */
+                        __('Visibility: %s', 'nibwp'),
+                        implode(' + ', $wf_vlabels)
+                    );
 
                     // Say whether it actually reached the other sites. A tick in
                     // the box is an intention; this is what came of it.
@@ -270,41 +297,67 @@ function nibwp_render_workflows_page(): void
                             'queued'          => __('Sharing — not sent yet', 'nibwp'),
                             'pending_review'  => __('Shared — community copy awaiting review', 'nibwp'),
                             'hub_unavailable' => __('Not shared yet — the hub cannot accept it', 'nibwp'),
-                            'needs_license'   => __('Not shared — needs an active licence', 'nibwp'),
+                            'needs_license'   => __('Not shared — needs an active license', 'nibwp'),
                             'not_owned'       => __('Not shared — this workflow came from elsewhere', 'nibwp'),
                             'error'           => __('Not shared — the last attempt failed', 'nibwp'),
                             'withdrawn'       => __('No longer shared', 'nibwp'),
                         ][$wf_share['state']] ?? '';
                         if ($wf_state_label !== '') {
-                            $wf_vtip .= ' — ' . $wf_state_label
-                                . ($wf_share['message'] !== '' ? ' (' . $wf_share['message'] . ')' : '');
+                            if ($wf_share['message'] !== '') {
+                                $wf_state_label = sprintf(
+                                    /* translators: 1: sharing state, e.g. "Not shared — the last attempt failed", 2: detail message */
+                                    __('%1$s (%2$s)', 'nibwp'),
+                                    $wf_state_label,
+                                    $wf_share['message']
+                                );
+                            }
+                            $wf_vtip = sprintf(
+                                /* translators: 1: "Visibility: …" text, 2: sharing state */
+                                __('%1$s — %2$s', 'nibwp'),
+                                $wf_vtip,
+                                $wf_state_label
+                            );
                         }
                     }
                 ?>
                     <div class="nw-wf-card <?php echo $wf['active'] ? 'is-active' : ''; ?>" data-id="<?php echo (int) $wf['id']; ?>" data-cat="<?php echo esc_attr($wf['category']); ?>" data-vis="<?php echo esc_attr(implode(' ', $wf_vis)); ?>" data-cmd="<?php echo esc_attr($wf_cmd); ?>" data-search="<?php echo esc_attr($wf_hay); ?>">
                         <div class="nw-wf-card__head">
-                            <strong class="nw-wf-card__title"><?php echo esc_html($wf['title']); ?></strong>
-                            <?php if ($wf['source'] === 'ai'): ?><span class="nw-wf-tag is-ai">AI</span><?php endif; ?>
+                            <strong class="nw-wf-card__title"><?php echo esc_html($wf_title); ?></strong>
+                            <?php if ($wf['source'] === 'ai'): ?><span class="nw-wf-tag is-ai"><?php echo esc_html_x('AI', 'badge: workflow written by the AI', 'nibwp'); ?></span><?php endif; ?>
                             <span class="nw-wf-scope nw-btip <?php echo ($wf_shared && in_array($wf_share['state'], ['shared', 'pending_review'], true)) ? 'is-shared' : ''; ?>" data-tip="<?php echo esc_attr($wf_vtip); ?>" aria-label="<?php echo esc_attr(implode(', ', $wf_vlabels)); ?>"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><?php echo $wf_vicon; ?></svg></span>
                         </div>
                         <?php if (($wf['creator'] ?? '') !== '' || ($wf['vote_key'] ?? '') !== ''): ?>
                         <div class="nw-wf-card__meta">
-                            <?php if (($wf['creator'] ?? '') !== ''): ?><span class="nw-wf-card__by"><?php esc_html_e('by', 'nibwp'); ?> <span><?php echo esc_html($wf['creator']); ?></span></span><?php endif; ?>
+                            <?php if (($wf['creator'] ?? '') !== ''): ?><span class="nw-wf-card__by"><?php
+                                echo wp_kses(
+                                    sprintf(
+                                        /* translators: %s: name of the workflow's creator */
+                                        esc_html__('by %s', 'nibwp'),
+                                        '<span>' . esc_html($wf['creator']) . '</span>'
+                                    ),
+                                    ['span' => []]
+                                );
+                            ?></span><?php endif; ?>
                             <?php if (($wf['vote_key'] ?? '') !== ''): ?>
                             <button type="button" class="nw-wf-upvote" data-vote-key="<?php echo esc_attr($wf['vote_key']); ?>" data-mine="0" aria-label="<?php esc_attr_e('Upvote', 'nibwp'); ?>"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88z"/></svg><span class="nw-wf-upvote__n">·</span></button>
                             <?php endif; ?>
                         </div>
                         <?php endif; ?>
-                        <?php if ($wf['summary'] !== ''): ?><p class="nw-wf-card__sum"><?php echo esc_html($wf['summary']); ?></p><?php endif; ?>
-                        <?php if ($wf['when'] !== ''): ?><p class="nw-wf-card__when"><span><?php esc_html_e('When', 'nibwp'); ?></span> <?php echo esc_html($wf['when']); ?></p><?php endif; ?>
+                        <?php if ($wf['summary'] !== ''): ?><p class="nw-wf-card__sum"><?php echo esc_html($wf_summary); ?></p><?php endif; ?>
+                        <?php if ($wf['when'] !== ''): ?><p class="nw-wf-card__when"><span><?php esc_html_e('When', 'nibwp'); ?></span> <?php echo esc_html($wf_when); ?></p><?php endif; ?>
 
                         <?php if ($wf['tools'] !== []): ?>
                             <div class="nw-wf-card__tools">
                                 <?php foreach ($wf['tools'] as $t):
                                     $cls = $t['status']; // active | available | missing
                                     $sym = $cls === 'active' ? '✓' : ($cls === 'available' ? '•' : '✗');
+                                    $cls_label = [
+                                        'active'    => _x('Active', 'tool detection status', 'nibwp'),
+                                        'available' => _x('Available', 'tool detection status', 'nibwp'),
+                                        'missing'   => _x('Missing', 'tool detection status', 'nibwp'),
+                                    ][$cls] ?? $cls;
                                 ?>
-                                    <span class="nw-wf-chip is-<?php echo esc_attr($cls); ?>" title="<?php echo esc_attr($cls); ?>"><?php echo esc_html($sym . ' ' . $t['key']); ?></span>
+                                    <span class="nw-wf-chip is-<?php echo esc_attr($cls); ?>" title="<?php echo esc_attr($cls_label); ?>"><?php echo esc_html($sym . ' ' . $t['key']); ?></span>
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
@@ -320,7 +373,7 @@ function nibwp_render_workflows_page(): void
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
                                 <button type="button" class="nw-wf-iconbtn nw-wf-dup nw-btip" data-id="<?php echo (int) $wf['id']; ?>" data-tip="<?php esc_attr_e('Duplicate this workflow', 'nibwp'); ?>" aria-label="<?php esc_attr_e('Duplicate', 'nibwp'); ?>"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
-                                <button type="button" class="nw-wf-iconbtn nw-wf-iconbtn--danger nw-btip nw-wf-del" data-id="<?php echo (int) $wf['id']; ?>" data-name="<?php echo esc_attr($wf['title']); ?>" data-tip="<?php esc_attr_e('Delete this workflow', 'nibwp'); ?>" aria-label="<?php esc_attr_e('Delete', 'nibwp'); ?>"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6"/></svg></button>
+                                <button type="button" class="nw-wf-iconbtn nw-wf-iconbtn--danger nw-btip nw-wf-del" data-id="<?php echo (int) $wf['id']; ?>" data-name="<?php echo esc_attr($wf_title); ?>" data-tip="<?php esc_attr_e('Delete this workflow', 'nibwp'); ?>" aria-label="<?php esc_attr_e('Delete', 'nibwp'); ?>"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6"/></svg></button>
                             </span>
                         </div>
                     </div>
@@ -336,7 +389,7 @@ function nibwp_render_workflows_page(): void
             <section id="nw-wf-discover" class="nw-wf-discover" hidden>
                 <div class="nw-wf-discover__head">
                     <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg> <?php esc_html_e('Discover from the community', 'nibwp'); ?></h3>
-                    <p><?php esc_html_e('Curated and community-shared workflows from NIBWP.COM. Import a copy to use and customise.', 'nibwp'); ?></p>
+                    <p><?php esc_html_e('Curated and community-shared workflows from NIBWP.COM. Import a copy to use and customize.', 'nibwp'); ?></p>
                 </div>
                 <div class="nw-wf-discover__grid" id="nw-wf-discover-grid"></div>
             </section>
@@ -420,7 +473,7 @@ function nibwp_render_workflows_page(): void
                         <script>window.nwWfToolMeta = <?php echo wp_json_encode($wf_tool_meta); ?>;</script>
                     </div>
                     <div id="nw-wf-vis-field">
-                        <label><?php esc_html_e('Visibility', 'nibwp'); ?><span class="nw-fieldtip nw-fieldtip--html">?<span class="nw-fieldtip__pop"><span class="nw-vis-legend"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span><strong><?php esc_html_e('Private', 'nibwp'); ?></strong> — <?php esc_html_e('this site only', 'nibwp'); ?></span></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg><span><strong><?php esc_html_e('License Circle', 'nibwp'); ?></strong> — <?php esc_html_e('every site on your license', 'nibwp'); ?></span></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span><strong><?php esc_html_e('Community', 'nibwp'); ?></strong> — <?php esc_html_e('public pool, reviewed first', 'nibwp'); ?></span></span></span><span class="nw-fieldtip__note"><?php esc_html_e('Private is exclusive.', 'nibwp'); ?></span></span></span></label>
+                        <label><?php esc_html_e('Visibility', 'nibwp'); ?><span class="nw-fieldtip nw-fieldtip--html">?<span class="nw-fieldtip__pop"><span class="nw-vis-legend"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span><?php echo wp_kses(__('<strong>Private</strong> — this site only', 'nibwp'), ['strong' => []]); ?></span></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg><span><?php echo wp_kses(__('<strong>License Circle</strong> — every site on your license', 'nibwp'), ['strong' => []]); ?></span></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span><?php echo wp_kses(__('<strong>Community</strong> — public pool, reviewed first', 'nibwp'), ['strong' => []]); ?></span></span></span><span class="nw-fieldtip__note"><?php esc_html_e('Private is exclusive.', 'nibwp'); ?></span></span></span></label>
                         <div class="nw-wf-vis" id="m_wf_visibility">
                             <label class="nw-wf-vis__opt"><input type="checkbox" name="wf_visibility[]" value="private" checked> <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <?php esc_html_e('Private', 'nibwp'); ?></span></label>
                             <label class="nw-wf-vis__opt"><input type="checkbox" name="wf_visibility[]" value="license"> <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg> <?php esc_html_e('License Circle', 'nibwp'); ?></span></label>
@@ -428,7 +481,7 @@ function nibwp_render_workflows_page(): void
                         </div>
                         <p class="description"><?php esc_html_e('Sharing is coming soon — your choice is saved now and syncs once the distribution backend is live.', 'nibwp'); ?></p>
                     </div>
-                    <p class="description nw-wf-vis-locked" id="nw-wf-vis-locked" hidden><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><?php esc_html_e('This workflow belongs to its creator — duplicate it to make your own private copy you can edit and re-share.', 'nibwp'); ?></p>
+                    <p class="description nw-wf-vis-locked" id="nw-wf-vis-locked" hidden><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-inline-end:4px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><?php esc_html_e('This workflow belongs to its creator — duplicate it to make your own private copy you can edit and re-share.', 'nibwp'); ?></p>
                     <div>
                         <label for="m_wf_body"><?php esc_html_e('Playbook (markdown)', 'nibwp'); ?><span class="nw-fieldtip" data-tip="<?php esc_attr_e('The instructions your AI follows strictly — principles, process, rules, reporting, patterns. Markdown.', 'nibwp'); ?>">?</span></label>
                         <input type="file" id="nw-wf-file" accept=".md,.markdown,text/markdown,text/plain" hidden>
@@ -449,6 +502,30 @@ function nibwp_render_workflows_page(): void
     (function(){
         var REST  = '<?php echo esc_js(rest_url('nibwp/v1/workflows/')); ?>';
         var NONCE = '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>';
+        var i18n = <?php echo wp_json_encode([
+            /* translators: %s: name of the workflow, already wrapped in <code> */
+            'delete_named'    => __('This will permanently delete %s. This cannot be undone.', 'nibwp'),
+            'delete_no_name'  => __('This will permanently delete this workflow. This cannot be undone.', 'nibwp'),
+            'pinned'          => __('Pinned', 'nibwp'),
+            'pin'             => __('Pin', 'nibwp'),
+            'import_workflow' => __('Import', 'nibwp'),
+            'imported'        => __('Imported', 'nibwp'),
+            'your_license'    => __('Your license', 'nibwp'),
+            'community'       => __('Community', 'nibwp'),
+            'featured_by'     => __('Featured by NIBWP.COM', 'nibwp'),
+            'featured'        => __('Featured', 'nibwp'),
+            /* translators: %s: name of the workflow's creator */
+            'by'              => __('by %s', 'nibwp'),
+            'copied'          => __('Copied!', 'nibwp'),
+            'remove'          => __('Remove', 'nibwp'),
+            /* translators: %s: the text typed into the tools field */
+            'no_match'        => __('No match — press Enter to add “%s”', 'nibwp'),
+            'new_workflow'    => __('New workflow', 'nibwp'),
+            'workflow'        => __('Workflow', 'nibwp'),
+            'file_too_large'  => __('File too large (max 512 KB).', 'nibwp'),
+        ]); ?>;
+        /* Fill the %s in a translated string. A function replacement, so a "$" in the value stays literal. */
+        function fill1(str, val){ return String(str).replace('%s', function(){ return val; }); }
 
         /* Delete (AJAX) — styled confirm, smooth card removal, no page reload.
            Fully delegated + the #nw-confirm modal is looked up at click time: it's
@@ -465,7 +542,7 @@ function nibwp_render_workflows_page(): void
                     var ok  = document.getElementById('nw-confirm-ok');
                     var name = (del.getAttribute('data-name') || '').replace(/</g, '&lt;');
                     pending = { id: parseInt(del.getAttribute('data-id'), 10), card: del.closest('.nw-wf-card'), btn: del };
-                    if (msg) msg.innerHTML = '<?php echo esc_js(__('This will permanently delete', 'nibwp')); ?> ' + (name ? '<code>' + name + '</code>' : '<?php echo esc_js(__('this workflow', 'nibwp')); ?>') + '. <?php echo esc_js(__('This cannot be undone.', 'nibwp')); ?>';
+                    if (msg) msg.innerHTML = name ? fill1(i18n.delete_named, '<code>' + name + '</code>') : i18n.delete_no_name;
                     if (ok) ok.href = '#';
                     cm.classList.add('is-open');
                     return;
@@ -515,7 +592,7 @@ function nibwp_render_workflows_page(): void
                 var card = btn.closest('.nw-wf-card');
                 if (card) card.classList.toggle('is-active', !!d.active);
                 var lbl = btn.querySelector('.nw-wf-pin-label');
-                if (lbl) lbl.textContent = d.active ? '<?php echo esc_js(__('Pinned', 'nibwp')); ?>' : '<?php echo esc_js(__('Pin', 'nibwp')); ?>';
+                if (lbl) lbl.textContent = d.active ? i18n.pinned : i18n.pin;
                 var stat = document.getElementById('nw-wf-stat-active');
                 if (stat) stat.textContent = document.querySelectorAll('.nw-wf-card.is-active').length;
                 if (typeof applyFilter === 'function') applyFilter();
@@ -660,7 +737,7 @@ function nibwp_render_workflows_page(): void
             var sec = document.getElementById('nw-wf-discover'), grid = document.getElementById('nw-wf-discover-grid');
             if (!sec || !grid) { return; }
             function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
-            var IMPORT = '<?php echo esc_js(__('Import', 'nibwp')); ?>', IMPORTED = '<?php echo esc_js(__('Imported', 'nibwp')); ?>';
+            var IMPORT = i18n.import_workflow, IMPORTED = i18n.imported;
             fetch(REST + 'discover', { credentials:'same-origin', headers:{'X-WP-Nonce':NONCE} })
                 .then(function(r){ return r.json(); })
                 .then(function(d){
@@ -669,16 +746,16 @@ function nibwp_render_workflows_page(): void
                         var tools = (a.tools || []).map(function(t){ return '<span class="nw-wf-chip">' + esc(t) + '</span>'; }).join('');
                         var ups = a.ups ? '<span class="nw-wf-disc__ups">▲ ' + (a.ups | 0) + '</span>' : '';
                         var badge = a.channel === 'license'
-                            ? '<span class="nw-wf-disc__src is-license"><?php echo esc_js(__('Your licence', 'nibwp')); ?></span>'
-                            : (a.channel === 'community' ? '<span class="nw-wf-disc__src is-community">Community</span>' : '<span class="nw-wf-disc__src">NIBWP.COM</span>');
-                        var star = a.featured ? '<span class="nw-wf-disc__star" title="<?php echo esc_js(__('Featured by NIBWP.COM', 'nibwp')); ?>">★ <?php echo esc_js(__('Featured', 'nibwp')); ?></span>' : '';
+                            ? '<span class="nw-wf-disc__src is-license">' + esc(i18n.your_license) + '</span>'
+                            : (a.channel === 'community' ? '<span class="nw-wf-disc__src is-community">' + esc(i18n.community) + '</span>' : '<span class="nw-wf-disc__src">NIBWP.COM</span>');
+                        var star = a.featured ? '<span class="nw-wf-disc__star" title="' + esc(i18n.featured_by) + '">★ ' + esc(i18n.featured) + '</span>' : '';
                         return '<div class="nw-wf-disc-card' + (a.featured ? ' is-featured' : '') + '" data-slug="' + esc(a.slug) + '">' +
                             '<div class="nw-wf-disc-card__top">' + badge + star + ups + '</div>' +
                             '<strong>' + esc(a.title) + '</strong>' +
                             '<p>' + esc(a.summary) + '</p>' +
                             (tools ? '<div class="nw-wf-card__tools">' + tools + '</div>' : '') +
-                            '<div class="nw-wf-disc-card__foot"><span class="nw-wf-card__by">' + esc('by ' + (a.author || 'Community')) + '</span>' +
-                            '<button type="button" class="button button-primary nw-wf-disc-import">' + IMPORT + '</button></div>' +
+                            '<div class="nw-wf-disc-card__foot"><span class="nw-wf-card__by">' + esc(fill1(i18n.by, a.author || i18n.community)) + '</span>' +
+                            '<button type="button" class="button button-primary nw-wf-disc-import">' + esc(IMPORT) + '</button></div>' +
                             '</div>';
                     }).join('');
                     sec.hidden = false;
@@ -702,7 +779,7 @@ function nibwp_render_workflows_page(): void
             var card = cp.closest('.nw-wf-card');
             var cmd = card ? (card.getAttribute('data-cmd') || '') : '';
             if (!cmd) return;
-            var done = function(){ cp.classList.add('is-copied'); var lbl = cp.querySelector('.nw-wf-copy-label'); var orig = lbl ? lbl.textContent : ''; if (lbl) { lbl.textContent = '<?php echo esc_js(__('Copied!', 'nibwp')); ?>'; } setTimeout(function(){ cp.classList.remove('is-copied'); if (lbl) { lbl.textContent = orig; } }, 1200); };
+            var done = function(){ cp.classList.add('is-copied'); var lbl = cp.querySelector('.nw-wf-copy-label'); var orig = lbl ? lbl.textContent : ''; if (lbl) { lbl.textContent = i18n.copied; } setTimeout(function(){ cp.classList.remove('is-copied'); if (lbl) { lbl.textContent = orig; } }, 1200); };
             if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(cmd).then(done, done); }
             else { var ta = document.createElement('textarea'); ta.value = cmd; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (_) {} document.body.removeChild(ta); done(); }
         });
@@ -741,7 +818,7 @@ function nibwp_render_workflows_page(): void
                     chip.className = 'nw-wf-tag is-' + (m.status || 'missing');
                     chip.innerHTML = toolIcon(m.type);
                     var lbl = document.createElement('span'); lbl.className = 'lbl'; lbl.textContent = t; chip.appendChild(lbl);
-                    var x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', 'remove'); x.textContent = '×';
+                    var x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', i18n.remove); x.textContent = '×';
                     x.addEventListener('click', function(ev){ ev.stopPropagation(); tags = tags.filter(function(z){ return z !== t; }); renderTags(); });
                     chip.appendChild(x);
                     tagWrap.insertBefore(chip, tagInput);
@@ -770,7 +847,7 @@ function nibwp_render_workflows_page(): void
                     rows += '<button type="button" class="nw-wf-sug is-' + (m.status || 'missing') + '" data-key="' + esc(k) + '">' + toolIcon(m.type) + '<span class="nw-wf-sug__label">' + esc(m.label || k) + '</span><span class="nw-wf-sug__key">' + esc(k) + '</span></button>';
                 });
                 if (q && shown === 0) {
-                    rows = '<div class="nw-wf-sug__none">' + '<?php echo esc_js(__('No match — press Enter to add', 'nibwp')); ?> “' + esc(q) + '”</div>';
+                    rows = '<div class="nw-wf-sug__none">' + fill1(esc(i18n.no_match), esc(q)) + '</div>';
                 }
                 tagSug.innerHTML = rows;
                 tagSug.hidden = (rows === '');
@@ -818,7 +895,7 @@ function nibwp_render_workflows_page(): void
                 if (catNew) { catNew.hidden = true; catNew.value = ''; }
             }
             var newBtn = document.getElementById('nw-wf-new');
-            if (newBtn) newBtn.addEventListener('click', function(){ fill({}); dupCreated = false; titleEl.textContent = '<?php echo esc_js(__('New workflow', 'nibwp')); ?>'; open(); });
+            if (newBtn) newBtn.addEventListener('click', function(){ fill({}); dupCreated = false; titleEl.textContent = i18n.new_workflow; open(); });
 
             /* Duplicate (AJAX) → instantly clone, then open the copy in the editor. */
             document.addEventListener('click', function(e){
@@ -828,7 +905,7 @@ function nibwp_render_workflows_page(): void
                 dup.classList.add('is-loading');
                 fetch(REST + 'duplicate', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','X-WP-Nonce':NONCE}, body: JSON.stringify({ id: parseInt(dup.getAttribute('data-id'), 10) }) })
                     .then(function(r){ return r.json(); })
-                    .then(function(d){ dup.classList.remove('is-loading'); if (d && d.ok) { fill(d.workflow); dupCreated = true; titleEl.textContent = d.workflow.title || '<?php echo esc_js(__('Workflow', 'nibwp')); ?>'; open(); } })
+                    .then(function(d){ dup.classList.remove('is-loading'); if (d && d.ok) { fill(d.workflow); dupCreated = true; titleEl.textContent = d.workflow.title || i18n.workflow; open(); } })
                     .catch(function(){ dup.classList.remove('is-loading'); });
             });
 
@@ -868,7 +945,7 @@ function nibwp_render_workflows_page(): void
             if (fileInput) fileInput.addEventListener('change', function(){
                 var f = fileInput.files && fileInput.files[0];
                 if (!f) return;
-                if (f.size > 512 * 1024) { alert('<?php echo esc_js(__('File too large (max 512 KB).', 'nibwp')); ?>'); fileInput.value = ''; return; }
+                if (f.size > 512 * 1024) { alert(i18n.file_too_large); fileInput.value = ''; return; }
                 var reader = new FileReader();
                 reader.onload = function(){
                     var text = String(reader.result || '');
@@ -891,7 +968,7 @@ function nibwp_render_workflows_page(): void
                     ed.classList.add('is-loading');
                     fetch(REST + 'get?id=' + encodeURIComponent(ed.getAttribute('data-id')), { credentials:'same-origin', headers:{'X-WP-Nonce':NONCE} })
                         .then(function(r){ return r.json(); })
-                        .then(function(d){ ed.classList.remove('is-loading'); if (d && d.ok) { fill(d.workflow); titleEl.textContent = d.workflow.title || '<?php echo esc_js(__('Workflow', 'nibwp')); ?>'; open(); } else { window.location = ed.href; } })
+                        .then(function(d){ ed.classList.remove('is-loading'); if (d && d.ok) { fill(d.workflow); titleEl.textContent = d.workflow.title || i18n.workflow; open(); } else { window.location = ed.href; } })
                         .catch(function(){ ed.classList.remove('is-loading'); window.location = ed.href; });
                     return;
                 }
@@ -918,7 +995,7 @@ function nibwp_render_workflow_editor(int $id): void
     $wf = $post ? nibwp_workflow_to_array($post, true) : ['id' => 0, 'title' => '', 'summary' => '', 'when' => '', 'tools' => [], 'body' => ''];
     $tools_csv = is_array($wf['tools']) ? implode(', ', array_map(static fn ($t) => is_array($t) ? $t['key'] : $t, $wf['tools'])) : '';
     ?>
-    <p><a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-workflows')); ?>">&larr; <?php esc_html_e('All workflows', 'nibwp'); ?></a></p>
+    <p><a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-workflows')); ?>"><span class="nw-rtl-flip" aria-hidden="true">&larr;</span> <?php esc_html_e('All workflows', 'nibwp'); ?></a></p>
     <form method="post" class="nw-wf-editor">
         <?php wp_nonce_field('nibwp_workflow'); ?>
         <input type="hidden" name="nibwp_wf_action" value="save">
@@ -964,15 +1041,18 @@ function nibwp_render_workflow_locked_grid(): void
     ?>
     <div class="nw-wf-grid">
         <?php foreach (nibwp_workflows_starters() as $meta):
-            $hay = strtolower(trim($meta['title'] . ' ' . $meta['summary'] . ' ' . $meta['when'] . ' ' . implode(' ', $meta['tools'])));
+            $title   = nibwp_i18n_data($meta['title']);
+            $summary = nibwp_i18n_data($meta['summary']);
+            $when    = nibwp_i18n_data($meta['when']);
+            $hay = strtolower(trim($title . ' ' . $summary . ' ' . $when . ' ' . implode(' ', $meta['tools'])));
         ?>
             <div class="nw-wf-card is-locked" data-search="<?php echo esc_attr($hay); ?>">
                 <div class="nw-wf-card__head">
-                    <strong class="nw-wf-card__title"><?php echo esc_html($meta['title']); ?></strong>
+                    <strong class="nw-wf-card__title"><?php echo esc_html($title); ?></strong>
                     <span class="nw-wf-tag is-pro">PRO</span>
                 </div>
-                <?php if ($meta['summary'] !== ''): ?><p class="nw-wf-card__sum"><?php echo esc_html($meta['summary']); ?></p><?php endif; ?>
-                <?php if ($meta['when'] !== ''): ?><p class="nw-wf-card__when"><span><?php esc_html_e('When', 'nibwp'); ?></span> <?php echo esc_html($meta['when']); ?></p><?php endif; ?>
+                <?php if ($summary !== ''): ?><p class="nw-wf-card__sum"><?php echo esc_html($summary); ?></p><?php endif; ?>
+                <?php if ($when !== ''): ?><p class="nw-wf-card__when"><span><?php esc_html_e('When', 'nibwp'); ?></span> <?php echo esc_html($when); ?></p><?php endif; ?>
                 <?php if (!empty($meta['tools'])): ?>
                     <div class="nw-wf-card__tools">
                         <?php foreach ($meta['tools'] as $key):
@@ -1007,7 +1087,7 @@ function nibwp_render_workflows_upsell(): void
         <p style="max-width:560px;margin:0 auto 18px;color:var(--nw-text-muted);">
             <?php esc_html_e('Save reusable operating playbooks — rules, process, and standards your AI follows strictly. Ships with fine-tuned starters (Bricks+ACF, Etch+ACSS, SEO, audits, safe-changes, contact forms). Your AI can create and update them too.', 'nibwp'); ?>
         </p>
-        <a class="button button-primary button-hero" href="https://nibwp.com/pricing" target="_blank" rel="noopener"><?php esc_html_e('Unlock with Pro', 'nibwp'); ?> &rarr;</a>
+        <a class="button button-primary button-hero" href="https://nibwp.com/pricing" target="_blank" rel="noopener"><?php esc_html_e('Unlock with Pro', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">&rarr;</span></a>
     </div>
     <?php
 }
@@ -1054,7 +1134,11 @@ add_action('rest_api_init', static function (): void {
                 return new \WP_REST_Response(['ok' => false, 'message' => 'Not found'], 404);
             }
             $new = nibwp_workflow_save([
-                'title'    => $post->post_title . ' (copy)',
+                'title'    => sprintf(
+                    /* translators: %s: name of the workflow being duplicated */
+                    __('%s (copy)', 'nibwp'),
+                    $post->post_title
+                ),
                 'summary'  => $post->post_excerpt,
                 'when'     => (string) get_post_meta($post->ID, '_nibwp_wf_when', true),
                 'tools'    => (array) get_post_meta($post->ID, '_nibwp_wf_tools', true),
@@ -1159,7 +1243,7 @@ add_action('rest_api_init', static function (): void {
                 }
                 set_transient('nibwp_wf_discover', $cached, 10 * MINUTE_IN_SECONDS);
             }
-            // Workflows the other sites on this licence have shared. Listed
+            // Workflows the other sites on this license have shared. Listed
             // first: they are the ones this user's own team wrote.
             $circle = function_exists('nibwp_workflow_circle_assets') ? nibwp_workflow_circle_assets() : [];
             foreach ($circle as $i => $a) {
@@ -1189,7 +1273,7 @@ add_action('rest_api_init', static function (): void {
             if ($slug === '') {
                 return new \WP_REST_Response(['ok' => false], 400);
             }
-            // A workflow shared with this licence is private to it, so the
+            // A workflow shared with this license is private to it, so the
             // circle has to travel with both the search and the body fetch —
             // without it the hub answers 404, which is the point.
             $circles = function_exists('nibwp_workflow_circle_hashes') ? nibwp_workflow_circle_hashes() : [];
@@ -1230,7 +1314,7 @@ add_action('rest_api_init', static function (): void {
                 'category' => $match['category'] ?? 'custom',
                 'icon'     => $match['icon'] ?? '',
                 'body'     => $body,
-                'creator'  => $match['author'] ?? 'Community',
+                'creator'  => $match['author'] ?? __('Community', 'nibwp'),
                 'source'   => ($match['channel'] ?? '') === 'community' ? 'community' : 'license',
             ]);
             if (is_wp_error($id)) {

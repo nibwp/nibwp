@@ -5,8 +5,9 @@ declare(strict_types=1);
 /**
  * Plugin Name: NIBWP
  * Plugin URI: https://www.nibwp.com
- * Description: Turns your WordPress site into a Model Context Protocol (MCP) server so AI agents like Claude Code and ChatGPT can read posts, terms, users, media, options, search, and a key-value memory store through a standard, permissioned interface.
- * Version: 1.2.1
+ * Update URI: https://www.nibwp.com
+ * Description: Turns your WordPress site into a Model Context Protocol (MCP) server so AI agents like Claude Code and ChatGPT can read posts, terms, users, media, options, search, and a key-value memory store through a standard, permissioned interface. Documentation and guides at <a href="https://www.nibwp.com">nibwp.com</a>.
+ * Version: 1.2.12
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Author: NIBWP
@@ -33,7 +34,7 @@ if (!defined('ABSPATH')) {
     exit();
 }
 
-define(constant_name: 'NIBWP_VERSION', value: '1.2.1');
+define(constant_name: 'NIBWP_VERSION', value: '1.2.12');
 define(constant_name: 'NIBWP_MAX_EXECUTION_TIME', value: 30);
 define('NIBWP_PLUGIN_FILE', __FILE__);
 define('NIBWP_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -225,7 +226,10 @@ if (!function_exists('nibwp_render_pricing_grid')) {
                     </header>
                     <div class="nw-plan__price">
                         <span class="nw-plan__amt">&euro;<span data-price="pro">49</span></span>
-                        <span class="nw-plan__per"><span class="nw-plan__per-period" data-period-label-yr><?php esc_html_e('per year', 'nibwp'); ?></span><span class="nw-plan__per-period" data-period-label-ltd hidden><?php esc_html_e('one-time payment', 'nibwp'); ?></span><br><span class="nw-plan__per-sites"><span data-sites-label>1</span> <?php esc_html_e('site', 'nibwp'); ?></span></span>
+                        <span class="nw-plan__per"><span class="nw-plan__per-period" data-period-label-yr><?php esc_html_e('per year', 'nibwp'); ?></span><span class="nw-plan__per-period" data-period-label-ltd hidden><?php esc_html_e('one-time payment', 'nibwp'); ?></span><br><span class="nw-plan__per-sites"><span data-sites-label><?php
+                            /* translators: %d: number of sites a license covers */
+                            echo esc_html(sprintf(_n('%d site', '%d sites', 1, 'nibwp'), 1));
+                        ?></span></span></span>
                     </div>
                     <p class="nw-plan__per-site" data-plan-per-site="pro">
                         <strong>&euro;<span data-per-site="pro">4.08</span></strong>
@@ -254,7 +258,10 @@ if (!function_exists('nibwp_render_pricing_grid')) {
                     </header>
                     <div class="nw-plan__price">
                         <span class="nw-plan__amt">&euro;<span data-price="bundle">79</span></span>
-                        <span class="nw-plan__per"><span class="nw-plan__per-period" data-period-label-yr><?php esc_html_e('per year', 'nibwp'); ?></span><span class="nw-plan__per-period" data-period-label-ltd hidden><?php esc_html_e('one-time payment', 'nibwp'); ?></span><br><span class="nw-plan__per-sites"><span data-sites-label>1</span> <?php esc_html_e('site', 'nibwp'); ?></span></span>
+                        <span class="nw-plan__per"><span class="nw-plan__per-period" data-period-label-yr><?php esc_html_e('per year', 'nibwp'); ?></span><span class="nw-plan__per-period" data-period-label-ltd hidden><?php esc_html_e('one-time payment', 'nibwp'); ?></span><br><span class="nw-plan__per-sites"><span data-sites-label><?php
+                            /* translators: %d: number of sites a license covers */
+                            echo esc_html(sprintf(_n('%d site', '%d sites', 1, 'nibwp'), 1));
+                        ?></span></span></span>
                     </div>
                     <p class="nw-plan__per-site is-featured" data-plan-per-site="bundle">
                         <strong>&euro;<span data-per-site="bundle">6.58</span></strong>
@@ -302,11 +309,23 @@ if (!function_exists('nibwp_render_pricing_grid')) {
                 try { prices = JSON.parse(box.dataset.prices || '{}'); } catch(e){}
                 var period = 'yr';
                 var sites  = 1;
+                var nwPricingI18n = <?php echo wp_json_encode([
+                    /* translators: %d: discount percentage against the single-site price; %% is a literal percent sign */
+                    'save' => __('Save %d%%', 'nibwp'),
+                    /* translators: %d: number of sites a license covers */
+                    'sites' => nibwp_i18n_js_plural(_n_noop('%d site', '%d sites', 'nibwp')),
+                ]); ?>;
+                function plural(p, n) { return p.forms[p.index[n < 200 ? n : 100 + n % 100]].replace('%d', n); }
+                // Numbers follow the admin's language, not a fixed English format.
+                var locale = document.documentElement.lang || undefined;
+                function localeString(n, opts) {
+                    try { return n.toLocaleString(locale, opts); } catch (e) { return n.toLocaleString('en-US', opts); }
+                }
 
                 function fmt(n){
                     // Up to 2 decimals when needed, else integer. Thin grouping.
                     var rounded = Math.round(n * 100) / 100;
-                    return rounded.toLocaleString('en-US', {
+                    return localeString(rounded, {
                         minimumFractionDigits: rounded % 1 === 0 ? 0 : 2,
                         maximumFractionDigits: 2
                     });
@@ -316,7 +335,7 @@ if (!function_exists('nibwp_render_pricing_grid')) {
                         var plan = el.dataset.price;
                         var p = (prices[plan] || {})[period] || {};
                         var v = p[sites];
-                        if (typeof v === 'number') el.textContent = v.toLocaleString('en-US');
+                        if (typeof v === 'number') el.textContent = localeString(v);
                     });
 
                     // Per-site rate.
@@ -336,7 +355,7 @@ if (!function_exists('nibwp_render_pricing_grid')) {
                         var badge = box.querySelector('[data-save="' + plan + '"]');
                         if (badge) {
                             if (save > 0 && sites > 1) {
-                                badge.textContent = 'Save ' + save + '%';
+                                badge.textContent = nwPricingI18n.save.replace('%d', save).replace('%%', '%');
                                 badge.hidden = false;
                             } else {
                                 badge.hidden = true;
@@ -345,7 +364,7 @@ if (!function_exists('nibwp_render_pricing_grid')) {
                         }
                     });
 
-                    box.querySelectorAll('[data-sites-label]').forEach(function(el){ el.textContent = sites; });
+                    box.querySelectorAll('[data-sites-label]').forEach(function(el){ el.textContent = plural(nwPricingI18n.sites, sites); });
                     box.querySelectorAll('[data-period-label-yr]').forEach(function(el){ el.hidden = (period !== 'yr'); });
                     box.querySelectorAll('[data-period-label-ltd]').forEach(function(el){ el.hidden = (period !== 'ltd'); });
                     box.querySelectorAll('[data-per-site-label-yr]').forEach(function(el){ el.hidden = (period !== 'yr'); });
@@ -392,7 +411,7 @@ function nibwp_load_bundled_dependencies()
     if (!file_exists(NIBWP_VENDOR_AUTOLOAD)) {
         return new WP_Error('nibwp_missing_vendor', __(
             'NIBWP is installed without its bundled vendor directory. This usually means the GitHub/source ZIP was installed instead of the NIBWP release build ZIP. The MCP Adapter cannot load, so NIBWP will not register an MCP endpoint. Install the NIBWP release build ZIP before using NIBWP.',
-            domain: 'nibwp',
+            'nibwp',
         ));
     }
 
@@ -400,9 +419,10 @@ function nibwp_load_bundled_dependencies()
         require_once NIBWP_VENDOR_AUTOLOAD;
     } catch (\Throwable $e) {
         return new WP_Error('nibwp_autoload_failed', sprintf(
+            /* translators: %s: error message from the Composer autoloader */
             __(
                 'NIBWP could not load its bundled Composer dependencies. The MCP Adapter cannot load, so NIBWP will not register an MCP endpoint. Reinstall the NIBWP release build ZIP. Error: %s',
-                domain: 'nibwp',
+                'nibwp',
             ),
             $e->getMessage(),
         ));
@@ -410,9 +430,10 @@ function nibwp_load_bundled_dependencies()
 
     if (!class_exists(NIBWP_MCP_ADAPTER_CLASS)) {
         return new WP_Error('nibwp_mcp_adapter_missing', sprintf(
+            /* translators: %s: PHP class name of the MCP Adapter */
             __(
                 'NIBWP loaded its Composer autoloader, but the MCP Adapter class (%s) is not available. NIBWP will not register an MCP endpoint. Reinstall the NIBWP release build ZIP.',
-                domain: 'nibwp',
+                'nibwp',
             ),
             NIBWP_MCP_ADAPTER_CLASS,
         ));
@@ -481,7 +502,7 @@ function nibwp_activation_check(): void
 
     wp_die(
         '<p>' . esc_html($error->get_error_message()) . '</p>',
-        esc_html__('NIBWP installation is incomplete', domain: 'nibwp'),
+        esc_html__('NIBWP installation is incomplete', 'nibwp'),
         ['back_link' => true],
     );
 }
@@ -557,9 +578,10 @@ function nibwp_initialize_mcp_adapter(): bool
     } catch (\Throwable $e) {
         nibwp_set_mcp_dependency_error(
             new WP_Error('nibwp_mcp_adapter_init_failed', sprintf(
+                /* translators: %s: error message from the MCP Adapter */
                 __(
                     'NIBWP found the MCP Adapter, but it failed during initialization. NIBWP will not register an MCP endpoint. Error: %s',
-                    domain: 'nibwp',
+                    'nibwp',
                 ),
                 $e->getMessage(),
             )),
@@ -580,12 +602,21 @@ add_action('rest_api_init', callback: 'nibwp_register_missing_mcp_endpoint', pri
 
 require_once __DIR__ . '/includes/admin-styles.php';
 require_once __DIR__ . '/includes/helpers.php';
+require_once __DIR__ . '/includes/i18n.php';
+require_once __DIR__ . '/includes/acss-settings.php';
+require_once __DIR__ . '/includes/design-system.php';
 require_once __DIR__ . '/includes/render-check.php';
 require_once __DIR__ . '/includes/oauth/oauth-scopes.php';
 require_once __DIR__ . '/includes/oauth/oauth.php';
 require_once __DIR__ . '/includes/oauth/oauth-server.php';
 require_once __DIR__ . '/includes/oauth/oauth-consent.php';
 require_once __DIR__ . '/includes/oauth/oauth-connect-tab.php';
+require_once __DIR__ . '/includes/oauth/oauth-htaccess.php';
+
+// The .htaccess fix is admin-consented on the way in; on the way out it must
+// not need consent at all — deactivating the plugin removes its marker block
+// so a switched-off NibWP leaves no fingerprints in server configuration.
+register_deactivation_hook(__FILE__, 'nibwp_oauth_remove_htaccess_rules');
 require_once __DIR__ . '/includes/addon-conflicts.php';
 require_once __DIR__ . '/includes/cli-info.php';
 require_once __DIR__ . '/includes/user-access.php';
@@ -616,13 +647,16 @@ unset($nibwp_optional_paid_file);
 require_once __DIR__ . '/includes/updater.php';
 require_once __DIR__ . '/includes/admin-page.php';
 require_once __DIR__ . '/includes/connect-page.php';
+require_once __DIR__ . '/includes/connect-flow.php';
 require_once __DIR__ . '/includes/danger-zone.php';
 require_once __DIR__ . '/includes/upload-link.php';
 require_once __DIR__ . '/includes/integrations-page.php';
 require_once __DIR__ . '/includes/memory-page.php';
 require_once __DIR__ . '/includes/how-to-page.php';
 require_once __DIR__ . '/includes/audit-log.php';
+require_once __DIR__ . '/includes/agent-guardrails.php';
 require_once __DIR__ . '/includes/settings-page.php';
+require_once __DIR__ . '/includes/affiliate-page.php';
 require_once __DIR__ . '/includes/status-checks.php';
 require_once __DIR__ . '/includes/status-page.php';
 require_once __DIR__ . '/includes/user-access-page.php';
@@ -655,7 +689,7 @@ if (!class_exists('WP_Ability')) {
         }
 
         wp_admin_notice(
-            esc_html__('NIBWP requires the Abilities API plugin to be installed and activated.', domain: 'nibwp'),
+            esc_html__('NIBWP requires the Abilities API plugin to be installed and activated.', 'nibwp'),
             [
                 'type' => 'error',
                 'dismissible' => false,
@@ -673,7 +707,7 @@ add_filter(
         if ($plugin_file === plugin_basename(__FILE__)) {
             $plugin_meta[] =
                 '<a href="https://www.facebook.com/groups/nibwp" target="_blank" rel="noopener noreferrer">'
-                . esc_html__('Community', domain: 'nibwp')
+                . esc_html__('Community', 'nibwp')
                 . '</a>';
         }
         return $plugin_meta;
@@ -697,7 +731,7 @@ add_filter('admin_body_class', static function (string $classes): string {
 /** Slugs of NIBWP's own admin pages (shared by the body-class + notice-hoist hooks). */
 function nibwp_admin_page_slugs(): array
 {
-    return ['nibwp-dashboard', 'nibwp-how-to', 'nibwp-connect', 'nibwp', 'nibwp-sandbox', 'nibwp-integrations', 'nibwp-workflows', 'nibwp-memory', 'nibwp-audit-log', 'nibwp-settings', 'nibwp-skills', 'nibwp-license', 'nibwp-status', 'nibwp-user-access'];
+    return ['nibwp-dashboard', 'nibwp-how-to', 'nibwp-connect', 'nibwp', 'nibwp-sandbox', 'nibwp-integrations', 'nibwp-workflows', 'nibwp-memory', 'nibwp-audit-log', 'nibwp-affiliate', 'nibwp-settings', 'nibwp-skills', 'nibwp-license', 'nibwp-status', 'nibwp-user-access'];
 }
 
 /**
@@ -805,7 +839,7 @@ add_action('admin_menu', static function () {
     // Top-level menu item — Dashboard is the main landing page.
     if ($nibwp_show_root) {
         add_menu_page(
-            page_title: __('Dashboard', domain: 'nibwp'),
+            page_title: __('Dashboard', 'nibwp'),
             menu_title: 'NIBWP',
             capability: 'manage_options',
             menu_slug: 'nibwp-dashboard',
@@ -817,8 +851,8 @@ add_action('admin_menu', static function () {
         // Dashboard (rename auto-created first submenu).
         add_submenu_page(
             parent_slug: 'nibwp-dashboard',
-            page_title: __('Dashboard', domain: 'nibwp'),
-            menu_title: __('Dashboard', domain: 'nibwp'),
+            page_title: __('Dashboard', 'nibwp'),
+            menu_title: __('Dashboard', 'nibwp'),
             capability: 'manage_options',
             menu_slug: 'nibwp-dashboard',
             callback: 'nibwp_render_dashboard_page',
@@ -828,8 +862,8 @@ add_action('admin_menu', static function () {
         // arriving on a shared link.
         add_submenu_page(
             parent_slug: '',
-            page_title: __('Dashboard', domain: 'nibwp'),
-            menu_title: __('Dashboard', domain: 'nibwp'),
+            page_title: __('Dashboard', 'nibwp'),
+            menu_title: __('Dashboard', 'nibwp'),
             capability: 'manage_options',
             menu_slug: 'nibwp-dashboard',
             callback: 'nibwp_render_dashboard_page',
@@ -839,8 +873,8 @@ add_action('admin_menu', static function () {
     // Connect / Configuration.
     add_submenu_page(
         parent_slug: $nibwp_parent('nibwp-connect'),
-        page_title: __('Connect', domain: 'nibwp'),
-        menu_title: __('Connect', domain: 'nibwp'),
+        page_title: __('Connect', 'nibwp'),
+        menu_title: __('Connect', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp-connect',
         callback: 'nibwp_render_connect_page',
@@ -849,8 +883,8 @@ add_action('admin_menu', static function () {
     // Integrations & Skills.
     add_submenu_page(
         parent_slug: $nibwp_parent('nibwp-integrations'),
-        page_title: __('Integrations', domain: 'nibwp'),
-        menu_title: __('Integrations', domain: 'nibwp'),
+        page_title: __('Integrations', 'nibwp'),
+        menu_title: __('Integrations', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp-integrations',
         callback: 'nibwp_render_integrations_page',
@@ -859,8 +893,8 @@ add_action('admin_menu', static function () {
     // AI Abilities.
     add_submenu_page(
         parent_slug: $nibwp_parent('nibwp'),
-        page_title: __('AI Abilities', domain: 'nibwp'),
-        menu_title: __('AI Abilities', domain: 'nibwp'),
+        page_title: __('AI Abilities', 'nibwp'),
+        menu_title: __('AI Abilities', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp',
         callback: 'nibwp_render_settings_page',
@@ -913,8 +947,8 @@ add_action('admin_menu', static function () {
     // Memory.
     add_submenu_page(
         parent_slug: $nibwp_parent('nibwp-memory'),
-        page_title: __('Memory', domain: 'nibwp'),
-        menu_title: __('Memory', domain: 'nibwp'),
+        page_title: __('Memory', 'nibwp'),
+        menu_title: __('Memory', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp-memory',
         callback: 'nibwp_render_memory_page',
@@ -923,8 +957,8 @@ add_action('admin_menu', static function () {
     // Audit Log.
     add_submenu_page(
         parent_slug: $nibwp_parent('nibwp-audit-log'),
-        page_title: __('Audit Log', domain: 'nibwp'),
-        menu_title: __('Audit Log', domain: 'nibwp'),
+        page_title: __('Audit Log', 'nibwp'),
+        menu_title: __('Audit Log', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp-audit-log',
         callback: 'nibwp_render_audit_log_page',
@@ -933,8 +967,8 @@ add_action('admin_menu', static function () {
     // Sandbox.
     add_submenu_page(
         parent_slug: $nibwp_parent('nibwp-sandbox'),
-        page_title: __('Sandbox', domain: 'nibwp'),
-        menu_title: __('Sandbox', domain: 'nibwp'),
+        page_title: __('Sandbox', 'nibwp'),
+        menu_title: __('Sandbox', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp-sandbox',
         callback: 'nibwp_render_sandbox_page',
@@ -943,8 +977,8 @@ add_action('admin_menu', static function () {
     // How To (interactive walkthrough) — hidden from WP submenu; reachable via topbar button.
     add_submenu_page(
         parent_slug: null,
-        page_title: __('How To', domain: 'nibwp'),
-        menu_title: __('How To', domain: 'nibwp'),
+        page_title: __('How To', 'nibwp'),
+        menu_title: __('How To', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp-how-to',
         callback: 'nibwp_render_how_to_page',
@@ -953,8 +987,8 @@ add_action('admin_menu', static function () {
     // Status & diagnostics.
     add_submenu_page(
         parent_slug: $nibwp_parent('nibwp-status'),
-        page_title: __('Status', domain: 'nibwp'),
-        menu_title: __('Status', domain: 'nibwp'),
+        page_title: __('Status', 'nibwp'),
+        menu_title: __('Status', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp-status',
         callback: 'nibwp_render_status_page',
@@ -981,12 +1015,27 @@ add_action('admin_menu', static function () {
     // Settings.
     add_submenu_page(
         parent_slug: $nibwp_parent('nibwp-settings'),
-        page_title: __('Settings', domain: 'nibwp'),
-        menu_title: __('Settings', domain: 'nibwp'),
+        page_title: __('Settings', 'nibwp'),
+        menu_title: __('Settings', 'nibwp'),
         capability: 'manage_options',
         menu_slug: 'nibwp-settings',
         callback: 'nibwp_render_settings_page_view',
     );
+
+    // Affiliate program — directly below Settings. The menu ITEM disappears
+    // once the user dismisses it, or if nibwp.com reports the program as
+    // paused; the page itself stays registered either way, so a dismissal is
+    // reversible instead of being a door that locks behind you.
+    if (function_exists('nibwp_render_affiliate_page')) {
+        add_submenu_page(
+            parent_slug: nibwp_affiliate_visible() ? $nibwp_parent('nibwp-affiliate') : '',
+            page_title: __('Affiliate Program', 'nibwp'),
+            menu_title: nibwp_affiliate_menu_label(),
+            capability: 'manage_options',
+            menu_slug: 'nibwp-affiliate',
+            callback: 'nibwp_render_affiliate_page',
+        );
+    }
 
     // License submenu — registered only when the license client is loaded.
     // In the Free wp.org build, the license client + UI are stripped, so this
@@ -1022,9 +1071,10 @@ if (!$is_enabled && nibwp_is_domain_mismatch()) {
         // for a switch. The button is the whole point: moving a site is the
         // ordinary cause, and confirming it was you is one click.
         $message = '<p>' . sprintf(
+            /* translators: 1: domain abilities were enabled on, 2: domain the site answers on now */
             esc_html__(
                 'NIBWP AI abilities are switched off because this site has moved. They were enabled on %1$s and it now answers on %2$s. Connected assistants can still sign in, but nothing they ask for will run until abilities are on for this address.',
-                domain: 'nibwp',
+                'nibwp',
             ),
             '<code>' . esc_html($locked !== '' ? $locked : __('another address', 'nibwp')) . '</code>',
             '<code>' . esc_html((string) wp_parse_url(home_url(), PHP_URL_HOST)) . '</code>',
@@ -1087,14 +1137,31 @@ function nibwp_register_legacy_mcp_server(mixed $adapter): void
         [\WP\MCP\Transport\HttpTransport::class],
         \WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class,
         \WP\MCP\Infrastructure\Observability\NullMcpObservabilityHandler::class,
-        [
+        // Filtered rather than listed outright. A server that names an ability
+        // nothing registered logs a "not found" notice per lookup and then
+        // advertises a tool that cannot be called — worse for a client than a
+        // shorter list. The registration above should mean all three are
+        // present; this is what stops a future timing change from becoming
+        // dead entries in a tool list.
+        nibwp_registered_only([
             'mcp-adapter/discover-abilities',
             'mcp-adapter/get-ability-info',
             'mcp-adapter/execute-ability',
-        ],
+        ]),
         nibwp_discover_public_abilities('resource'),
         nibwp_discover_public_abilities('prompt'),
     );
+}
+
+/**
+ * Keep only the abilities that are actually registered.
+ *
+ * @param list<string> $names
+ * @return list<string>
+ */
+function nibwp_registered_only(array $names): array
+{
+    return array_values(array_filter($names, 'nibwp_has_ability'));
 }
 
 /**
@@ -1224,7 +1291,7 @@ if ($is_enabled) {
 
             $wp_admin_bar->add_node([
                 'id' => 'nibwp-mcp-status',
-                'title' => esc_html__('NIBWP ON', domain: 'nibwp'),
+                'title' => esc_html__('NIBWP ON', 'nibwp'),
                 'href' => admin_url('admin.php?page=nibwp-dashboard'),
                 'meta' => ['class' => 'nibwp-mcp-on'],
             ]);
@@ -1266,7 +1333,7 @@ if ($is_enabled) {
             wp_admin_notice(
                 esc_html__(
                     'NIBWP bundles the MCP Adapter. You can safely deactivate the standalone MCP Adapter plugin.',
-                    domain: 'nibwp',
+                    'nibwp',
                 ),
                 [
                     'type' => 'info',
@@ -1279,115 +1346,115 @@ if ($is_enabled) {
     // Register ability categories.
     add_action('wp_abilities_api_categories_init', static function () {
         wp_register_ability_category('code-execution', [
-            'label' => __('Code Execution', domain: 'nibwp'),
-            'description' => __('Abilities that execute code on the WordPress server.', domain: 'nibwp'),
+            'label' => __('Code Execution', 'nibwp'),
+            'description' => __('Abilities that execute code on the WordPress server.', 'nibwp'),
         ]);
 
         wp_register_ability_category('filesystem', [
-            'label' => __('Filesystem', domain: 'nibwp'),
-            'description' => __('Server filesystem operations.', domain: 'nibwp'),
+            'label' => __('Filesystem', 'nibwp'),
+            'description' => __('Server filesystem operations.', 'nibwp'),
         ]);
 
         wp_register_ability_category('visual', [
-            'label' => __('Visual workspace', domain: 'nibwp'),
-            'description' => __('Driving and reading real pages in a browser tab the user is watching.', domain: 'nibwp'),
+            'label' => __('Visual workspace', 'nibwp'),
+            'description' => __('Driving and reading real pages in a browser tab the user is watching.', 'nibwp'),
         ]);
 
         wp_register_ability_category('design', [
-            'label' => __('Design', domain: 'nibwp'),
-            'description' => __('Deciding how this site should look, before anything is built.', domain: 'nibwp'),
+            'label' => __('Design', 'nibwp'),
+            'description' => __('Deciding how this site should look, before anything is built.', 'nibwp'),
         ]);
 
         if (! nibwp_has_ability_category('mcp-adapter')) {
             wp_register_ability_category('mcp-adapter', [
-                'label' => __('MCP Adapter', domain: 'nibwp'),
-                'description' => __('Meta-abilities for MCP protocol bridging.', domain: 'nibwp'),
+                'label' => __('MCP Adapter', 'nibwp'),
+                'description' => __('Meta-abilities for MCP protocol bridging.', 'nibwp'),
             ]);
         }
 
         wp_register_ability_category('elementor', [
-            'label' => __('Elementor', domain: 'nibwp'),
-            'description' => __('Elementor page builder abilities.', domain: 'nibwp'),
+            'label' => __('Elementor', 'nibwp'),
+            'description' => __('Elementor page builder abilities.', 'nibwp'),
         ]);
 
         wp_register_ability_category('bricks', [
-            'label' => __('Bricks', domain: 'nibwp'),
-            'description' => __('Bricks builder abilities.', domain: 'nibwp'),
+            'label' => __('Bricks', 'nibwp'),
+            'description' => __('Bricks builder abilities.', 'nibwp'),
         ]);
 
         wp_register_ability_category('custom-fields', [
-            'label' => __('Custom Fields', domain: 'nibwp'),
-            'description' => __('Custom field and content type management.', domain: 'nibwp'),
+            'label' => __('Custom Fields', 'nibwp'),
+            'description' => __('Custom field and content type management.', 'nibwp'),
         ]);
 
         wp_register_ability_category('memory', [
-            'label' => __('Memory', domain: 'nibwp'),
-            'description' => __('Cross-session memory for AI agents.', domain: 'nibwp'),
+            'label' => __('Memory', 'nibwp'),
+            'description' => __('Cross-session memory for AI agents.', 'nibwp'),
         ]);
 
         wp_register_ability_category('wordpress', [
-            'label' => __('WordPress', domain: 'nibwp'),
-            'description' => __('Core WordPress content and site management.', domain: 'nibwp'),
+            'label' => __('WordPress', 'nibwp'),
+            'description' => __('Core WordPress content and site management.', 'nibwp'),
         ]);
 
         wp_register_ability_category('woocommerce', [
-            'label' => __('WooCommerce', domain: 'nibwp'),
-            'description' => __('WooCommerce store management abilities.', domain: 'nibwp'),
+            'label' => __('WooCommerce', 'nibwp'),
+            'description' => __('WooCommerce store management abilities.', 'nibwp'),
         ]);
 
         wp_register_ability_category('seo', [
-            'label' => __('SEO', domain: 'nibwp'),
-            'description' => __('SEO plugin integrations (Yoast, Rank Math, AIOSEO).', domain: 'nibwp'),
+            'label' => __('SEO', 'nibwp'),
+            'description' => __('SEO plugin integrations (Yoast, Rank Math, AIOSEO).', 'nibwp'),
         ]);
 
         wp_register_ability_category('acss', [
-            'label' => __('AutomaticCSS', domain: 'nibwp'),
-            'description' => __('AutomaticCSS framework variables, classes, and CSS regeneration.', domain: 'nibwp'),
+            'label' => __('AutomaticCSS', 'nibwp'),
+            'description' => __('AutomaticCSS framework variables, classes, and CSS regeneration.', 'nibwp'),
         ]);
 
         wp_register_ability_category('content', [
-            'label' => __('Content', domain: 'nibwp'),
-            'description' => __('Content planning, scheduling, fetching, and rewriting.', domain: 'nibwp'),
+            'label' => __('Content', 'nibwp'),
+            'description' => __('Content planning, scheduling, fetching, and rewriting.', 'nibwp'),
         ]);
 
         wp_register_ability_category('automaticcss', [
-            'label' => __('Automatic.css', domain: 'nibwp'),
-            'description' => __('AutomaticCSS utility framework management.', domain: 'nibwp'),
+            'label' => __('Automatic.css', 'nibwp'),
+            'description' => __('AutomaticCSS utility framework management.', 'nibwp'),
         ]);
 
         wp_register_ability_category('etchwp', [
-            'label' => __('EtchWP', domain: 'nibwp'),
-            'description' => __('EtchWP unified development environment abilities.', domain: 'nibwp'),
+            'label' => __('EtchWP', 'nibwp'),
+            'description' => __('EtchWP unified development environment abilities.', 'nibwp'),
         ]);
 
         wp_register_ability_category('etchwp-pro', [
-            'label' => __('EtchWP Pro', domain: 'nibwp'),
-            'description' => __('Premium skill pack — image / HTML / Figma → EtchWP atomic components.', domain: 'nibwp'),
+            'label' => __('EtchWP Pro', 'nibwp'),
+            'description' => __('Premium skill pack — image / HTML / Figma → EtchWP atomic components.', 'nibwp'),
         ]);
 
         wp_register_ability_category('acss-pro', [
-            'label' => __('ACSS Pro', domain: 'nibwp'),
-            'description' => __('Premium skill pack — screenshot / HTML / URL → working Automatic.css configuration (palette, type ramp, space ramp, breakpoints) with WCAG contrast + modular scale validation.', domain: 'nibwp'),
+            'label' => __('ACSS Pro', 'nibwp'),
+            'description' => __('Premium skill pack — screenshot / HTML / URL → working Automatic.css configuration (palette, type ramp, space ramp, breakpoints) with WCAG contrast + modular scale validation.', 'nibwp'),
         ]);
 
         wp_register_ability_category('bricks-pro', [
-            'label' => __('Bricks Pro', domain: 'nibwp'),
-            'description' => __('Premium skill pack — HTML / URL / image / Figma → validated Bricks template with element whitelist, global classes, ACSS tokens, query loops, dynamic data, native form / video elements, and per-breakpoint settings.', domain: 'nibwp'),
+            'label' => __('Bricks Pro', 'nibwp'),
+            'description' => __('Premium skill pack — HTML / URL / image / Figma → validated Bricks template with element whitelist, global classes, ACSS tokens, query loops, dynamic data, native form / video elements, and per-breakpoint settings.', 'nibwp'),
         ]);
 
         wp_register_ability_category('security', [
-            'label' => __('Security & Maintenance', domain: 'nibwp'),
-            'description' => __('Security scanning, malware detection, file repair, database cleanup, and site hardening.', domain: 'nibwp'),
+            'label' => __('Security & Maintenance', 'nibwp'),
+            'description' => __('Security scanning, malware detection, file repair, database cleanup, and site hardening.', 'nibwp'),
         ]);
 
         wp_register_ability_category('migration', [
-            'label' => __('Migration', domain: 'nibwp'),
-            'description' => __('Export, import, clone, and migrate WordPress content and settings.', domain: 'nibwp'),
+            'label' => __('Migration', 'nibwp'),
+            'description' => __('Export, import, clone, and migrate WordPress content and settings.', 'nibwp'),
         ]);
 
         wp_register_ability_category('notifications', [
-            'label' => __('Notifications', domain: 'nibwp'),
-            'description' => __('Email, SMS, webhooks, and notification management with Twilio integration.', domain: 'nibwp'),
+            'label' => __('Notifications', 'nibwp'),
+            'description' => __('Email, SMS, webhooks, and notification management with Twilio integration.', 'nibwp'),
         ]);
 
         // NIBWP meta abilities — skill playbook loader, marketplace helpers,
@@ -1396,8 +1463,8 @@ if ($is_enabled) {
         // unregistered category, so this MUST exist before any ability under
         // category 'nibwp' tries to register.
         wp_register_ability_category('nibwp', [
-            'label' => __('NIBWP', domain: 'nibwp'),
-            'description' => __('NIBWP meta abilities — skills marketplace, playbook loader, feedback.', domain: 'nibwp'),
+            'label' => __('NIBWP', 'nibwp'),
+            'description' => __('NIBWP meta abilities — skills marketplace, playbook loader, feedback.', 'nibwp'),
         ]);
 
         // Premium integration categories. Each integration ability file in
@@ -1406,7 +1473,13 @@ if ($is_enabled) {
         // registered here, WP rejects the ability silently. Add new
         // categories below whenever a new integration ships.
         foreach ([
-            'forms'         => ['Forms', 'Form plugins (Gravity, WPForms, Fluent, CF7, Ninja, Formidable, Forminator, Happy, JetFormBuilder).'],
+            // Namespaced deliberately. Ninja Forms registers a bare `forms`
+            // category WITHOUT checking whether one exists, so sharing the
+            // slug produced a "already registered" notice on every request.
+            // Relying on ITS registration instead would be worse: deactivating
+            // Ninja Forms would take the category with it and silently
+            // unregister every form ability we own.
+            'nibwp-forms'   => ['Forms', 'Form plugins (Gravity, WPForms, Fluent, CF7, Ninja, Formidable, Forminator, Happy, JetFormBuilder, WS Form, Bit Form).'],
             'crm'           => ['CRM', 'CRM plugins (FluentCRM, Groundhogg, Mailchimp connector, etc.).'],
             'ecommerce'     => ['E-commerce', 'WooCommerce add-ons, FluentCart, Easy Digital Downloads.'],
             'affiliate'     => ['Affiliate', 'Affiliate program managers (FluentAffiliate, AffiliateWP).'],
@@ -1424,6 +1497,8 @@ if ($is_enabled) {
             'generatepress' => ['GeneratePress', 'GeneratePress theme + GP Premium.'],
             'kadence'       => ['Kadence', 'Kadence theme + Kadence Blocks.'],
             'voxel'         => ['Voxel', 'Voxel theme — listings, directories, commerce, community.'],
+            'breakdance'    => ['Breakdance', 'Breakdance builder — pages, templates, global design. Covers Oxygen 6.'],
+            'builderius'    => ['Builderius', 'Builderius builder — templates, components, design tokens.'],
         ] as $slug => [$label, $desc]) {
             if (! nibwp_has_ability_category($slug)) {
                 wp_register_ability_category($slug, [
@@ -1458,6 +1533,46 @@ if ($is_enabled) {
     //   • the premium/ directory ships (Pro build only)
     //   • the user has an active Pro / Bundle / matching skill license
     add_action('wp_abilities_api_init', static function () {
+        // ── The adapter's own core abilities, registered on time ────────────
+        //
+        // The bundled MCP Adapter registers get-ability-info and
+        // execute-ability on this very hook — but it only SUBSCRIBES to the
+        // hook from McpAdapter::maybe_create_default_server(), which runs from
+        // init(), which is hooked to rest_api_init priority 15.
+        //
+        // WordPress 6.9 fires wp_abilities_api_init lazily, the first time
+        // anything touches the abilities registry (WP_Abilities_Registry::
+        // get_instance()). NIBWP touches it long before rest_api_init, so by
+        // the time the adapter subscribes this hook has already fired and its
+        // listener never runs. The two abilities are then missing for the rest
+        // of the request, and every server that names them — the adapter's own
+        // default server and our legacy alias both do — logs
+        // "Ability ... not found" once per lookup.
+        //
+        // discover-abilities never showed the symptom only because NIBWP
+        // registers its own replacement a few lines below.
+        //
+        // Registered here through the adapter's OWN classes rather than a copy
+        // of their definitions: a duplicated schema would drift from the
+        // vendored adapter on its next update, and these two are the execution
+        // path for every tool call an agent makes.
+        foreach ([
+            'mcp-adapter/get-ability-info' => '\\WP\\MCP\\Abilities\\GetAbilityInfoAbility',
+            'mcp-adapter/execute-ability'  => '\\WP\\MCP\\Abilities\\ExecuteAbilityAbility',
+        ] as $nibwp_ability => $nibwp_class) {
+            if (nibwp_has_ability($nibwp_ability)) {
+                continue;
+            }
+            if (!class_exists($nibwp_class) || !method_exists($nibwp_class, 'register')) {
+                continue;
+            }
+
+            // The adapter's register() calls wp_register_ability() directly and
+            // returns void, so a failure surfaces as the ability still being
+            // absent rather than as a return value. Nothing else to check.
+            $nibwp_class::register();
+        }
+
         $dir = __DIR__ . '/includes/abilities/';
 
         // Safe read-only abilities (Free, wp.org-shipped).

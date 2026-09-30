@@ -515,6 +515,62 @@ function nibwp_workflows_starters(): array
             'category'=> 'build-sites',
             'icon'    => 'layout-grid',
         ],
+        'convert-to-bricks' => [
+            'title'   => 'Convert a design to Bricks',
+            'summary' => 'Rebuild HTML, a URL, a screenshot, or a Figma frame as a native Bricks template via the Bricks Pro skill — real elements, styling in element settings rather than custom CSS, BEM global classes, per-breakpoint values, validated then committed.',
+            'when'    => 'Rebuilding a design (HTML / URL / image / Figma) into a Bricks page, template, header, or footer.',
+            'tools'   => ['bricks', 'bricks-pro', 'acss-pro', 'automaticcss'],
+            'category'=> 'build-sites',
+            'icon'    => 'layout-template',
+        ],
+        'convert-to-elementor' => [
+            'title'   => 'Convert a design to Elementor',
+            'summary' => 'Rebuild HTML, a URL, or a screenshot as native Elementor widgets via the Elementor Pro skill — widget names and control ids read from the live registry, classic and V4 atomic elements both supported, render-checked after the write.',
+            'when'    => 'Rebuilding a design into an Elementor page or template, or repairing one that will not open in the editor.',
+            'tools'   => ['elementor', 'elementor-pro'],
+            'category'=> 'build-sites',
+            'icon'    => 'layout-dashboard',
+        ],
+        'design-system-setup' => [
+            'title'   => 'Establish the design direction first',
+            'summary' => 'Derive a design direction from the site you already have — palette, type scale, spacing rhythm, radii — agree it with the user, and record the brand prefix and colors so every later build references the same tokens instead of inventing values page by page.',
+            'when'    => 'Starting a site or redesign, before a run of page builds, or when a site has drifted into three greys and five spacing values.',
+            'tools'   => ['design-skills', 'acss-pro', 'automaticcss'],
+            'category'=> 'build-sites',
+            'icon'    => 'pen-tool',
+        ],
+        'convert-to-breakdance' => [
+            'title'   => 'Convert a design to Breakdance',
+            'summary' => 'Rebuild HTML, a URL, a screenshot, or a Figma frame as a native Breakdance section via the Breakdance Pro skill — real nodes in the builder tree rather than markup in the post body, element types read from the live catalogue, then audited.',
+            'when'    => 'Rebuilding a design (HTML / URL / image / Figma) into a Breakdance page or section.',
+            'tools'   => ['breakdance', 'breakdance-pro'],
+            'category'=> 'build-sites',
+            'icon'    => 'layout',
+        ],
+        'figma-to-wordpress' => [
+            'title'   => 'Build a Figma design in WordPress',
+            'summary' => 'Read the real Figma node tree and Variables — not a screenshot — map them to the design tokens this site already uses, detect which builder it runs, and convert through the validated pipeline belonging to that builder.',
+            'when'    => 'Someone pastes a Figma link, or wants a frame, component or library turned into a WordPress page or design system.',
+            'tools'   => ['figma-pro'],
+            'category'=> 'build-sites',
+            'icon'    => 'image',
+        ],
+        'course-build' => [
+            'title'   => 'Build a Tutor LMS course',
+            'summary' => 'Turn a brief, outline, transcript, PDF or URL into a complete validated Tutor LMS course — topics, lessons with real content, and quizzes whose questions come from the lessons before them.',
+            'when'    => 'Creating a course from source material, or filling out one that exists as a title and nothing else.',
+            'tools'   => ['tutorlms', 'tutorlms-builder'],
+            'category'=> 'content',
+            'icon'    => 'list-checks',
+        ],
+        'course-landing-page' => [
+            'title'   => 'Build a course landing page',
+            'summary' => 'Build a sales page for a Tutor LMS course bound to the live course record — curriculum, instructor and price read from the course rather than retyped — saved as a draft linked back to it.',
+            'when'    => 'A course needs a page that sells it, or an existing sales page has drifted out of step with the curriculum.',
+            'tools'   => ['tutorlms', 'tutorlms-minisite'],
+            'category'=> 'build-sites',
+            'icon'    => 'rocket',
+        ],
         'voxel-directory-build' => [
             'title'   => 'Build a Voxel directory',
             'summary' => 'From a post type to a working directory — fields and filters, then the preview card, single layout, archive and a wired search page, each assigned and each checked against the site\'s own data.',
@@ -662,14 +718,25 @@ function nibwp_workflows_seed_starters(): void
     if (!nibwp_workflows_unlocked()) {
         return;
     }
-    // Cheap guard so we don't query on every single admin request. Bump to
-    // re-seed: refreshes shipped text + back-fills creator/visibility.
-    $version = '8';
+    $manifest = nibwp_workflows_starters();
+
+    // Cheap guard so we don't query on every single admin request — derived
+    // from what we ship rather than hand-maintained.
+    //
+    // It used to be a literal with a comment saying to bump it when starters
+    // changed, and that is exactly what did not happen: workflows were added,
+    // shipped, and never appeared on any install that had already seeded,
+    // because the number still matched. The page showed 19 while the plugin
+    // carried 28, with nothing anywhere reporting a problem.
+    //
+    // Hashing the manifest means adding, renaming or re-describing a starter
+    // re-seeds by itself; including the plugin version catches an edit to a
+    // starter's body, which ships with a release. Building the array first
+    // costs nothing — it is a literal return.
+    $version = (defined('NIBWP_VERSION') ? NIBWP_VERSION : '0') . ':' . md5(serialize($manifest));
     if (get_option('nibwp_workflows_seeded') === $version) {
         return;
     }
-
-    $manifest = nibwp_workflows_starters();
 
     // Remove every starter-sourced post that isn't a current manifest entry —
     // clears retired starters AND any duplicates left by earlier seeds/migrations.
@@ -929,7 +996,7 @@ add_action('wp_abilities_api_init', static function (): void {
 
     wp_register_ability('nibwp/list-workflows', [
         'label'       => __('List workflows', 'nibwp'),
-        'description' => __('List saved NIBWP workflows (operating playbooks) with their summary, when-to-use, whether they are PINNED (always-on), and the tools each one targets (with detection status). Unpinned workflows are still used — the agent auto-loads them when a task matches their when-to-use.', 'nibwp'),
+        'description' => 'List saved NIBWP workflows (operating playbooks) with their summary, when-to-use, whether they are PINNED (always-on), and the tools each one targets (with detection status). Unpinned workflows are still used — the agent auto-loads them when a task matches their when-to-use.',
         'category'    => 'nibwp',
         'input_schema'  => ['type' => 'object', 'properties' => new stdClass(), 'additionalProperties' => false],
         'output_schema' => ['type' => 'object'],
@@ -940,7 +1007,7 @@ add_action('wp_abilities_api_init', static function (): void {
 
     wp_register_ability('nibwp/get-workflow', [
         'label'       => __('Get workflow', 'nibwp'),
-        'description' => __('Load the full markdown playbook + metadata for one workflow, by id or slug.', 'nibwp'),
+        'description' => 'Load the full markdown playbook + metadata for one workflow, by id or slug.',
         'category'    => 'nibwp',
         'input_schema'  => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'slug' => ['type' => 'string']], 'additionalProperties' => false],
         'output_schema' => ['type' => 'object'],
@@ -951,7 +1018,7 @@ add_action('wp_abilities_api_init', static function (): void {
 
     wp_register_ability('nibwp/save-workflow', [
         'label'       => __('Save workflow', 'nibwp'),
-        'description' => __('Create a new NIBWP workflow (operating playbook) — capture a process you just agreed on. Provide a title + the markdown body (principles, process, strict rules, reporting, patterns). Optionally set when-to-use, target tools, and activate it.', 'nibwp'),
+        'description' => 'Create a new NIBWP workflow (operating playbook) — capture a process you just agreed on. Provide a title + the markdown body (principles, process, strict rules, reporting, patterns). Optionally set when-to-use, target tools, and activate it.',
         'category'    => 'nibwp',
         'input_schema'  => [
             'type' => 'object',
@@ -975,7 +1042,7 @@ add_action('wp_abilities_api_init', static function (): void {
 
     wp_register_ability('nibwp/update-workflow', [
         'label'       => __('Update workflow', 'nibwp'),
-        'description' => __('Edit an existing workflow (by id or slug) — change the body, rules, summary, when-to-use, tools, or active state. A revision is kept so changes can be rolled back.', 'nibwp'),
+        'description' => 'Edit an existing workflow (by id or slug) — change the body, rules, summary, when-to-use, tools, or active state. A revision is kept so changes can be rolled back.',
         'category'    => 'nibwp',
         'input_schema'  => [
             'type' => 'object',
@@ -1000,7 +1067,7 @@ add_action('wp_abilities_api_init', static function (): void {
 
     wp_register_ability('nibwp/activate-workflow', [
         'label'       => __('Pin / unpin workflow', 'nibwp'),
-        'description' => __('Pin or unpin a workflow. PINNED = always-on: its playbook is injected as strict context on EVERY request. A workflow does NOT need to be pinned to be used — unpinned ones auto-load when a task matches their when-to-use. Pass exclusive:true to make it the only pinned one.', 'nibwp'),
+        'description' => 'Pin or unpin a workflow. PINNED = always-on: its playbook is injected as strict context on EVERY request. A workflow does NOT need to be pinned to be used — unpinned ones auto-load when a task matches their when-to-use. Pass exclusive:true to make it the only pinned one.',
         'category'    => 'nibwp',
         'input_schema'  => [
             'type' => 'object',

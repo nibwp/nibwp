@@ -197,6 +197,218 @@ function nibwp_oauth_availability(): array
     return ['ok' => true, 'reason' => 'available', 'message' => ''];
 }
 
+/**
+ * Whether this host actually serves the sign-in discovery a client needs.
+ *
+ * nibwp_oauth_availability() answers "is OAuth switched on and is the site on
+ * https" — it never asks whether the host will serve the endpoints. Plenty do
+ * not: a security rule blocking /.well-known, CGI restrictions, a WAF answering
+ * 403 to anything unusual. On those hosts the page recommended signing in, the
+ * customer's AI client failed with an opaque registration error from its own
+ * vendor, and nothing on our side had said a word.
+ *
+ * Proof of failure only. A loopback request that cannot be made at all — a
+ * timeout, a refused connection, a host that blocks its own outbound calls —
+ * proves nothing about what an outside client can reach, so it leaves sign-in
+ * alone. Only a definite bad answer from the endpoints demotes it.
+ *
+ * @return array{ok: bool, reason: string, message: string}
+ */
+function nibwp_oauth_discovery_probe(bool $fresh = false): array
+{
+    $ok = ['ok' => true, 'reason' => 'served', 'message' => ''];
+
+    $cached = $fresh ? false : get_transient('nibwp_oauth_discovery');
+    if (is_array($cached) && isset($cached['ok'])) {
+        return $cached;
+    }
+
+    $args = ['timeout' => 8, 'redirection' => 3, 'sslverify' => false];
+
+    // 0. The address WordPress publishes has to be the address clients reach.
+    //
+    // RFC 8414 requires the `issuer` in the metadata to be identical to the URL
+    // the document was fetched from, and a client that finds otherwise MUST
+    // reject it — before registration, before any screen, with nothing to read
+    // but a failure. Every URL we publish comes from home_url(), so a site
+    // served over HTTPS whose WordPress Address still says http:// publishes a
+    // document no client will accept.
+    //
+    // The loopback checks below cannot see this: they fetch home_url() and get
+    // back exactly what home_url() said. The evidence is the request this admin
+    // page is being served over right now, which is why the test lives here and
+    // not in the fetches.
+    $proto = '';
+    if (isset($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        $forwarded = explode(',', (string) wp_unslash($_SERVER['HTTP_X_FORWARDED_PROTO']));
+        $proto = strtolower(trim((string) reset($forwarded)));
+    }
+    $served_over_https = $proto === 'https' || is_ssl();
+
+    if ($served_over_https && wp_parse_url(home_url(), PHP_URL_SCHEME) === 'http') {
+        $result = [
+            'ok'      => false,
+            'reason'  => 'issuer_scheme_mismatch',
+            'message' => sprintf(
+                /* translators: %s: the site's WordPress Address setting */
+                __('This site is being served over HTTPS, but its WordPress Address is still %s. Sign-in metadata is published from that setting, and AI clients are required to reject a document whose address does not match the one they fetched it from — so signing in fails before any screen appears. Fix it in Settings > General (set both addresses to https), or ask the host to pass the HTTPS header through. An application password works regardless.', 'nibwp'),
+                home_url()
+            ),
+        ];
+        set_transient('nibwp_oauth_discovery', $result, 15 * MINUTE_IN_SECONDS);
+
+        return $result;
+    }
+
+    // 1. The metadata document a client reads to find the endpoints.
+    $meta = wp_remote_get(home_url('/.well-known/oauth-authorization-server'), $args);
+    if (is_wp_error($meta)) {
+        return $ok; // Inconclusive: say nothing.
+    }
+
+    $code = (int) wp_remote_retrieve_response_code($meta);
+    if ($code !== 200) {
+        $result = [
+            'ok'      => false,
+            'reason'  => 'discovery_blocked',
+            'message' => sprintf(
+                /* translators: %d: HTTP status code */
+                __('This host is not serving the sign-in discovery document (/.well-known/ returned %d). AI clients read that file to find where to sign in, so signing in cannot work here until the host allows it. An application password works regardless.', 'nibwp'),
+                $code
+            ),
+        ];
+        set_transient('nibwp_oauth_discovery', $result, 15 * MINUTE_IN_SECONDS);
+
+        return $result;
+    }
+
+    $body = json_decode((string) wp_remote_retrieve_body($meta), true);
+    if (!is_array($body) || empty($body['authorization_endpoint'])) {
+        $result = [
+            'ok'      => false,
+            'reason'  => 'discovery_malformed',
+            'message' => __('This host answers the sign-in discovery URL with something other than the expected document — usually a security rule or a caching layer rewriting it. Signing in cannot work until that is resolved. An application password works regardless.', 'nibwp'),
+        ];
+        set_transient('nibwp_oauth_discovery', $result, 15 * MINUTE_IN_SECONDS);
+
+        return $result;
+    }
+
+    // 2. The endpoint itself has to challenge an anonymous caller, because the
+    //    challenge header is what points a client at the rest of the flow.
+    $mcp = wp_remote_post(rest_url('mcp/nibwp'), $args + [
+        'headers' => ['Content-Type' => 'application/json'],
+        'body'    => '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}',
+    ]);
+    if (is_wp_error($mcp)) {
+        return $ok;
+    }
+
+    $challenge = (string) wp_remote_retrieve_header($mcp, 'www-authenticate');
+    if ((int) wp_remote_retrieve_response_code($mcp) === 401 && !str_contains($challenge, 'resource_metadata')) {
+        $result = [
+            'ok'      => false,
+            'reason'  => 'challenge_stripped',
+            'message' => __('This host is removing the authentication header the MCP endpoint sends, which is how a client finds the sign-in service. Signing in cannot work until that stops. An application password works regardless.', 'nibwp'),
+        ];
+        set_transient('nibwp_oauth_discovery', $result, 15 * MINUTE_IN_SECONDS);
+
+        return $result;
+    }
+
+    // 3. Registration is the one endpoint a client writes to before it holds
+    //    any credential, which makes it the endpoint WAFs challenge first —
+    //    and the failure a customer actually reported: their AI client showed
+    //    an opaque vendor-side registration error while every discovery check
+    //    above passed. An empty POST proves traversal either way: our own 400
+    //    (and even our own 429) is an RFC-shaped JSON body, an interstitial is
+    //    not. The POST spends one rate-limit slot; the cache above bounds this
+    //    probe to at most four an hour.
+    $register = wp_remote_post(rest_url('nibwp/v1/oauth/register'), $args + [
+        'headers' => ['Content-Type' => 'application/json'],
+        'body'    => '{}',
+    ]);
+    if (!is_wp_error($register)) {
+        $reg_body = json_decode((string) wp_remote_retrieve_body($register), true);
+        $reg_json = is_array($reg_body) && (isset($reg_body['error']) || isset($reg_body['client_id']));
+        $mitigated = (string) wp_remote_retrieve_header($register, 'cf-mitigated');
+        if (!$reg_json || $mitigated !== '') {
+            $result = [
+                'ok'      => false,
+                'reason'  => 'register_blocked',
+                'message' => __('Something on this host is intercepting POST /wp-json/nibwp/v1/oauth/register, which AI clients call to sign in — usually a firewall or Cloudflare challenge. Add a security exception for /wp-json/nibwp/v1/oauth/*, /.well-known/oauth-*, and /nibwp-oauth/authorize, or use an application password, which works regardless.', 'nibwp'),
+            ];
+            set_transient('nibwp_oauth_discovery', $result, 15 * MINUTE_IN_SECONDS);
+
+            return $result;
+        }
+    }
+
+    // 4. The consent URL the metadata advertises has to answer. When the
+    //    pretty path is blocked at the server, the admin-post handler — which
+    //    every install answers — takes over via the advertised metadata, so a
+    //    blocked path only demotes sign-in when the fallback is dead too.
+    $authorize_pretty = home_url('/nibwp-oauth/authorize');
+    if (nibwp_oauth_authorize_url() === $authorize_pretty || get_option('nibwp_oauth_authorize_fallback')) {
+        $auth = wp_remote_get($authorize_pretty, ['timeout' => 8, 'redirection' => 0, 'sslverify' => false]);
+        if (!is_wp_error($auth)) {
+            $auth_code = (int) wp_remote_retrieve_response_code($auth);
+            if (in_array($auth_code, [200, 302], true)) {
+                // The clean path answers: no reason to keep advertising the
+                // query-string form, which has costs of its own.
+                delete_option('nibwp_oauth_authorize_fallback');
+            } elseif (in_array($auth_code, [403, 404], true)) {
+                update_option('nibwp_oauth_authorize_fallback', 1, false);
+                $fallback = wp_remote_get(admin_url('admin-post.php?action=nibwp_oauth_authorize'), ['timeout' => 8, 'redirection' => 0, 'sslverify' => false]);
+                $fallback_code = is_wp_error($fallback) ? 0 : (int) wp_remote_retrieve_response_code($fallback);
+                if (!in_array($fallback_code, [200, 302], true)) {
+                    $result = [
+                        'ok'      => false,
+                        'reason'  => 'authorize_unreachable',
+                        'message' => __('This host is blocking /nibwp-oauth/authorize, the page where you approve a sign-in, and the fallback address is blocked too. Ask the host to allow it, or use an application password, which works regardless.', 'nibwp'),
+                    ];
+                    set_transient('nibwp_oauth_discovery', $result, 15 * MINUTE_IN_SECONDS);
+
+                    return $result;
+                }
+            }
+        }
+    }
+
+    // 5. A bearer token has to survive the trip through the server, or every
+    //    sign-in succeeds and then every authenticated call fails — the worst
+    //    order to discover it in. The self-test echoes back whether the
+    //    Authorization header arrived.
+    if (function_exists('nibwp_status_selftest_token')) {
+        $probe_token = nibwp_status_selftest_token();
+        $selftest = wp_remote_get(
+            rest_url('nibwp/v1/connection-selftest') . '?token=' . rawurlencode($probe_token),
+            ['timeout' => 8, 'sslverify' => false, 'headers' => ['Authorization' => 'Bearer nibwp-probe']]
+        );
+        if (!is_wp_error($selftest) && (int) wp_remote_retrieve_response_code($selftest) === 200) {
+            $echo = json_decode((string) wp_remote_retrieve_body($selftest), true);
+            if (is_array($echo) && array_key_exists('auth_header_seen', $echo) && $echo['auth_header_seen'] === false) {
+                $result = [
+                    'ok'      => false,
+                    'reason'  => 'auth_header_stripped',
+                    'message' => sprintf(
+                        /* translators: %s: nginx configuration line the host has to add */
+                        __('This server drops the Authorization header before WordPress sees it, so signed-in clients could never authenticate. On Apache the Status page offers a one-click fix; on nginx ask the host to add: %s An application password sent the same way is affected too — fix this either way.', 'nibwp'),
+                        'fastcgi_param HTTP_AUTHORIZATION $http_authorization;'
+                    ),
+                ];
+                set_transient('nibwp_oauth_discovery', $result, 15 * MINUTE_IN_SECONDS);
+
+                return $result;
+            }
+        }
+    }
+
+    set_transient('nibwp_oauth_discovery', $ok, HOUR_IN_SECONDS);
+
+    return $ok;
+}
+
 // ---------------------------------------------------------------------------
 // Remote-transport client configuration
 // ---------------------------------------------------------------------------
@@ -309,6 +521,17 @@ function nibwp_oauth_remote_configs(string $mcp_url, string $name): array
     $cursor_link = 'cursor://anysphere.cursor-deeplink/mcp/install?name=' . rawurlencode($name)
         . '&config=' . rawurlencode(base64_encode((string) wp_json_encode(['url' => $mcp_url])));
 
+    // Where VS Code, and Copilot through it, keep the server list. The command
+    // name is VS Code's own and stays as its palette spells it.
+    $vscode_paths = [
+        __('Workspace', 'nibwp') => '.vscode/mcp.json',
+        _x('User', 'VS Code configuration scope', 'nibwp') => sprintf(
+            /* translators: %s: VS Code command palette entry */
+            __('Run “%s”', 'nibwp'),
+            'MCP: Open User Configuration'
+        ),
+    ];
+
     $configs = [];
 
     // Assistants that connect from their own cloud. Offered only when they could
@@ -375,7 +598,10 @@ function nibwp_oauth_remote_configs(string $mcp_url, string $name): array
         'cursor' => [
             'code' => $mcp_servers,
             'hint' => __('Press the button: Cursor opens its <strong>Tools and MCP</strong> page with this server listed, and you press <strong>Install</strong> then <strong>Connect</strong>. If nothing opens, Cursor has not registered its link handler on this machine — add the block below to <code>mcp.json</code> instead, which always works.', 'nibwp'),
-            'paths' => ['Global' => '~/.cursor/mcp.json', 'Project' => '.cursor/mcp.json'],
+            'paths' => [
+                __('Global', 'nibwp') => '~/.cursor/mcp.json',
+                __('Project', 'nibwp') => '.cursor/mcp.json',
+            ],
             'isShell' => false,
             'action' => [
                 'label' => __('Add to Cursor', 'nibwp'),
@@ -385,7 +611,7 @@ function nibwp_oauth_remote_configs(string $mcp_url, string $name): array
         'vscode' => [
             'code' => $servers,
             'hint' => __('Use the button, or add this to <code>mcp.json</code> yourself.', 'nibwp'),
-            'paths' => ['Workspace' => '.vscode/mcp.json', 'User' => 'Run “MCP: Open User Configuration”'],
+            'paths' => $vscode_paths,
             'isShell' => false,
             'action' => [
                 'label' => __('Add to VS Code', 'nibwp'),
@@ -395,7 +621,7 @@ function nibwp_oauth_remote_configs(string $mcp_url, string $name): array
         'github-copilot' => [
             'code' => $servers,
             'hint' => __('Copilot reads VS Code\'s MCP configuration, so the same button works.', 'nibwp'),
-            'paths' => ['Workspace' => '.vscode/mcp.json', 'User' => 'Run “MCP: Open User Configuration”'],
+            'paths' => $vscode_paths,
             'isShell' => false,
             'action' => [
                 'label' => __('Add to VS Code', 'nibwp'),
@@ -616,7 +842,7 @@ function nibwp_oauth_render_manual_clients(): void
     // phpcs:enable
 
     $messages = [
-        'name' => __('Give the application a name so you can recognise it later.', 'nibwp'),
+        'name' => __('Give the application a name so you can recognize it later.', 'nibwp'),
         'uris' => __('At least one return address is required.', 'nibwp'),
         'invalid' => __('Return addresses must be https, a loopback address, or the application\'s own scheme.', 'nibwp'),
     ];
@@ -715,7 +941,11 @@ function nibwp_oauth_render_connections(): void
                             printf(
                                 /* translators: 1: how long ago it was connected, 2: last used */
                                 esc_html__('Connected %1$s · %2$s', 'nibwp'),
-                                esc_html(human_time_diff($conn['created']) . __(' ago', 'nibwp')),
+                                esc_html(sprintf(
+                                    /* translators: %s: human time difference */
+                                    __('%s ago', 'nibwp'),
+                                    human_time_diff($conn['created'])
+                                )),
                                 $conn['last_used'] > 0
                                     ? esc_html(sprintf(
                                         /* translators: %s: human time difference */
@@ -836,8 +1066,11 @@ function nibwp_oauth_render_connect_tabs(
 
             function shadows() {
                 var max = strip.scrollWidth - strip.clientWidth;
-                wrap.classList.toggle('has-scroll-left', strip.scrollLeft > 2);
-                wrap.classList.toggle('has-scroll-right', strip.scrollLeft < max - 2);
+                // Right to left, scrollLeft runs from 0 at the start down to -max at
+                // the end, and the RTL stylesheet swaps the fades, so the distance
+                // from the start is what both classes need.
+                wrap.classList.toggle('has-scroll-left', Math.abs(strip.scrollLeft) > 2);
+                wrap.classList.toggle('has-scroll-right', Math.abs(strip.scrollLeft) < max - 2);
             }
 
             function step() {

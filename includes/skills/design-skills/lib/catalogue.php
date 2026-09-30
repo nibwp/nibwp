@@ -102,11 +102,21 @@ function nibwp_design_seed(string $subject = ''): int
  * request, prefer the longest keyword matched so "tour operator" beats "tour",
  * and fall back to the seeded pick when nothing matches at all.
  *
+ * The seeded pick knows nothing about the request, so a caller can narrow the
+ * rows it draws from. If the narrowing leaves nothing, every row is back in play:
+ * an answer that is not ideal beats no answer.
+ *
  * @param array<int, array<string, string>> $rows
+ * @param (callable(array<string, string>): bool)|null $fallback_allows
  * @return array<string, string>|null
  */
-function nibwp_design_match(array $rows, string $needle, string $keyword_column, string $seed_subject = ''): ?array
-{
+function nibwp_design_match(
+    array $rows,
+    string $needle,
+    string $keyword_column,
+    string $seed_subject = '',
+    ?callable $fallback_allows = null
+): ?array {
     if ($rows === []) {
         return null;
     }
@@ -143,16 +153,50 @@ function nibwp_design_match(array $rows, string $needle, string $keyword_column,
         return $best;
     }
 
-    return $rows[nibwp_design_seed($seed_subject) % count($rows)];
+    $pool = $fallback_allows === null ? $rows : array_values(array_filter($rows, $fallback_allows));
+    if ($pool === []) {
+        $pool = $rows;
+    }
+
+    return $pool[nibwp_design_seed($seed_subject) % count($pool)];
+}
+
+/**
+ * Whether the purpose names one section or component rather than a whole page.
+ *
+ * Every layout pattern is a page's plan. Asked for a "5-step process timeline
+ * section", the keyword match found no page and the seeded fallback answered
+ * with a blog index — Latest, By topic, Archive — for a single timeline. A
+ * section joins a page that already has its order, so it gets no order of its
+ * own.
+ *
+ * Page words win: "landing page with a pricing section" is still a page.
+ */
+function nibwp_design_is_section(string $purpose): bool
+{
+    if (preg_match('/\b(pages?|homepages?|websites?|sites?)\b/i', $purpose)) {
+        return false;
+    }
+
+    return (bool) preg_match(
+        '/\b(sections?|blocks?|components?|hero(es)?|ctas?|banners?|timelines?|steps?|process(es)?|grids?|bento|cards?|faqs?|testimonials?|pricing|features?|stats?|headers?|footers?|nav|navbar|menus?)\b/i',
+        $purpose
+    );
 }
 
 /**
  * The layout pattern for what is being built — ours, WordPress-shaped.
  *
+ * Null for a section: see nibwp_design_is_section().
+ *
  * @return array<string, string>|null
  */
 function nibwp_design_layout_for(string $purpose): ?array
 {
+    if (nibwp_design_is_section($purpose)) {
+        return null;
+    }
+
     return nibwp_design_match(
         nibwp_design_table('wordpress/layout-patterns.csv'),
         $purpose,
@@ -184,10 +228,15 @@ function nibwp_design_builder_notes(string $builder): ?array
  * scoped to "any" always do. Each carries its reason, so the agent can explain
  * a choice rather than cite a rule.
  *
+ * A section only ever gets the "any" rules. The scopes name kinds of page, and
+ * matching is by word, so "services bento grid" used to collect the services
+ * page's rules without being a services page.
+ *
  * @return array<int, array{rule: string, refuse: string, instead: string, why: string}>
  */
 function nibwp_design_rules_for(string $purpose): array
 {
+    $section = nibwp_design_is_section($purpose);
     $purpose = strtolower($purpose);
     $out = [];
 
@@ -195,6 +244,9 @@ function nibwp_design_rules_for(string $purpose): array
         $applies = strtolower((string) ($row['Applies To'] ?? 'any'));
 
         if ($applies !== 'any' && $applies !== '') {
+            if ($section) {
+                continue;
+            }
             $hit = false;
             foreach (explode(';', $applies) as $scope) {
                 $scope = trim($scope);
@@ -229,7 +281,47 @@ function nibwp_design_style_for(string $purpose, string $product_type = ''): ?ar
     $rows = nibwp_design_table('styles.csv');
     $needle = trim($purpose . ' ' . $product_type);
 
-    return nibwp_design_match($rows, $needle, 'Keywords', 'style:' . $needle);
+    // When no style's keywords match, the seeded pick is blind, and it has handed
+    // requests a style whose own notes rule that kind of work out. The least the
+    // blind pick can do is skip styles that name the request as a bad fit.
+    $words = nibwp_design_significant_words($needle);
+    $allows = static function (array $row) use ($words): bool {
+        $avoid = strtolower((string) ($row['Do Not Use For'] ?? ''));
+        foreach ($words as $word) {
+            if (preg_match('/\b' . preg_quote($word, '/') . '/', $avoid)) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    return nibwp_design_match($rows, $needle, 'Keywords', 'style:' . $needle, $allows);
+}
+
+/**
+ * The words of a request that say what it is about.
+ *
+ * Short words and the words every request shares ("section", "page") would rule
+ * out styles for reasons that have nothing to do with the request. A trailing
+ * "s" is dropped and matched as a prefix, so "services" still finds "service".
+ *
+ * @return array<int, string>
+ */
+function nibwp_design_significant_words(string $text): array
+{
+    $common = ['with', 'that', 'this', 'from', 'into', 'about', 'your', 'their', 'page', 'section', 'block', 'component', 'site', 'website'];
+    $out = [];
+
+    foreach (preg_split('/[^a-z]+/', strtolower($text)) ?: [] as $word) {
+        if (strlen($word) > 4 && str_ends_with($word, 's')) {
+            $word = substr($word, 0, -1);
+        }
+        if (strlen($word) >= 4 && !in_array($word, $common, true)) {
+            $out[$word] = $word;
+        }
+    }
+
+    return array_values($out);
 }
 
 /**
@@ -251,7 +343,7 @@ function nibwp_design_type_for(string $purpose, string $mood = ''): ?array
 }
 
 /**
- * The catalogue's palette for a product type — a seed for our own colour maths,
+ * The catalogue's palette for a product type — a seed for our own color maths,
  * used only when the site itself offered nothing.
  *
  * @return array<int, string>

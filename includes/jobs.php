@@ -260,7 +260,7 @@ function nibwp_jobs_create(array $args): int|WP_Error
 {
     $catalog = sanitize_key((string) ($args['catalog'] ?? ''));
     if ($catalog !== '' && $catalog !== 'custom' && !nibwp_jobs_catalog_card($catalog)) {
-        return new WP_Error('bad_catalog', 'Unknown job type.');
+        return new WP_Error('bad_catalog', __('Unknown job type.', 'nibwp'));
     }
     $card  = nibwp_jobs_catalog_card($catalog);
     $title = trim((string) ($args['name'] ?? '')) ?: (string) ($card['title'] ?? __('Custom job', 'nibwp'));
@@ -287,13 +287,18 @@ function nibwp_jobs_create(array $args): int|WP_Error
 function nibwp_jobs_run(int $job_id): int|WP_Error
 {
     if (get_post_type($job_id) !== NIBWP_JOB_CPT) {
-        return new WP_Error('not_found', 'No such job.');
+        return new WP_Error('not_found', __('No such job.', 'nibwp'));
     }
     $run_id = wp_insert_post([
         'post_type'   => NIBWP_JOB_RUN_CPT,
         'post_parent' => $job_id,
         'post_status' => 'publish',
-        'post_title'  => get_the_title($job_id) . ' — ' . wp_date('Y-m-d H:i'),
+        'post_title'  => sprintf(
+            /* translators: 1: job name, 2: date and time the run started */
+            __('%1$s — %2$s', 'nibwp'),
+            get_the_title($job_id),
+            wp_date('Y-m-d H:i')
+        ),
     ], true);
     if (is_wp_error($run_id)) {
         return $run_id;
@@ -320,7 +325,7 @@ function nibwp_jobs_run(int $job_id): int|WP_Error
 function nibwp_jobs_delete_job(int $job_id): bool|WP_Error
 {
     if (get_post_type($job_id) !== NIBWP_JOB_CPT) {
-        return new WP_Error('not_found', 'No such job.');
+        return new WP_Error('not_found', __('No such job.', 'nibwp'));
     }
     foreach (get_posts(['post_type' => NIBWP_JOB_RUN_CPT, 'post_parent' => $job_id, 'numberposts' => -1, 'fields' => 'ids', 'post_status' => 'any']) as $rid) {
         wp_delete_post((int) $rid, true);
@@ -333,7 +338,7 @@ function nibwp_jobs_delete_job(int $job_id): bool|WP_Error
 function nibwp_jobs_delete_run(int $run_id): bool|WP_Error
 {
     if (get_post_type($run_id) !== NIBWP_JOB_RUN_CPT) {
-        return new WP_Error('not_found', 'No such run.');
+        return new WP_Error('not_found', __('No such run.', 'nibwp'));
     }
     wp_delete_post($run_id, true);
     return true;
@@ -343,7 +348,7 @@ function nibwp_jobs_delete_run(int $run_id): bool|WP_Error
 function nibwp_jobs_pause_run(int $run_id): bool|WP_Error
 {
     if (get_post_type($run_id) !== NIBWP_JOB_RUN_CPT) {
-        return new WP_Error('not_found', 'No such run.');
+        return new WP_Error('not_found', __('No such run.', 'nibwp'));
     }
     update_post_meta($run_id, '_nibwp_run_status', 'stopped');
     update_post_meta($run_id, '_nibwp_run_finished', time());
@@ -357,7 +362,7 @@ function nibwp_jobs_intent(string $brief): int|WP_Error
 {
     $brief = trim($brief);
     if ($brief === '') {
-        return new WP_Error('empty', 'Tell NIBWP what to do.');
+        return new WP_Error('empty', __('Tell NIBWP what to do.', 'nibwp'));
     }
     $job_id = nibwp_jobs_create([
         'catalog' => 'custom',
@@ -373,7 +378,16 @@ function nibwp_jobs_intent(string $brief): int|WP_Error
     do_action('nibwp_job_intent_plan', (int) $job_id, $brief);
     $run_id = nibwp_jobs_run((int) $job_id);
     if (!is_wp_error($run_id)) {
-        nibwp_jobs_add_event((int) $run_id, ['actor' => 'you', 'action' => __('You asked NIBWP to', 'nibwp') . ' — ' . wp_trim_words($brief, 12, '…'), 'status' => 'info', 'detail' => $brief]);
+        nibwp_jobs_add_event((int) $run_id, [
+            'actor'  => 'you',
+            'action' => sprintf(
+                /* translators: %s: the first words of what the user asked for */
+                __('You asked NIBWP to — %s', 'nibwp'),
+                wp_trim_words($brief, 12, '…')
+            ),
+            'status' => 'info',
+            'detail' => $brief,
+        ]);
     }
     return $run_id;
 }
@@ -382,7 +396,7 @@ function nibwp_jobs_intent(string $brief): int|WP_Error
 function nibwp_jobs_approve(int $run_id, string $approval_id, bool $decision): array|WP_Error
 {
     if (get_post_type($run_id) !== NIBWP_JOB_RUN_CPT) {
-        return new WP_Error('not_found', 'No such run.');
+        return new WP_Error('not_found', __('No such run.', 'nibwp'));
     }
     $approvals = (array) get_post_meta($run_id, '_nibwp_run_approvals', true);
     $found = false;
@@ -395,7 +409,7 @@ function nibwp_jobs_approve(int $run_id, string $approval_id, bool $decision): a
     }
     unset($a);
     if (!$found) {
-        return new WP_Error('no_approval', 'That approval is not pending.');
+        return new WP_Error('no_approval', __('That approval is not pending.', 'nibwp'));
     }
     update_post_meta($run_id, '_nibwp_run_approvals', $approvals);
     nibwp_jobs_add_event($run_id, [
@@ -427,7 +441,7 @@ function nibwp_jobs_job_to_array(WP_Post $p): array
     $card = nibwp_jobs_catalog_card($catalog);
     return [
         'id'       => (int) $p->ID,
-        'name'     => $p->post_title,
+        'name'     => nibwp_i18n_data($p->post_title),
         'catalog'  => $catalog,
         'icon'     => (string) ($card['icon'] ?? 'wand-2'),
         'schedule' => (string) get_post_meta($p->ID, '_nibwp_job_schedule', true) ?: 'manual',
@@ -472,7 +486,7 @@ function nibwp_jobs_run_to_array(WP_Post $r): array
     return [
         'id'        => (int) $r->ID,
         'job_id'    => (int) $r->post_parent,
-        'job_name'  => get_the_title($r->post_parent),
+        'job_name'  => nibwp_i18n_data(get_the_title($r->post_parent)),
         'status'    => (string) get_post_meta($r->ID, '_nibwp_run_status', true),
         'started'   => (int) get_post_meta($r->ID, '_nibwp_run_started', true),
         'finished'  => (int) get_post_meta($r->ID, '_nibwp_run_finished', true),
@@ -521,7 +535,7 @@ function nibwp_jobs_activity(int $since = 0, int $limit = 60): array
     $floor  = max($since, time() - $window);
     $out = [];
     foreach (get_posts(['post_type' => NIBWP_JOB_RUN_CPT, 'numberposts' => 40, 'post_status' => 'publish', 'orderby' => 'date', 'order' => 'DESC']) as $r) {
-        $job_name = get_the_title($r->post_parent);
+        $job_name = nibwp_i18n_data(get_the_title($r->post_parent));
         foreach ((array) get_post_meta($r->ID, '_nibwp_run_events', true) as $ev) {
             if ((int) ($ev['ts'] ?? 0) <= $floor) {
                 continue;
@@ -590,7 +604,11 @@ function nibwp_jobs_local_runner(int $run_id, int $job_id): void
     if (!empty($card['gated'])) {
         $approval = [
             'id'      => $run_id . '-1',
-            'title'   => sprintf(__('Approve changes for “%s”', 'nibwp'), $title),
+            'title'   => sprintf(
+                /* translators: %s: job name */
+                __('Approve changes for “%s”', 'nibwp'),
+                $title
+            ),
             'detail'  => __('NIBWP prepared changes that affect your site. Approve to apply them, or deny to skip.', 'nibwp'),
             'preview' => implode("\n", array_slice($feats, 0, 3)),
             'status'  => 'pending',
@@ -602,7 +620,11 @@ function nibwp_jobs_local_runner(int $run_id, int $job_id): void
         update_post_meta($run_id, '_nibwp_run_status', 'done');
         update_post_meta($run_id, '_nibwp_run_finished', time());
         update_post_meta($run_id, '_nibwp_run_report', [
-            'summary' => sprintf(__('“%s” finished — nothing needed your approval.', 'nibwp'), $title),
+            'summary' => sprintf(
+                /* translators: %s: job name */
+                __('“%s” finished — nothing needed your approval.', 'nibwp'),
+                $title
+            ),
             'items'   => $feats,
             'flags'   => [],
         ]);
@@ -637,8 +659,16 @@ function nibwp_jobs_local_resume(int $run_id, string $approval_id, bool $decisio
     update_post_meta($run_id, '_nibwp_run_finished', time());
     update_post_meta($run_id, '_nibwp_run_report', [
         'summary' => $decision
-            ? sprintf(__('“%s” finished — your approved changes were applied.', 'nibwp'), $title)
-            : sprintf(__('“%s” finished — the changes were skipped as you asked.', 'nibwp'), $title),
+            ? sprintf(
+                /* translators: %s: job name */
+                __('“%s” finished — your approved changes were applied.', 'nibwp'),
+                $title
+            )
+            : sprintf(
+                /* translators: %s: job name */
+                __('“%s” finished — the changes were skipped as you asked.', 'nibwp'),
+                $title
+            ),
         'items'   => $decision ? $feats : [__('No changes made — you denied the step.', 'nibwp')],
         'flags'   => [],
     ]);
@@ -736,7 +766,7 @@ function nibwp_jobs_running(): array
             'id'       => (int) $r->ID,
             'job_id'   => (int) $r->post_parent,
             'catalog'  => (string) get_post_meta((int) $r->post_parent, '_nibwp_job_catalog', true),
-            'job_name' => get_the_title($r->post_parent),
+            'job_name' => nibwp_i18n_data(get_the_title($r->post_parent)),
             'status'   => $status,
             'started'  => (int) get_post_meta($r->ID, '_nibwp_run_started', true),
             'step'     => (string) ($last['action'] ?? ''),
@@ -806,7 +836,7 @@ function nibwp_jobs_rest_toggle(WP_REST_Request $r): array|WP_Error
 {
     $job_id = (int) $r->get_param('job_id');
     if (get_post_type($job_id) !== NIBWP_JOB_CPT) {
-        return new WP_Error('not_found', 'No such job.', ['status' => 404]);
+        return new WP_Error('not_found', __('No such job.', 'nibwp'), ['status' => 404]);
     }
     $now = (string) get_post_meta($job_id, '_nibwp_job_status', true);
     $new = $now === 'paused' ? 'active' : 'paused';
@@ -819,7 +849,7 @@ function nibwp_jobs_rest_schedule(WP_REST_Request $r): array|WP_Error
     $job_id = (int) $r->get_param('job_id');
     $sched  = (string) $r->get_param('schedule');
     if (get_post_type($job_id) !== NIBWP_JOB_CPT || !in_array($sched, ['manual', 'daily', 'weekly'], true)) {
-        return new WP_Error('bad_request', 'Bad job or schedule.', ['status' => 400]);
+        return new WP_Error('bad_request', __('Bad job or schedule.', 'nibwp'), ['status' => 400]);
     }
     update_post_meta($job_id, '_nibwp_job_schedule', $sched);
     return ['ok' => true, 'schedule' => $sched];
@@ -829,7 +859,7 @@ function nibwp_jobs_rest_get_run(WP_REST_Request $r): array|WP_Error
 {
     $run = get_post((int) $r['id']);
     if (!$run || $run->post_type !== NIBWP_JOB_RUN_CPT) {
-        return new WP_Error('not_found', 'No such run.', ['status' => 404]);
+        return new WP_Error('not_found', __('No such run.', 'nibwp'), ['status' => 404]);
     }
     return ['ok' => true, 'run' => nibwp_jobs_run_to_array($run)];
 }

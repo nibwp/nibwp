@@ -339,3 +339,14 @@ body.nw-oa-body {
 
 .nw-oa-warn--block strong { color: var(--nw-oa-text); }
 .nw-oa-warn--block span { color: var(--nw-oa-muted); }
+
+/* ── Right-to-left: text that is not prose ──────────────────────────────
+   The site's host name and any code on this screen read left to right in any
+   UI language; see the same block in admin.css. */
+/*rtl:begin:ignore*/
+.nw-oa code, .nw-oa kbd, .nw-oa pre,
+.nw-oa-site {
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+/*rtl:end:ignore*/

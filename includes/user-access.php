@@ -15,7 +15,7 @@ declare(strict_types=1);
  * — the agency keeps a link, the client sees a clean admin. Nothing here gates
  * abilities, REST or MCP; those stay on `manage_options` exactly as before.
  *
- * Everything fails open. If the owner's account is gone, the licence lapses, or
+ * Everything fails open. If the owner's account is gone, the license lapses, or
  * the configuration resolves to nothing, menus come back rather than a site
  * where nobody can reach the plugin.
  */
@@ -207,7 +207,7 @@ function nibwp_user_access_is_owner(?int $user_id = null): bool
 /**
  * Whether the feature is available at all on this site.
  *
- * Tier gate. Delete this function's licence check to un-tier the feature; the
+ * Tier gate. Delete this function's license check to un-tier the feature; the
  * Free build's `nibwp_is_pro()` stub returns false, so Free neutralises itself
  * without a second code path.
  */
@@ -288,7 +288,7 @@ function nibwp_user_access_page_choices(bool $include_owner_only = false): array
  *
  * @return array<int, string>|null Null means "no restriction" — show everything,
  *                                 which is also the answer whenever anything is
- *                                 unusual (no owner, no licence, no user).
+ *                                 unusual (no owner, no license, no user).
  */
 function nibwp_user_access_visible_slugs(?int $user_id = null): ?array
 {

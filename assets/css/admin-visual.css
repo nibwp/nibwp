@@ -1833,7 +1833,7 @@ a.nw-vs-check { display: block; text-align: center; text-decoration: none; }
 .nw-vs-job:hover { transform: translateX(1px); }
 
 .nw-vs-job::after {
-    content: 'Copy';
+    content: attr(data-copy-label);
     position: absolute;
     top: 8px;
     right: 9px;
@@ -1850,7 +1850,7 @@ a.nw-vs-check { display: block; text-align: center; text-decoration: none; }
 }
 
 .nw-vs-job:hover::after, .nw-vs-job:focus-visible::after { opacity: 1; }
-.nw-vs-job.is-copied::after { content: 'Copied'; opacity: 1; color: var(--nw-vs-go); }
+.nw-vs-job.is-copied::after { content: attr(data-copied-label); opacity: 1; color: var(--nw-vs-go); }
 .nw-vs-job--locked::after { content: none; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2565,11 +2565,13 @@ a.nw-vs-check:hover, a.nw-vs-check:focus { color: var(--nw-vs-text); }
     background: currentColor;
     opacity: .45;
     transition: opacity .12s, transform .12s;
+    /* The row's chevron points onward, the way the line reads. */
+    transform: none /*rtl:translateX(0) scaleX(-1)*/;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") center / 11px no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") center / 11px no-repeat;
 }
 
-.nw-vs-job:hover .nw-vs-job__label::before { opacity: 1; transform: translateX(1px); }
+.nw-vs-job:hover .nw-vs-job__label::before { opacity: 1; transform: translateX(1px) /*rtl:translateX(-1px) scaleX(-1)*/; }
 .nw-vs-job__note { padding-left: 19px; }
 
 /* Locked rows point at a lock instead of onward, since pressing one explains
@@ -2581,7 +2583,7 @@ a.nw-vs-check:hover, a.nw-vs-check:focus { color: var(--nw-vs-text); }
 
 @media (prefers-reduced-motion: reduce) {
     .nw-vs-job__label::before { transition: none; }
-    .nw-vs-job:hover .nw-vs-job__label::before { transform: none; }
+    .nw-vs-job:hover .nw-vs-job__label::before { transform: none /*rtl:scaleX(-1)*/; }
 }
 
 /* Room to read: 44ch put "This workspace is open in another tab" on two lines
@@ -2710,6 +2712,7 @@ a.nw-vs-check:hover, a.nw-vs-check:focus { color: var(--nw-vs-text); }
     height: 12px;
     flex: 0 0 auto;
     background: currentColor;
+    transform: none /*rtl:scaleX(-1)*/;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") center / 12px no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") center / 12px no-repeat;
 }
@@ -2958,7 +2961,7 @@ a.nw-vs-check:hover, a.nw-vs-check:focus { color: var(--nw-vs-text); }
 .nw-vs-find__row { position: relative; padding-right: 62px; }
 
 .nw-vs-find__row::after {
-    content: 'Copy';
+    content: attr(data-copy-label);
     position: absolute;
     top: 8px;
     right: 9px;
@@ -2977,7 +2980,7 @@ a.nw-vs-check:hover, a.nw-vs-check:focus { color: var(--nw-vs-text); }
 .nw-vs-find__row:focus-visible::after { opacity: 1; }
 
 .nw-vs-find__row.is-copied::after {
-    content: 'Copied';
+    content: attr(data-copied-label);
     opacity: 1;
     background: var(--nw-vs-mark-soft);
     color: var(--nw-vs-mark);
@@ -3108,3 +3111,66 @@ a.nw-vs-check:hover, a.nw-vs-check:focus { color: var(--nw-vs-text); }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* ── Pairing a headless runner ─────────────────────────────────────────────
+   The key is shown once and never again — the site only kept its fingerprint —
+   so it has to be readable and selectable at a glance rather than truncated
+   into something someone copies half of. */
+
+.nw-vs-pair__opt {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 8px;
+    font-size: var(--text-s, 12px);
+    line-height: 1.4;
+    color: var(--nw-vs-text-2);
+    cursor: pointer;
+}
+
+.nw-vs-pair__opt input { flex: 0 0 auto; margin: 0; }
+
+.nw-vs-pair__key {
+    display: block;
+    margin: 8px 0 6px;
+    padding: 8px 9px;
+    border: 1px solid var(--nw-vs-line);
+    border-radius: var(--nw-vs-r-sm);
+    background: var(--nw-vs-raise);
+    font-family: var(--nw-vs-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: var(--text-xs, 11px);
+    line-height: 1.5;
+    color: var(--nw-vs-text);
+    word-break: break-all;
+    user-select: all;
+}
+
+/* A key nobody notices has expired is a support request about the runner. */
+.nw-vs-pair__when { display: block; margin-top: 4px; color: var(--nw-vs-muted); }
+
+/* ── Right-to-left: text that is not prose ──────────────────────────────
+   Addresses, commands and version numbers read left to right in any UI
+   language; see the same block in admin.css. */
+/*rtl:begin:ignore*/
+.nw-vs code, .nw-vs kbd, .nw-vs samp, .nw-vs pre,
+.nw-vs-foot__v {
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+.nw-vs pre,
+.nw-vs-blocked__url,
+.nw-vs-try__cmd,
+.nw-vs-pair__key,
+.nw-vs-start__url input {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+}
+/*rtl:end:ignore*/
+
+/* Directional icons in markup: see admin.css. */
+.nw-rtl-flip { transform: none /*rtl:scaleX(-1)*/; }
+/* A text arrow is inline, and transforms skip inline boxes. */
+/*rtl:raw:
+span.nw-rtl-flip { display: inline-block; }
+*/

@@ -58,8 +58,8 @@ function nibwp_render_enable_toggle(): void
     ?>
     <h2 class="nibwp-step-heading">
         <span class="nibwp-step-badge">1</span>
-        <?php esc_html_e('Enable AI Abilities', domain: 'nibwp'); ?>
-        <span class="nw-tooltip" data-tip="<?php esc_attr_e('Activates the MCP server endpoint so AI agents (Claude, ChatGPT, Cursor, etc.) can connect and control WordPress.', domain: 'nibwp'); ?>">?</span>
+        <?php esc_html_e('Enable AI Abilities', 'nibwp'); ?>
+        <span class="nw-tooltip" data-tip="<?php esc_attr_e('Activates the MCP server endpoint so AI agents (Claude, ChatGPT, Cursor, etc.) can connect and control WordPress.', 'nibwp'); ?>">?</span>
     </h2>
     <form method="post" action="" id="nibwp-settings-form" style="margin: 16px 0 0;">
         <?php wp_nonce_field('nibwp_settings'); ?>
@@ -68,23 +68,23 @@ function nibwp_render_enable_toggle(): void
                 checked: $enabled,
                 current: true,
             ); ?> <?php disabled($toggle_disabled); ?> />
-            <span><?php esc_html_e('Turn on AI Abilities for this site', domain: 'nibwp'); ?></span>
+            <span><?php esc_html_e('Turn on AI Abilities for this site', 'nibwp'); ?></span>
         </label>
         <p class="description" style="margin:0 0 8px;">
-            <strong style="color:#d63638;"><?php esc_html_e('Security note:', domain: 'nibwp'); ?></strong>
+            <strong style="color:#d63638;"><?php esc_html_e('Security note:', 'nibwp'); ?></strong>
             <?php esc_html_e(
                 'When enabled, AI agents can execute PHP code and perform filesystem operations on this site. Always keep backups.',
-                domain: 'nibwp',
+                'nibwp',
             ); ?>
         </p>
         <p class="description" style="margin:0 0 14px;">
             <?php esc_html_e(
                 'Use NIBWP with a capable AI model and set your client to ask for confirmation before every action. Read what the agent is about to do before approving.',
-                domain: 'nibwp',
+                'nibwp',
             ); ?>
         </p>
         <?php submit_button(
-            text: __('Save Settings', domain: 'nibwp'),
+            text: __('Save Settings', 'nibwp'),
             type: 'primary',
             name: 'nibwp_submit',
             wrap: false,
@@ -105,34 +105,34 @@ function nibwp_render_enable_toggle(): void
                 </div>
                 <h3 id="nw-enable-confirm-title">
                     <?php echo $looks_production
-                        ? esc_html__('This looks like a production site', domain: 'nibwp')
-                        : esc_html__('Heads up — read this before enabling', domain: 'nibwp'); ?>
+                        ? esc_html__('This looks like a production site', 'nibwp')
+                        : esc_html__('Heads up — read this before enabling', 'nibwp'); ?>
                 </h3>
             </div>
             <div class="nw-confirm__body">
                 <?php if ($looks_production): ?>
                     <p>
-                        <?php esc_html_e('The plugin can stay installed here, but AI Abilities are not meant for live sites. Enable them only on a staging or development copy of this site.', domain: 'nibwp'); ?>
+                        <?php esc_html_e('The plugin can stay installed here, but AI Abilities are not meant for live sites. Enable them only on a staging or development copy of this site.', 'nibwp'); ?>
                     </p>
                     <ul class="nw-confirm__bullets">
-                        <li><?php esc_html_e('Recommended: enable on a staging clone, make changes there, then deploy normally.', domain: 'nibwp'); ?></li>
-                        <li><?php esc_html_e('AI agents can execute PHP and modify files — irreversible damage is possible.', domain: 'nibwp'); ?></li>
-                        <li><?php esc_html_e('Keep AI Abilities OFF on production servers.', domain: 'nibwp'); ?></li>
+                        <li><?php esc_html_e('Recommended: enable on a staging clone, make changes there, then deploy normally.', 'nibwp'); ?></li>
+                        <li><?php esc_html_e('AI agents can execute PHP and modify files — irreversible damage is possible.', 'nibwp'); ?></li>
+                        <li><?php esc_html_e('Keep AI Abilities OFF on production servers.', 'nibwp'); ?></li>
                     </ul>
                 <?php else: ?>
                     <p>
-                        <?php esc_html_e('AI agents will be able to execute PHP code and access the filesystem. Always keep recent backups.', domain: 'nibwp'); ?>
+                        <?php esc_html_e('AI agents will be able to execute PHP code and access the filesystem. Always keep recent backups.', 'nibwp'); ?>
                     </p>
                 <?php endif; ?>
             </div>
             <div class="nw-confirm__footer">
                 <button type="button" class="button button-secondary" id="nw-enable-confirm-cancel">
-                    <?php esc_html_e('Cancel', domain: 'nibwp'); ?>
+                    <?php esc_html_e('Cancel', 'nibwp'); ?>
                 </button>
                 <button type="button" class="button button-primary nw-confirm__continue" id="nw-enable-confirm-continue">
                     <?php echo $looks_production
-                        ? esc_html__('Continue anyway', domain: 'nibwp')
-                        : esc_html__('Yes, enable it', domain: 'nibwp'); ?>
+                        ? esc_html__('Continue anyway', 'nibwp')
+                        : esc_html__('Yes, enable it', 'nibwp'); ?>
                 </button>
             </div>
         </div>
@@ -215,10 +215,10 @@ function nibwp_render_production_warning(): void
             <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         <div class="nibwp-production-warning__body">
-            <strong class="nibwp-production-warning__title"><?php esc_html_e('This looks like a production site.', domain: 'nibwp'); ?></strong>
+            <strong class="nibwp-production-warning__title"><?php esc_html_e('This looks like a production site.', 'nibwp'); ?></strong>
             <span class="nibwp-production-warning__desc"><?php esc_html_e(
                 'Keeping the plugin installed here is fine, but AI Abilities should only be active on a staging or development copy. Make your changes there, then deploy the result the regular way. On production, keep AI Abilities off.',
-                domain: 'nibwp',
+                'nibwp',
             ); ?></span>
         </div>
         <form method="post" class="nibwp-production-warning__form">
@@ -226,7 +226,7 @@ function nibwp_render_production_warning(): void
             <button type="submit"
                     name="nibwp_dismiss_production_warning"
                     class="nibwp-production-warning__dismiss">
-                <?php esc_html_e('Dismiss', domain: 'nibwp'); ?>
+                <?php esc_html_e('Dismiss', 'nibwp'); ?>
             </button>
         </form>
     </div>
@@ -269,7 +269,7 @@ function nibwp_handle_use_existing_password()
     if (!current_user_can('manage_options')) {
         return new WP_Error('forbidden', __(
             'You do not have permission to use application passwords.',
-            domain: 'nibwp',
+            'nibwp',
         ));
     }
 
@@ -278,12 +278,12 @@ function nibwp_handle_use_existing_password()
     $raw = $_POST['nibwp_existing_password'] ?? '';
     $value = is_string($raw) ? trim($raw) : '';
     if ($value === '') {
-        return new WP_Error('empty', __('Paste the application password value before submitting.', domain: 'nibwp'));
+        return new WP_Error('empty', __('Paste the application password value before submitting.', 'nibwp'));
     }
     if (strlen($value) < 16) {
         return new WP_Error('too_short', __(
             'That does not look like an application password. WordPress application passwords are at least 16 characters long.',
-            domain: 'nibwp',
+            'nibwp',
         ));
     }
     return $value;
@@ -304,7 +304,7 @@ function nibwp_handle_create_password()
     if (!current_user_can('manage_options')) {
         return new WP_Error('forbidden', __(
             'You do not have permission to create application passwords.',
-            domain: 'nibwp',
+            'nibwp',
         ));
     }
 
@@ -392,9 +392,9 @@ function nibwp_render_password_row(array $pw, string $dt_format): void
     $uuid = (string) ($pw['uuid'] ?? '');
     $name = (string) ($pw['name'] ?? '');
     $created_date = ($pw['created'] ?? null) !== null ? wp_date($dt_format, (int) $pw['created']) : false;
-    $created = $created_date !== false ? $created_date : __('Unknown', domain: 'nibwp');
+    $created = $created_date !== false ? $created_date : __('Unknown', 'nibwp');
     $last_used_date = ($pw['last_used'] ?? null) !== null ? wp_date($dt_format, (int) $pw['last_used']) : false;
-    $last_used = $last_used_date !== false ? $last_used_date : __('Never', domain: 'nibwp');
+    $last_used = $last_used_date !== false ? $last_used_date : __('Never', 'nibwp');
     $revoke_nonce = (string) wp_create_nonce('nibwp_revoke_password_' . $uuid);
     ?>
     <tr>
@@ -403,12 +403,12 @@ function nibwp_render_password_row(array $pw, string $dt_format): void
         <td><?php echo esc_html($last_used); ?></td>
         <td>
             <form method="post" style="margin:0;" onsubmit="return confirm('<?php echo
-                esc_js(__('Revoke this password? Any clients using it will lose access.', domain: 'nibwp'))
+                esc_js(__('Revoke this password? Any clients using it will lose access.', 'nibwp'))
             ; ?>');">
                 <input type="hidden" name="nibwp_revoke_uuid" value="<?php echo esc_attr($uuid); ?>" />
                 <input type="hidden" name="_wpnonce" value="<?php echo esc_attr($revoke_nonce); ?>" />
                 <button type="submit" name="nibwp_revoke_password" class="button button-small nibwp-revoke-btn">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-right:4px;"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px;margin-inline-end:4px;"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                     <?php esc_html_e('Revoke', 'nibwp'); ?>
                 </button>
             </form>
@@ -423,21 +423,110 @@ function nibwp_render_password_row(array $pw, string $dt_format): void
  * Just the generate button (with a collapsible name input) and a success notice after generation.
  * The list of existing passwords lives in the separate manage section at the bottom of the page.
  */
+/**
+ * "How it works" — the four steps in plain words, in a dialog.
+ *
+ * A native <dialog>: the browser brings the backdrop, Esc, focus trapping and
+ * inertness of the page behind it, none of which is worth reimplementing.
+ *
+ * This is the explainer the page used to render inline as a second list of
+ * steps directly above the steps themselves. Off the path, one click away.
+ */
+function nibwp_render_how_it_works_dialog(): void
+{
+    $steps = [
+        [
+            'icon'  => '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/>',
+            'title' => __('Turn on AI abilities', 'nibwp'),
+            'body'  => __('One switch. It opens the address on this site that AI tools talk to.', 'nibwp'),
+        ],
+        [
+            'icon'  => '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+            'title' => __('Pick your tool', 'nibwp'),
+            'body'  => __('Claude, ChatGPT, Cursor, VS Code and the rest. Everything below adapts to the one you choose.', 'nibwp'),
+        ],
+        [
+            'icon'  => '<path d="M12 3 4 6.5v5c0 4.4 3.2 8.4 8 9.5 4.8-1.1 8-5.1 8-9.5v-5L12 3Z"/><path d="m9 12 2 2 4-4"/>',
+            'title' => __('Choose how to connect', 'nibwp'),
+            'body'  => __('Sign in and approve it once, or create an application password. The page only offers what your tool can actually use.', 'nibwp'),
+        ],
+        [
+            'icon'  => '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+            'title' => __('Paste it into your tool', 'nibwp'),
+            'body'  => __('Copy the line the last step gives you. Your tool connects, and asks before it does anything.', 'nibwp'),
+        ],
+    ];
+    ?>
+    <dialog class="nw-hiw" id="nw-hiw" aria-labelledby="nw-hiw-title">
+        <div class="nw-hiw__head">
+            <div>
+                <p class="nw-hiw__eyebrow"><?php esc_html_e('In four steps', 'nibwp'); ?></p>
+                <h2 class="nw-hiw__title" id="nw-hiw-title"><?php esc_html_e('How it works', 'nibwp'); ?></h2>
+            </div>
+            <button type="button" class="nw-hiw__x" data-nw-hiw-close aria-label="<?php esc_attr_e('Close', 'nibwp'); ?>">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <ol class="nw-hiw__steps">
+            <?php foreach ($steps as $i => $step): ?>
+                <li class="nw-hiw__step">
+                    <span class="nw-hiw__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><?php
+                            echo $step['icon']; // phpcs:ignore -- literal markup in this function.
+                        ?></svg>
+                    </span>
+                    <span class="nw-hiw__body">
+                        <span class="nw-hiw__step-title">
+                            <span class="nw-hiw__n"><?php echo (int) $i + 1; ?></span>
+                            <?php echo esc_html($step['title']); ?>
+                        </span>
+                        <span class="nw-hiw__text"><?php echo esc_html($step['body']); ?></span>
+                    </span>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+
+        <p class="nw-hiw__foot">
+            <?php esc_html_e('You stay in control: your AI tool asks before every action, and you can revoke access at any time from Manage connections and keys.', 'nibwp'); ?>
+        </p>
+
+        <div class="nw-hiw__actions">
+            <button type="button" class="nibwp-btn-primary" data-nw-hiw-close><?php esc_html_e('Got it', 'nibwp'); ?></button>
+        </div>
+    </dialog>
+
+    <script>
+    (function () {
+        var dlg = document.getElementById('nw-hiw');
+        if (!dlg || !dlg.showModal) { return; }
+
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('[data-nw-hiw-open]')) { dlg.showModal(); return; }
+            if (e.target.closest('[data-nw-hiw-close]')) { dlg.close(); return; }
+            // Clicking the backdrop lands on the dialog itself, never on its
+            // contents, so this closes on outside clicks without a second layer.
+            if (e.target === dlg) { dlg.close(); }
+        });
+    })();
+    </script>
+    <?php
+}
+
 function nibwp_render_password_step(
     ?string $new_password,
     ?string $existing_password = null,
     ?WP_Error $existing_error = null,
 ): void {
     $pw_status = nibwp_app_passwords_status();
-    $has_existing = nibwp_get_mcp_passwords() !== [];
     $existing_section_open = $existing_password !== null || $existing_error !== null;
     ?>
-    <?php // No step heading here either: the tabs above name this method, and
-          // the step is numbered once, above them. ?>
-    <p class="description" style="margin:0 0 12px;">
+    <?php // The step above already names this method, so this only has to say
+          // what the button is about to do. ?>
+    <p class="nw-pw__lead">
         <?php esc_html_e(
-            'Generate an application password that your AI client will use to authenticate with WordPress. The password is embedded into the connection text in step 3.',
-            domain: 'nibwp',
+            'Create a key for your AI client to sign in with. It drops straight into the connection text below.',
+            'nibwp',
         ); ?>
     </p>
 
@@ -459,50 +548,50 @@ function nibwp_render_password_step(
                 .nibwp-apppass__body { margin: 10px 0 0; font-weight: 400; }
                 .nibwp-apppass__body p { margin: 0 0 8px; }
                 .nibwp-apppass__body p:last-child { margin-bottom: 0; }
-                .nibwp-apppass__body ul { margin: 4px 0 8px; padding-left: 20px; list-style: disc outside; }
-                .nibwp-apppass__body li { margin: 0 0 4px; padding-left: 2px; }
+                .nibwp-apppass__body ul { margin: 4px 0 8px; padding-inline-start: 20px; list-style: disc outside; }
+                .nibwp-apppass__body li { margin: 0 0 4px; padding-inline-start: 2px; }
                 .nibwp-apppass__body pre { background: #f6f7f7; border: 1px solid #c3c4c7; padding: 8px 12px; margin: 6px 0 8px; font-size: 13px; border-radius: 3px; }
             </style>
             <div class="nibwp-apppass__wrap">
             <p class="nibwp-apppass__msg"><strong><?php echo esc_html($pw_status['message']); ?></strong></p>
             <details class="nibwp-apppass-why">
                 <summary>
-                    <span class="nibwp-apppass__on-closed"><?php esc_html_e('Why is this happening?', domain: 'nibwp'); ?></span>
-                    <span class="nibwp-apppass__on-open"><?php esc_html_e('Show less', domain: 'nibwp'); ?></span>
+                    <span class="nibwp-apppass__on-closed"><?php esc_html_e('Why is this happening?', 'nibwp'); ?></span>
+                    <span class="nibwp-apppass__on-open"><?php esc_html_e('Show less', 'nibwp'); ?></span>
                 </summary>
                 <div class="nibwp-apppass__body">
                     <?php if ($pw_status['reason'] === 'unsupported'): ?>
                         <?php if (nibwp_likely_local_http()): ?>
                             <p><?php esc_html_e(
                                 'This site is on a local hostname over HTTP. Add this line to your wp-config.php (above the "/* That\'s all" comment), then reload:',
-                                domain: 'nibwp',
+                                'nibwp',
                             ); ?></p>
                             <pre>define('WP_ENVIRONMENT_TYPE', 'local');</pre>
                         <?php endif; ?>
                         <p><?php esc_html_e(
                             'An Application Password is a permanent credential your AI client sends on every request. WordPress core refuses to issue one over an insecure connection, because anyone able to read the traffic would capture it. So the feature stays off until the site is served over HTTPS.',
-                            domain: 'nibwp',
+                            'nibwp',
                         ); ?></p>
-                        <p><strong><?php esc_html_e('To enable:', domain: 'nibwp'); ?></strong></p>
+                        <p><strong><?php esc_html_e('To enable:', 'nibwp'); ?></strong></p>
                         <ul>
-                            <li><?php esc_html_e('Serve this site over HTTPS (install an SSL certificate — most hosts offer free Let\'s Encrypt).', domain: 'nibwp'); ?></li>
-                            <li><?php esc_html_e('Local / staging box on http:// on purpose? Add the line above to wp-config.php to mark the site as a local environment.', domain: 'nibwp'); ?></li>
+                            <li><?php esc_html_e('Serve this site over HTTPS (install an SSL certificate — most hosts offer free Let\'s Encrypt).', 'nibwp'); ?></li>
+                            <li><?php esc_html_e('Local / staging box on http:// on purpose? Add the line above to wp-config.php to mark the site as a local environment.', 'nibwp'); ?></li>
                         </ul>
                     <?php else: ?>
                         <p><?php esc_html_e(
                             'This site supports Application Passwords, but something is switching them off on purpose — almost always a security plugin, or a line of code that filters the feature to "disabled". WordPress will not issue a password while that override is active.',
-                            domain: 'nibwp',
+                            'nibwp',
                         ); ?></p>
-                        <p><strong><?php esc_html_e('Where to re-enable it:', domain: 'nibwp'); ?></strong></p>
+                        <p><strong><?php esc_html_e('Where to re-enable it:', 'nibwp'); ?></strong></p>
                         <ul>
-                            <li><?php esc_html_e('Wordfence → Login Security → Settings → uncheck "Disable WordPress application passwords".', domain: 'nibwp'); ?></li>
-                            <li><?php esc_html_e('Solid Security (iThemes) → WordPress Tweaks → allow Application Passwords.', domain: 'nibwp'); ?></li>
-                            <li><?php esc_html_e('All-In-One WP Security → find the Application Passwords toggle and turn it on.', domain: 'nibwp'); ?></li>
-                            <li><?php esc_html_e('Custom code / must-use plugin: remove any wp_is_application_passwords_available filter or the WP_APPLICATION_PASSWORDS constant set to false.', domain: 'nibwp'); ?></li>
+                            <li><?php esc_html_e('Wordfence → Login Security → Settings → uncheck "Disable WordPress application passwords".', 'nibwp'); ?></li>
+                            <li><?php esc_html_e('Solid Security (iThemes) → WordPress Tweaks → allow Application Passwords.', 'nibwp'); ?></li>
+                            <li><?php esc_html_e('All-In-One WP Security → find the Application Passwords toggle and turn it on.', 'nibwp'); ?></li>
+                            <li><?php esc_html_e('Custom code / must-use plugin: remove any wp_is_application_passwords_available filter or the WP_APPLICATION_PASSWORDS constant set to false.', 'nibwp'); ?></li>
                         </ul>
                         <p><?php esc_html_e(
                             'Quick check: WordPress admin → Users → your profile → the "Application Passwords" section. If it is missing or blocked there too, the override is site-wide (not just NIBWP).',
-                            domain: 'nibwp',
+                            'nibwp',
                         ); ?></p>
                     <?php endif; ?>
                 </div>
@@ -514,8 +603,8 @@ function nibwp_render_password_step(
     <?php if ($new_password !== null): ?>
         <div class="notice notice-success inline" style="margin:8px 0 16px;">
             <p style="margin:0 0 8px;"><?php esc_html_e(
-                'Application password generated. It is now embedded in the connection text in step 3. Save it somewhere safe: it will not be shown in full again.',
-                domain: 'nibwp',
+                'Application password generated. It is now embedded in the connection text below. Save it somewhere safe: it will not be shown in full again.',
+                'nibwp',
             ); ?></p>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <code id="nibwp-new-pw-value" style="font-size:14px; font-weight:600; padding:6px 10px; background:#fff; border:1px solid #c3c4c7; border-radius:3px;"><?php echo
@@ -523,115 +612,90 @@ function nibwp_render_password_step(
                 ; ?></code>
                 <button type="button" class="nibwp-btn-ghost" onclick="nibwpCopy('nibwp-new-pw-value', this)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                    <span class="nibwp-btn__label"><?php esc_html_e('Copy password only', domain: 'nibwp'); ?></span>
+                    <span class="nibwp-btn__label"><?php esc_html_e('Copy password only', 'nibwp'); ?></span>
                 </button>
             </div>
         </div>
     <?php elseif ($existing_password !== null): ?>
         <div class="notice notice-success inline" style="margin:8px 0 16px;">
             <p style="margin:0;"><?php esc_html_e(
-                'Password accepted. It is now embedded in the connection text in step 3.',
-                domain: 'nibwp',
+                'Password accepted. It is now embedded in the connection text below.',
+                'nibwp',
             ); ?></p>
         </div>
     <?php endif; ?>
 
-    <form method="post" style="margin: 0;">
+    <form method="post" class="nw-pw__form">
         <?php wp_nonce_field('nibwp_create_password'); ?>
-        <?php if (!$has_existing): ?>
-            <p style="margin:0 0 10px;">
-                <button
-                    type="button"
-                    class="nibwp-btn-ghost"
-                    id="nibwp-password-name-toggle"
-                    aria-expanded="false"
-                    aria-controls="nibwp-password-name-field"
-                    onclick="nibwpTogglePasswordName(this)"
-                ><?php esc_html_e('Customize password name (optional)', domain: 'nibwp'); ?></button>
-            </p>
-        <?php endif; ?>
-        <div
-            id="nibwp-password-name-field"
-            <?php echo $has_existing ? '' : 'hidden'; ?>
-            style="margin: 0 0 12px; <?php echo $has_existing ? '' : 'display:none;'; ?>"
-        >
-            <label for="nibwp-password-name" style="display:block; margin-bottom:4px;">
-                <strong><?php esc_html_e('Name', domain: 'nibwp'); ?></strong>
+        <div class="nw-pw__field">
+            <label class="nw-pw__label" for="nibwp-password-name">
+                <?php esc_html_e('Name', 'nibwp'); ?>
+                <span class="nw-pw__opt"><?php esc_html_e('optional', 'nibwp'); ?></span>
             </label>
             <input
                 type="text"
                 id="nibwp-password-name"
                 name="nibwp_password_name"
-                placeholder="<?php esc_attr_e('e.g. Cursor on laptop, Claude Desktop', domain: 'nibwp'); ?>"
-                style="width:300px;"
-                class="regular-text"
+                class="nw-pw__input"
+                placeholder="<?php esc_attr_e('e.g. Cursor on laptop', 'nibwp'); ?>"
                 maxlength="70"
             />
-            <p class="description" style="margin-top:4px;">
+            <p class="nw-pw__hint">
                 <?php esc_html_e(
-                    'A label to identify this credential later. Leave blank to use "NIBWP".',
-                    domain: 'nibwp',
+                    'Only a label, so you can recognise this key later. Leave it blank to use "NIBWP".',
+                    'nibwp',
                 ); ?>
             </p>
         </div>
+
         <button
             type="submit"
             name="nibwp_create_password"
-            class="button button-primary"
+            class="nibwp-btn-primary nw-pw__go"
             <?php echo !$pw_status['available'] ? 'disabled' : ''; ?>>
-            <?php echo
-                $has_existing
-                    ? esc_html__('Generate another application password', domain: 'nibwp')
-                    : esc_html__('Generate application password', domain: 'nibwp')
-            ; ?>
+            <?php esc_html_e('Create password', 'nibwp'); ?>
         </button>
     </form>
 
-    <p style="margin:14px 0 4px;">
-        <button
-            type="button"
-            class="nibwp-btn-ghost nibwp-btn-ghost--small"
-            id="nibwp-use-existing-toggle"
-            aria-expanded="<?php echo $existing_section_open ? 'true' : 'false'; ?>"
-            aria-controls="nibwp-use-existing-field"
-            onclick="nibwpToggleUseExisting(this)"
-        ><?php esc_html_e('I already have an application password', domain: 'nibwp'); ?></button>
-    </p>
-    <div
-        id="nibwp-use-existing-field"
-        <?php echo $existing_section_open ? '' : 'hidden'; ?>
-        style="margin:6px 0 0; <?php echo $existing_section_open ? '' : 'display:none;'; ?>"
-    >
-        <form method="post" style="margin:0;">
+    <?php // A <details> rather than a button plus a JS toggle: the browser
+          // already owns show-and-hide, and this is the quiet path — someone
+          // reusing a key they saved elsewhere. ?>
+    <details class="nw-pw__have"<?php echo $existing_section_open ? ' open' : ''; ?>>
+        <summary class="nw-pw__have-summary">
+            <?php esc_html_e('I already have an application password', 'nibwp'); ?>
+        </summary>
+        <form method="post" class="nw-pw__have-form">
             <?php wp_nonce_field('nibwp_use_existing_password'); ?>
-            <label for="nibwp-existing-password" style="display:block; margin-bottom:4px;">
-                <strong><?php esc_html_e('Paste the password value', domain: 'nibwp'); ?></strong>
+            <label class="nw-pw__label" for="nibwp-existing-password">
+                <?php esc_html_e('Paste the password value', 'nibwp'); ?>
             </label>
-            <input
-                type="text"
-                id="nibwp-existing-password"
-                name="nibwp_existing_password"
-                placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-                style="width:340px; font-family:monospace;"
-                class="regular-text"
-                autocomplete="off"
-            />
-            <button type="submit" name="nibwp_use_existing_password" class="button">
-                <?php esc_html_e('Use this password', domain: 'nibwp'); ?>
-            </button>
+            <div class="nw-pw__have-row">
+                <input
+                    type="text"
+                    id="nibwp-existing-password"
+                    name="nibwp_existing_password"
+                    placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                    class="nw-pw__input nw-pw__input--mono"
+                    autocomplete="off"
+                />
+                <button type="submit" name="nibwp_use_existing_password" class="nibwp-btn-ghost">
+                    <?php esc_html_e('Use this password', 'nibwp'); ?>
+                </button>
+            </div>
             <?php if ($existing_error !== null): ?>
-                <div class="notice notice-error inline" style="margin:8px 0 0;">
-                    <p style="margin:0;"><?php echo esc_html($existing_error->get_error_message()); ?></p>
+                <div class="notice notice-error inline nw-pw__err">
+                    <p><?php echo esc_html($existing_error->get_error_message()); ?></p>
                 </div>
             <?php endif; ?>
-            <p class="description" style="margin-top:4px;">
+            <p class="nw-pw__hint">
                 <?php esc_html_e(
-                    'For reusing an application password you already saved (e.g. from a password manager). It is used only to fill the connection text and never stored on this site.',
-                    domain: 'nibwp',
+                    'For a password you already saved elsewhere. It only fills the connection text below and is never stored on this site.',
+                    'nibwp',
                 ); ?>
             </p>
         </form>
-    </div>
+    </details>
+
     <?php
 }
 
@@ -652,19 +716,19 @@ function nibwp_render_manage_passwords_section(bool $allow_create_hint = true): 
     $dt_format = nibwp_get_datetime_format('Y-m-d H:i');
     $count = count($mcp_passwords);
     $open_by_default = $count <= 3;
-    /* translators: %d: count of existing application passwords */
     $summary = sprintf(
+        /* translators: %d: count of existing application passwords */
         _n(
-            single: 'Manage existing application password (%d)',
-            plural: 'Manage existing application passwords (%d)',
-            number: $count,
-            domain: 'nibwp',
+            'Manage existing application password (%d)',
+            'Manage existing application passwords (%d)',
+            $count,
+            'nibwp',
         ),
         $count,
     );
     ?>
     <details class="nibwp-manage-passwords"<?php echo $open_by_default ? ' open' : ''; ?>>
-        <summary class="nibwp-manage-passwords-summary">
+        <summary class="nibwp-btn-ghost nibwp-manage-passwords-summary">
             <?php echo esc_html($summary); ?>
         </summary>
         <div class="nibwp-manage-passwords-body">
@@ -672,17 +736,17 @@ function nibwp_render_manage_passwords_section(bool $allow_create_hint = true): 
                 <p class="description" style="margin:0 0 12px;">
                     <?php esc_html_e(
                         'AI Abilities are disabled. These credentials remain valid for WordPress authentication, but the NIBWP MCP endpoint will reject requests until AI Abilities are turned back on.',
-                        domain: 'nibwp',
+                        'nibwp',
                     ); ?>
                 </p>
             <?php endif; ?>
             <table class="wp-list-table widefat fixed striped">
                 <thead>
                     <tr>
-                        <th><?php esc_html_e('Name', domain: 'nibwp'); ?></th>
-                        <th style="width:180px;"><?php esc_html_e('Created', domain: 'nibwp'); ?></th>
-                        <th style="width:180px;"><?php esc_html_e('Last Used', domain: 'nibwp'); ?></th>
-                        <th style="width:140px;"><?php esc_html_e('Actions', domain: 'nibwp'); ?></th>
+                        <th><?php esc_html_e('Name', 'nibwp'); ?></th>
+                        <th style="width:180px;"><?php esc_html_e('Created', 'nibwp'); ?></th>
+                        <th style="width:180px;"><?php esc_html_e('Last Used', 'nibwp'); ?></th>
+                        <th style="width:140px;"><?php esc_html_e('Actions', 'nibwp'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -711,29 +775,52 @@ function nibwp_build_paste_to_agent_paragraph(
     ?string $password_placeholder = null,
 ): string {
     $password_value = $password_placeholder ?? $display_password;
+    // The person pastes this into their AI client, so it reads in their
+    // language. Endpoints, credentials, package names, env vars and flags stay
+    // literal: the agent has to type them exactly.
     $lines = [
-        'I want to add this WordPress site as an MCP server to this AI client.',
+        __('I want to add this WordPress site as an MCP server to this AI client.', 'nibwp'),
         '',
-        'Connection details:',
-        '- Server URL: ' . $rest_url,
-        '- Username: ' . $username,
-        '- Application password: ' . $password_value,
-        '- Server name to use in the config: ' . $name_placeholder,
-        '- Transport: @automattic/mcp-wordpress-remote via npx',
+        __('Connection details:', 'nibwp'),
+        /* translators: %s: MCP server URL */
+        sprintf(__('- Server URL: %s', 'nibwp'), $rest_url),
+        /* translators: %s: WordPress username */
+        sprintf(__('- Username: %s', 'nibwp'), $username),
+        /* translators: %s: application password value */
+        sprintf(__('- Application password: %s', 'nibwp'), $password_value),
+        /* translators: %s: MCP server name */
+        sprintf(__('- Server name to use in the config: %s', 'nibwp'), $name_placeholder),
+        /* translators: 1: npm package name, 2: the npx command */
+        sprintf(__('- Transport: %1$s via %2$s', 'nibwp'), '@automattic/mcp-wordpress-remote', 'npx'),
         '',
-        'Setup rules:',
-        '- Pass credentials ONLY as env vars: WP_API_URL, WP_API_USERNAME, WP_API_PASSWORD. Do NOT use CLI flags like --url or --password (the package ignores them).',
-        '- args array must be exactly ["-y", "@automattic/mcp-wordpress-remote@latest"].'
+        __('Setup rules:', 'nibwp'),
+        sprintf(
+            /* translators: 1: list of environment variable names, 2: a CLI flag, 3: another CLI flag */
+            __('- Pass credentials ONLY as env vars: %1$s. Do NOT use CLI flags like %2$s or %3$s (the package ignores them).', 'nibwp'),
+            'WP_API_URL, WP_API_USERNAME, WP_API_PASSWORD',
+            '--url',
+            '--password',
+        ),
+        sprintf(
+            /* translators: 1: the config key "args", 2: its exact JSON value */
+            __('- %1$s array must be exactly %2$s.', 'nibwp'),
+            'args',
+            '["-y", "@automattic/mcp-wordpress-remote@latest"]',
+        )
             . (
                 nibwp_likely_self_signed_https()
                     ? "\n"
-                    . '- Also set NODE_TLS_REJECT_UNAUTHORIZED="0" in env (this site uses a local self-signed TLS certificate).'
+                    . sprintf(
+                        /* translators: %s: environment variable assignment */
+                        __('- Also set %s in env (this site uses a local self-signed TLS certificate).', 'nibwp'),
+                        'NODE_TLS_REJECT_UNAUTHORIZED="0"',
+                    )
                     : ''
             ),
         '',
-        'Don\'t ask me to confirm choices already specified above. After writing the config, restart or reload the MCP session (most clients require it), then verify by listing the server\'s tools. If it fails, show me the stderr from the npx process before proposing changes.',
+        __('Don\'t ask me to confirm choices already specified above. After writing the config, restart or reload the MCP session (most clients require it), then verify by listing the server\'s tools. If it fails, show me the stderr from the npx process before proposing changes.', 'nibwp'),
         '',
-        'If you cannot modify the config of this AI client from here, tell me to expand "Need the JSON config for a specific client?" on the NIBWP Configuration page and copy the snippet manually.',
+        __('If you cannot modify the config of this AI client from here, tell me to expand "Need the JSON config for a specific client?" on the NIBWP Configuration page and copy the snippet manually.', 'nibwp'),
     ];
 
     return implode("\n", $lines);
@@ -939,12 +1026,12 @@ function nibwp_build_configs(string $rest_url, string $username, string $display
     $vscode_servers_json = (string) json_encode(['servers' => [$mcp_name => $npx_server]], $opts);
 
     /* translators: %s: config file name wrapped in <code> tags */
-    $add_to = __('Add to %s.', domain: 'nibwp');
+    $add_to = __('Add to %s.', 'nibwp');
 
     $special = [
         'claude-code' => [
             'code' => nibwp_build_claude_code_cmd($mcp_name, $rest_url, $username, $display_password),
-            'hint' => __('Run in your terminal.', domain: 'nibwp'),
+            'hint' => __('Run in your terminal.', 'nibwp'),
             'paths' => [],
             'isShell' => true,
         ],
@@ -967,8 +1054,8 @@ function nibwp_build_configs(string $rest_url, string $username, string $display
             'code' => nibwp_build_opencode_json($mcp_name, $rest_url, $username, $display_password, $opts),
             'hint' => sprintf($add_to, '<code>opencode.json</code>'),
             'paths' => [
-                __('Project', domain: 'nibwp') => 'opencode.json',
-                __('Global', domain: 'nibwp') => '~/.config/opencode/opencode.json',
+                __('Project', 'nibwp') => 'opencode.json',
+                __('Global', 'nibwp') => '~/.config/opencode/opencode.json',
             ],
             'isShell' => false,
         ],
@@ -985,7 +1072,7 @@ function nibwp_build_configs(string $rest_url, string $username, string $display
 function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_servers_json): array
 {
     /* translators: %s: config file name wrapped in <code> tags */
-    $add_to = __('Add to %s.', domain: 'nibwp');
+    $add_to = __('Add to %s.', 'nibwp');
 
     return [
         'claude-desktop' => [
@@ -1001,8 +1088,8 @@ function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_s
             'code' => $mcp_servers_json,
             'hint' => sprintf($add_to, '<code>mcp.json</code>'),
             'paths' => [
-                __('Global', domain: 'nibwp') => '~/.cursor/mcp.json',
-                __('Project', domain: 'nibwp') => '.cursor/mcp.json',
+                __('Global', 'nibwp') => '~/.cursor/mcp.json',
+                __('Project', 'nibwp') => '.cursor/mcp.json',
             ],
             'isShell' => false,
         ],
@@ -1010,10 +1097,10 @@ function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_s
             'code' => $vscode_servers_json,
             'hint' => sprintf($add_to, '<code>mcp.json</code>'),
             'paths' => [
-                __('Workspace', domain: 'nibwp') => '.vscode/mcp.json',
-                __('User', domain: 'nibwp') => __(
+                __('Workspace', 'nibwp') => '.vscode/mcp.json',
+                __('User', 'nibwp') => __(
                     'Run: MCP: Open User Configuration (command palette)',
-                    domain: 'nibwp',
+                    'nibwp',
                 ),
             ],
             'isShell' => false,
@@ -1031,9 +1118,9 @@ function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_s
             'code' => $mcp_servers_json,
             'hint' => sprintf($add_to, '<code>cline_mcp_settings.json</code>'),
             'paths' => [
-                __('Via UI', domain: 'nibwp') => __(
-                    'Cline sidebar â†’ MCP Servers â†’ Configure MCP Servers',
-                    domain: 'nibwp',
+                __('Via UI', 'nibwp') => __(
+                    'Cline sidebar → MCP Servers → Configure MCP Servers',
+                    'nibwp',
                 ),
             ],
             'isShell' => false,
@@ -1042,10 +1129,10 @@ function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_s
             'code' => $mcp_servers_json,
             'hint' => sprintf($add_to, '<code>mcp.json</code>'),
             'paths' => [
-                __('Project', domain: 'nibwp') => '.roo/mcp.json',
-                __('Via UI', domain: 'nibwp') => __(
-                    'Roo Code sidebar â†’ MCP Servers â†’ Configure MCP Servers',
-                    domain: 'nibwp',
+                __('Project', 'nibwp') => '.roo/mcp.json',
+                __('Via UI', 'nibwp') => __(
+                    'Roo Code sidebar → MCP Servers → Configure MCP Servers',
+                    'nibwp',
                 ),
             ],
             'isShell' => false,
@@ -1054,10 +1141,10 @@ function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_s
             'code' => $mcp_servers_json,
             'hint' => sprintf($add_to, '<code>mcp.json</code>'),
             'paths' => [
-                __('Project', domain: 'nibwp') => '.kilocode/mcp.json',
-                __('Via UI', domain: 'nibwp') => __(
-                    'Kilo Code sidebar â†’ MCP Servers â†’ Configure MCP Servers',
-                    domain: 'nibwp',
+                __('Project', 'nibwp') => '.kilocode/mcp.json',
+                __('Via UI', 'nibwp') => __(
+                    'Kilo Code sidebar → MCP Servers → Configure MCP Servers',
+                    'nibwp',
                 ),
             ],
             'isShell' => false,
@@ -1066,7 +1153,7 @@ function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_s
             'code' => $vscode_servers_json,
             'hint' => sprintf($add_to, '<code>mcp.json</code>'),
             'paths' => [
-                __('Project', domain: 'nibwp') => '.github/copilot/mcp.json',
+                __('Project', 'nibwp') => '.github/copilot/mcp.json',
             ],
             'isShell' => false,
         ],
@@ -1074,8 +1161,8 @@ function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_s
             'code' => $mcp_servers_json,
             'hint' => sprintf($add_to, '<code>mcp.json</code>'),
             'paths' => [
-                __('Global', domain: 'nibwp') => '~/.aws/amazonq/mcp.json',
-                __('Project', domain: 'nibwp') => '.amazonq/mcp.json',
+                __('Global', 'nibwp') => '~/.aws/amazonq/mcp.json',
+                __('Project', 'nibwp') => '.amazonq/mcp.json',
             ],
             'isShell' => false,
         ],
@@ -1083,8 +1170,8 @@ function nibwp_build_standard_configs(string $mcp_servers_json, string $vscode_s
             'code' => $mcp_servers_json,
             'hint' => sprintf($add_to, '<code>settings.json</code>'),
             'paths' => [
-                __('Global', domain: 'nibwp') => '~/.gemini/settings.json',
-                __('Project', domain: 'nibwp') => '.gemini/settings.json',
+                __('Global', 'nibwp') => '~/.gemini/settings.json',
+                __('Project', 'nibwp') => '.gemini/settings.json',
             ],
             'isShell' => false,
         ],
@@ -1136,7 +1223,7 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
         'opencode' => 'OpenCode',
     ];
 
-    $copied_label = esc_js(__('Copied!', domain: 'nibwp'));
+    $copied_label = esc_js(__('Copied!', 'nibwp'));
     $paste_paragraph_initial = nibwp_build_paste_to_agent_paragraph(
         $rest_url,
         $username,
@@ -1151,10 +1238,10 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
         $pw_slot,
     );
     ?>
-    <h2 class="nibwp-step-heading" id="nibwp-connect-client" style="margin-top:32px;">
-        <span class="nibwp-step-badge">3</span>
-        <?php esc_html_e('Connect Your AI Client', domain: 'nibwp'); ?>
-    </h2>
+    <?php // No heading of its own: this block is the body of a numbered step
+          // now, and the badge here still said "3" long after the flow had
+          // stopped having a third step in that position. The step section
+          // carries the nibwp-connect-client id that the scroll below targets. ?>
     <?php // No instruction line: a code block with a Copy button next to it is
           // already telling you to copy it. ?>
 
@@ -1179,10 +1266,10 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
     <?php if (nibwp_likely_self_signed_https()): ?>
         <div class="notice notice-warning inline" style="margin:0 0 12px;">
             <p style="margin:0;">
-                <strong><?php esc_html_e('Local HTTPS detected.', domain: 'nibwp'); ?></strong>
+                <strong><?php esc_html_e('Local HTTPS detected.', 'nibwp'); ?></strong>
                 <?php esc_html_e(
                     'Your site uses HTTPS with a certificate that is not publicly trusted (normal for local development). The snippets below include a small flag so your AI client can connect anyway.',
-                    domain: 'nibwp',
+                    'nibwp',
                 ); ?>
             </p>
         </div>
@@ -1191,9 +1278,9 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
     <div class="nibwp-prompt-label">
         <span class="nibwp-prompt-label__badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            <?php esc_html_e('Prompt for your AI agent', domain: 'nibwp'); ?>
+            <?php esc_html_e('Prompt for your AI agent', 'nibwp'); ?>
         </span>
-        <span class="nibwp-prompt-label__hint"><?php esc_html_e('Paste this into Claude, ChatGPT, Cursor — the agent will set up the connection for you.', domain: 'nibwp'); ?></span>
+        <span class="nibwp-prompt-label__hint"><?php esc_html_e('Paste this into Claude, ChatGPT, Cursor — the agent will set up the connection for you.', 'nibwp'); ?></span>
     </div>
 
     <div class="nibwp-paste-block">
@@ -1208,26 +1295,26 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
                 onclick="nibwpToggleExpandPaste(this)"
                 aria-expanded="false"
                 aria-controls="nibwp-paste-content"
-            ><?php esc_html_e('Show full text', domain: 'nibwp'); ?></button>
+            ><?php esc_html_e('Show full text', 'nibwp'); ?></button>
             <button
                 type="button"
                 class="nibwp-btn-ghost nibwp-paste-actions__copy"
                 onclick="nibwpManualSetup()"
-            ><?php esc_html_e('Manual setup', domain: 'nibwp'); ?></button>
+            ><?php esc_html_e('Manual setup', 'nibwp'); ?></button>
             <button
                 type="button"
                 class="nibwp-btn-primary"
                 onclick="nibwpCopyPaste(this)"
             >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                <span class="nibwp-btn__label"><?php esc_html_e('Copy prompt', domain: 'nibwp'); ?></span></button>
+                <span class="nibwp-btn__label"><?php esc_html_e('Copy prompt', 'nibwp'); ?></span></button>
             <p
                 id="nibwp-paste-copied-warning"
                 style="display:none; margin:0; color:#d63638; font-size:13px; font-weight:600;"
             >
                 <?php esc_html_e(
                     "Don't share with anyone: it contains an application password that grants access to this WordPress site.",
-                    domain: 'nibwp',
+                    'nibwp',
                 ); ?>
             </p>
         </div>
@@ -1241,7 +1328,7 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
             <span class="nibwp-optional__chev" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </span>
-            <span class="nibwp-optional__title"><?php esc_html_e('Optional', domain: 'nibwp'); ?></span>
+            <span class="nibwp-optional__title"><?php esc_html_e('Optional', 'nibwp'); ?></span>
         </summary>
 
     <p style="margin:14px 0 4px;">
@@ -1252,7 +1339,7 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
             aria-expanded="false"
             aria-controls="nibwp-server-name-field"
             onclick="nibwpToggleServerName(this)"
-        ><?php esc_html_e('Change server name', domain: 'nibwp'); ?></button>
+        ><?php esc_html_e('Change server name', 'nibwp'); ?></button>
     </p>
     <div id="nibwp-server-name-field" hidden style="display:none; margin: 6px 0 14px;">
         <input
@@ -1267,14 +1354,14 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
         <p class="description" style="margin:6px 0 0;">
             <?php esc_html_e(
                 'Editing here updates the connection text and JSON snippets below in real time. Each AI client config keeps its own name once saved on its side.',
-                domain: 'nibwp',
+                'nibwp',
             ); ?>
         </p>
         <div id="nibwp-name-warning" class="notice notice-warning inline" style="display:none; margin:8px 0 0;">
             <p style="margin:0;">
                 <?php esc_html_e(
                     'Maximum 25 characters reached. Required for client compatibility.',
-                    domain: 'nibwp',
+                    'nibwp',
                 ); ?>
             </p>
         </div>
@@ -1282,19 +1369,19 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
             <p style="margin:0;">
                 <?php esc_html_e(
                     'Tip: keep "nibwp" in the name so you (and your AI agent) can tell this MCP server apart from others.',
-                    domain: 'nibwp',
+                    'nibwp',
                 ); ?>
             </p>
         </div>
     </div>
 
     <h3 style="margin:20px 0 8px; font-size:15px; font-weight:600; color:var(--nw-text);">
-        <?php esc_html_e('IDE / Client Config Snippets', domain: 'nibwp'); ?>
+        <?php esc_html_e('IDE / Client Config Snippets', 'nibwp'); ?>
     </h3>
     <p class="description" style="margin:0 0 12px;">
         <?php esc_html_e(
             'Select your AI client below to get the ready-to-use MCP config snippet. Copy and paste it into your client\'s configuration file.',
-            domain: 'nibwp',
+            'nibwp',
         ); ?>
     </p>
 
@@ -1318,7 +1405,7 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
             <pre id="nibwp-config-code"></pre>
             <button type="button" class="button nibwp-copy-btn" onclick="nibwpCopyConfig(this)"><?php esc_html_e(
                 'Copy',
-                domain: 'nibwp',
+                'nibwp',
             ); ?></button>
         </div>
         <div id="nibwp-config-footer" style="font-size:13px; color:var(--nw-text-muted); border-top: 1px solid #c3c4c7;">
@@ -1391,7 +1478,7 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
             var pathsEl = document.getElementById('nibwp-config-paths');
             var keys = Object.keys(cfg.paths);
             if (keys.length > 0) {
-                var html = '<ul style="margin:4px 0 0; padding-left:20px;">';
+                var html = '<ul style="margin:4px 0 0; padding-inline-start:20px;">';
                 keys.forEach(function (label) {
                     html += '<li><strong>' + label + '</strong>: <code>' + cfg.paths[label] + '</code></li>';
                 });
@@ -1502,11 +1589,11 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
             if (expanded) {
                 content.classList.remove('is-expanded');
                 btn.setAttribute('aria-expanded', 'false');
-                btn.textContent = <?php echo wp_json_encode(__('Show full text', domain: 'nibwp')); ?>;
+                btn.textContent = <?php echo wp_json_encode(__('Show full text', 'nibwp')); ?>;
             } else {
                 content.classList.add('is-expanded');
                 btn.setAttribute('aria-expanded', 'true');
-                btn.textContent = <?php echo wp_json_encode(__('Show less', domain: 'nibwp')); ?>;
+                btn.textContent = <?php echo wp_json_encode(__('Show less', 'nibwp')); ?>;
             }
         };
 
@@ -1545,8 +1632,11 @@ function nibwp_render_config_section(string $rest_url, string $username, string 
 
             function updateShadows() {
                 var max = strip.scrollWidth - strip.clientWidth;
-                wrap.classList.toggle('has-scroll-left', strip.scrollLeft > 2);
-                wrap.classList.toggle('has-scroll-right', strip.scrollLeft < max - 2);
+                // Right to left, scrollLeft runs from 0 at the start down to -max at
+                // the end, and the RTL stylesheet swaps the fades, so the distance
+                // from the start is what both classes need.
+                wrap.classList.toggle('has-scroll-left', Math.abs(strip.scrollLeft) > 2);
+                wrap.classList.toggle('has-scroll-right', Math.abs(strip.scrollLeft) < max - 2);
             }
             function animate() {
                 if (Math.abs(velocity) < 0.1) { rafId = null; return; }
@@ -1583,7 +1673,7 @@ function nibwp_render_mcp_dependency_inline_notice(?WP_Error $dependency_error):
 
     ?>
     <div class="nibwp-mcp-error-panel" role="alert">
-        <h2><?php esc_html_e('NIBWP cannot expose MCP', domain: 'nibwp'); ?></h2>
+        <h2><?php esc_html_e('NIBWP cannot expose MCP', 'nibwp'); ?></h2>
         <p><?php echo esc_html($dependency_error->get_error_message()); ?></p>
     </div>
     <?php
@@ -1599,7 +1689,7 @@ function nibwp_render_enable_prompt(?WP_Error $dependency_error): void
     <p style="color:var(--nw-text-muted); font-size:14px;">
         <?php esc_html_e(
             'Enable AI Abilities above to create application passwords and connect an MCP client.',
-            domain: 'nibwp',
+            'nibwp',
         ); ?>
     </p>
     <?php
@@ -1629,8 +1719,8 @@ function nibwp_render_connect_page(): void
     $existing_password = is_string($existing_result) ? $existing_result : null;
 
     $result_message = match ($_GET['nibwp_result'] ?? null) {
-        'disconnected' => __('Application disconnected. It can no longer reach this site.', domain: 'nibwp'),
-        'revoked' => __('Application password revoked.', domain: 'nibwp'),
+        'disconnected' => __('Application disconnected. It can no longer reach this site.', 'nibwp'),
+        'revoked' => __('Application password revoked.', 'nibwp'),
         default => null,
     };
 
@@ -1639,100 +1729,85 @@ function nibwp_render_connect_page(): void
     $rest_url = rest_url('mcp/nibwp');
     $display_password = $new_password ?? $existing_password ?? 'YOUR-APP-PASSWORD';
 
-    $copied_label = esc_js(__('Copied!', domain: 'nibwp'));
+    $copied_label = esc_js(__('Copied!', 'nibwp'));
 
     ?>
     <?php nibwp_render_admin_header(); ?>
     <div class="wrap nibwp-wrap">
         <div class="nibwp-page-header">
             <div>
-                <h1><?php esc_html_e('Configuration', domain: 'nibwp'); ?></h1>
-                <p class="nibwp-subtitle"><?php esc_html_e('Connect AI agents to your WordPress site via MCP.', domain: 'nibwp'); ?></p>
+                <h1><?php esc_html_e('Configuration', 'nibwp'); ?></h1>
+                <p class="nibwp-subtitle"><?php esc_html_e('Connect AI agents to your WordPress site via MCP.', 'nibwp'); ?></p>
             </div>
+            <button type="button" class="nw-hiw__open" data-nw-hiw-open>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span><?php esc_html_e('How it works', 'nibwp'); ?></span>
+            </button>
         </div>
+
+        <?php nibwp_render_how_it_works_dialog(); ?>
 
         <?php nibwp_render_mcp_dependency_inline_notice($mcp_dependency_error); ?>
 
         <?php if ($toggle_saved === true): ?>
             <div class="notice notice-success is-dismissible"><p><?php
 
-            esc_html_e('Settings saved.', domain: 'nibwp');
+            esc_html_e('Settings saved.', 'nibwp');
             ?></p></div>
         <?php endif; ?>
 
         <?php nibwp_render_production_warning(); ?>
 
-        <details class="nibwp-howto">
-            <summary class="nibwp-howto__summary">
-                <span class="nibwp-howto__eyebrow"><?php esc_html_e('How it works', domain: 'nibwp'); ?></span>
-                <span class="nibwp-howto__chev" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
-            </summary>
-            <p class="nibwp-howto__lead"><?php esc_html_e('NIBWP gives your AI assistant (Claude, ChatGPT, Cursor…) a secure key to read and manage this site for you. Three quick steps:', domain: 'nibwp'); ?></p>
-            <ol class="nibwp-howto__steps">
-                <li><span class="nibwp-howto__n">1</span><?php esc_html_e('Turn on AI Abilities below.', domain: 'nibwp'); ?></li>
-                <li><span class="nibwp-howto__n">2</span><?php esc_html_e('Create a secure connection key.', domain: 'nibwp'); ?></li>
-                <li><span class="nibwp-howto__n">3</span><?php esc_html_e('Paste the ready-made prompt into your AI — it connects itself.', domain: 'nibwp'); ?></li>
-            </ol>
-        </details>
+        <?php
+        // The "how it works" explainer used to describe three steps the page
+        // then did not render as steps. Now that the flow below is those three
+        // steps, repeating them above is just the same list twice — and the
+        // copy had already drifted from what the steps actually do.
+        ?>
 
-        <div class="nibwp-connect-section">
-            <?php nibwp_render_enable_toggle(); ?>
-        </div>
+        <?php if ($create_error !== null): ?>
+            <div class="notice notice-error"><p><?php
 
-        <?php nibwp_render_enable_prompt($mcp_dependency_error); ?>
-        <?php if ($mcp_ready): ?>
-            <?php if ($create_error !== null): ?>
-                <div class="notice notice-error"><p><?php
-
-                echo esc_html($create_error->get_error_message());
-                ?></p></div>
-            <?php endif; ?>
-
-            <?php if ($result_message !== null): ?>
-                <div class="notice notice-success is-dismissible"><p><?php
-
-                echo esc_html($result_message);
-                ?></p></div>
-            <?php endif; ?>
-
-            <div class="nibwp-connect-section">
-                <?php
-                // Two ways in. The sign-in pane needs no credential, so it must
-                // not sit behind the "did this request just mint a password?"
-                // gate Step 3 uses — it would vanish on reload.
-                nibwp_oauth_render_connect_tabs(
-                    $rest_url,
-                    nibwp_get_mcp_server_name_default(),
-                    static function () use ($new_password, $existing_password, $existing_error, $rest_url, $username, $display_password): void {
-                        nibwp_render_password_step($new_password, $existing_password, $existing_error);
-                        nibwp_render_manage_passwords_section(allow_create_hint: true);
-
-                        if ($new_password !== null || $existing_password !== null) {
-                            nibwp_render_config_section($rest_url, $username, $display_password);
-                        }
-                    },
-                    // Anything that just happened on the password form keeps the
-                    // page on the password form — a new password, a pasted one,
-                    // or an error explaining why neither worked.
-                    ($new_password !== null || $existing_password !== null
-                        || $create_error !== null || $existing_error !== null)
-                        ? 'password'
-                        : 'signin'
-                );
-                ?>
-            </div>
-
-            <?php nibwp_oauth_render_connections(); ?>
-            <?php nibwp_oauth_render_manual_clients(); ?>
-        <?php elseif (nibwp_get_mcp_passwords() !== []): ?>
-            <div class="nibwp-connect-section">
-                <h2 class="nibwp-step-heading">
-                    <span class="nibwp-step-badge">2</span>
-                    <?php esc_html_e('Application Password', domain: 'nibwp'); ?>
-                </h2>
-                <?php nibwp_render_manage_passwords_section(allow_create_hint: false); ?>
-            </div>
+            echo esc_html($create_error->get_error_message());
+            ?></p></div>
         <?php endif; ?>
+
+        <?php if ($result_message !== null): ?>
+            <div class="notice notice-success is-dismissible"><p><?php
+
+            echo esc_html($result_message);
+            ?></p></div>
+        <?php endif; ?>
+
+        <?php
+        // The flow renders whether or not abilities are on, because step 1 IS
+        // the switch that turns them on. Gating the whole flow behind $mcp_ready
+        // left a site with abilities off showing one line of grey text telling
+        // the reader to "enable AI Abilities above" - above nothing, since the
+        // only control that does it had just been gated away. On a fresh
+        // install that was the entire page, and on a site where someone had
+        // switched abilities off it was that line plus a list of old keys with
+        // no way back.
+        //
+        // Steps 2 to 5 already render locked while $enabled is false, which is
+        // the honest picture: here is the path, here is the switch that starts
+        // it. Only a broken MCP dependency still hides the flow, because then
+        // there is nothing the switch could usefully turn on.
+        if ($mcp_dependency_error === null) {
+            nibwp_render_connect_flow(
+                $rest_url,
+                $username,
+                $display_password,
+                $new_password,
+                $existing_password,
+                $create_error,
+                $existing_error
+            );
+        } elseif (nibwp_get_mcp_passwords() !== []) {
+            // No usable flow, but existing keys still have to be revocable.
+            nibwp_render_manage_passwords_section(allow_create_hint: false);
+        }
+        ?>
 
     </div>
 
@@ -1745,36 +1820,6 @@ function nibwp_render_connect_page(): void
             lbl.textContent = '<?php echo $copied_label; ?>';
             setTimeout(function() { lbl.textContent = orig; }, 1500);
         });
-    }
-    function nibwpTogglePasswordName(btn) {
-        var field = document.getElementById('nibwp-password-name-field');
-        var expanded = btn.getAttribute('aria-expanded') === 'true';
-        if (expanded) {
-            field.style.display = 'none';
-            field.hidden = true;
-            btn.setAttribute('aria-expanded', 'false');
-        } else {
-            field.style.display = 'block';
-            field.hidden = false;
-            btn.setAttribute('aria-expanded', 'true');
-            var input = document.getElementById('nibwp-password-name');
-            if (input) { input.focus(); }
-        }
-    }
-    function nibwpToggleUseExisting(btn) {
-        var field = document.getElementById('nibwp-use-existing-field');
-        var expanded = btn.getAttribute('aria-expanded') === 'true';
-        if (expanded) {
-            field.style.display = 'none';
-            field.hidden = true;
-            btn.setAttribute('aria-expanded', 'false');
-        } else {
-            field.style.display = 'block';
-            field.hidden = false;
-            btn.setAttribute('aria-expanded', 'true');
-            var input = document.getElementById('nibwp-existing-password');
-            if (input) { input.focus(); }
-        }
     }
     </script>
     <?php

@@ -15,7 +15,7 @@ declare(strict_types=1);
  * this never touches:
  *
  *   - update checks match on that path, so updates keep arriving
- *   - the licence keys off the site and the licence key, not the plugin name
+ *   - the license keys off the site and the license key, not the plugin name
  *   - option names, hooks, capabilities and REST routes are untouched
  *   - deactivating this feature restores the real name with nothing to undo
  *

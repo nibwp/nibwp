@@ -40,6 +40,14 @@ function nibwp_check_for_updates($transient)
     $plugin_file = plugin_basename(dirname(__DIR__) . '/nibwp.php');
 
     if ($remote === null || !version_compare(NIBWP_VERSION, $remote['version'], operator: '<')) {
+        // Anything already queued for this plugin came from somewhere else —
+        // in practice wordpress.org, which carries the same slug but the free
+        // build. Installing it would replace a licensed copy with a smaller
+        // one, so the entry goes. The Update URI header in nibwp.php stops
+        // WordPress asking wordpress.org at all; this is what catches an entry
+        // left in the transient from before the header existed.
+        unset($transient->response[$plugin_file]);
+
         $transient->no_update[$plugin_file] = (object) [
             'id' => $plugin_file,
             'slug' => 'nibwp',
@@ -283,7 +291,7 @@ function nibwp_updater_upgrade_url(): string
  */
 add_action('admin_post_nibwp_check_updates', static function (): void {
     if (!current_user_can('update_plugins')) {
-        wp_die(esc_html__('You are not allowed to check for updates.', domain: 'nibwp'));
+        wp_die(esc_html__('You are not allowed to check for updates.', 'nibwp'));
     }
     check_admin_referer('nibwp_check_updates');
 
@@ -323,13 +331,13 @@ function nibwp_updater_admin_notice(): void
 
     if ($has_update) {
         printf(
-            '<div class="notice notice-warning"><p><strong>%1$s</strong> %2$s <a href="%3$s" class="button button-primary button-small" style="margin-left:6px;">%4$s</a> <a href="%5$s" style="margin-left:8px;">%6$s</a></p></div>',
-            esc_html(sprintf(/* translators: %s: new version */ __('NIBWP %s is available.', domain: 'nibwp'), $info['version'])),
-            esc_html(sprintf(/* translators: %s: installed version */ __('You have %s.', domain: 'nibwp'), NIBWP_VERSION)),
+            '<div class="notice notice-warning"><p><strong>%1$s</strong> %2$s <a href="%3$s" class="button button-primary button-small" style="margin-inline-start:6px;">%4$s</a> <a href="%5$s" style="margin-inline-start:8px;">%6$s</a></p></div>',
+            esc_html(sprintf(/* translators: %s: new version */ __('NIBWP %s is available.', 'nibwp'), $info['version'])),
+            esc_html(sprintf(/* translators: %s: installed version */ __('You have %s.', 'nibwp'), NIBWP_VERSION)),
             esc_url(nibwp_updater_upgrade_url()),
-            esc_html__('Update now', domain: 'nibwp'),
+            esc_html__('Update now', 'nibwp'),
             esc_url($check_url),
-            esc_html__('Re-check', domain: 'nibwp'),
+            esc_html__('Re-check', 'nibwp'),
         );
         return;
     }
@@ -339,14 +347,14 @@ function nibwp_updater_admin_notice(): void
     if (isset($_GET['nibwp_checked'])) {
         printf(
             '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
-            esc_html(sprintf(/* translators: %s: installed version */ __('NIBWP is up to date (v%s).', domain: 'nibwp'), NIBWP_VERSION)),
+            esc_html(sprintf(/* translators: %s: installed version */ __('NIBWP is up to date (v%s).', 'nibwp'), NIBWP_VERSION)),
         );
     } elseif (str_contains((string) $screen->id, 'nibwp-dashboard')) {
         printf(
-            '<div class="notice notice-info"><p>%1$s <a href="%2$s" class="button button-small" style="margin-left:6px;">%3$s</a></p></div>',
-            esc_html(sprintf(/* translators: %s: installed version */ __('NIBWP v%s installed.', domain: 'nibwp'), NIBWP_VERSION)),
+            '<div class="notice notice-info"><p>%1$s <a href="%2$s" class="button button-small" style="margin-inline-start:6px;">%3$s</a></p></div>',
+            esc_html(sprintf(/* translators: %s: installed version */ __('NIBWP v%s installed.', 'nibwp'), NIBWP_VERSION)),
             esc_url($check_url),
-            esc_html__('Check for updates', domain: 'nibwp'),
+            esc_html__('Check for updates', 'nibwp'),
         );
     }
 }
@@ -354,11 +362,17 @@ function nibwp_updater_admin_notice(): void
 /**
  * Email the site admin once when a new NIBWP version becomes available.
  *
+ * Off until the site owner turns it on (NIBWP → Settings → Notifications,
+ * option `nibwp_update_email_enabled`). Nobody asked to be emailed by default,
+ * and an unrequested message about a plugin is the kind people mark as spam.
+ * The `nibwp_update_email_enabled` filter still has the last word, for hosts
+ * that manage this in code; change the recipient with
+ * `nibwp_update_email_recipient`.
+ *
  * De-duplicated per version via the nibwp_update_last_emailed option, so each
  * release notifies at most once. Runs on admin page loads AND on the plugin
  * update cron (wp_update_plugins), so unattended sites are still notified.
- * Licensed builds only. Disable with the `nibwp_update_email_enabled` filter;
- * change the recipient with `nibwp_update_email_recipient`.
+ * Licensed builds only.
  */
 add_action('admin_init', 'nibwp_updater_maybe_email');
 add_action('wp_update_plugins', 'nibwp_updater_maybe_email');
@@ -381,7 +395,7 @@ function nibwp_updater_maybe_email(): void
 
 function nibwp_updater_maybe_email_run(): void
 {
-    if (!apply_filters('nibwp_update_email_enabled', true)) {
+    if (!apply_filters('nibwp_update_email_enabled', (bool) get_option('nibwp_update_email_enabled', false))) {
         return;
     }
     if (nibwp_updater_active_license_key() === '') {
@@ -409,26 +423,26 @@ function nibwp_updater_maybe_email_run(): void
     $site_name = wp_specialchars_decode((string) get_option('blogname'), ENT_QUOTES);
     $subject = sprintf(
         /* translators: 1: site name, 2: new version */
-        __('[%1$s] NIBWP %2$s is available', domain: 'nibwp'),
+        __('[%1$s] NIBWP %2$s is available', 'nibwp'),
         $site_name,
         $new_version,
     );
 
     $lines = [
         /* translators: %s: site URL */
-        sprintf(__('A new version of NIBWP is available for %s.', domain: 'nibwp'), home_url()),
+        sprintf(__('A new version of NIBWP is available for %s.', 'nibwp'), home_url()),
         '',
         /* translators: %s: installed version */
-        sprintf(__('Installed version: %s', domain: 'nibwp'), NIBWP_VERSION),
+        sprintf(__('Installed version: %s', 'nibwp'), NIBWP_VERSION),
         /* translators: %s: new version */
-        sprintf(__('New version: %s', domain: 'nibwp'), $new_version),
+        sprintf(__('New version: %s', 'nibwp'), $new_version),
         '',
         /* translators: %s: plugins screen URL */
-        sprintf(__('Update now: %s', domain: 'nibwp'), admin_url('plugins.php')),
+        sprintf(__('Update now: %s', 'nibwp'), admin_url('plugins.php')),
     ];
     if (!empty($info['homepage'])) {
         /* translators: %s: changelog / homepage URL */
-        $lines[] = sprintf(__('Details: %s', domain: 'nibwp'), (string) $info['homepage']);
+        $lines[] = sprintf(__('Details: %s', 'nibwp'), (string) $info['homepage']);
     }
 
     // Record the version BEFORE sending so a slow/looping mailer cannot fire

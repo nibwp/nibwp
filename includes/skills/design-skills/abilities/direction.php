@@ -21,11 +21,8 @@ require_once __DIR__ . '/../lib/catalogue.php';
 require_once __DIR__ . '/../lib/store.php';
 
 wp_register_ability('nibwp/design-direction', [
-    'label' => __('Design Direction', domain: 'nibwp'),
-    'description' => __(
-        'Decides how a page should look on THIS site before anything is built: colour roles with contrast already validated, a type pairing, spacing rhythm, shape language, the layout pattern for this kind of page, and the specific generic defaults to refuse. Reads the site first — ACSS variables, theme.json, the logo — and only falls back to a design catalogue for what the site does not say. Call this before building any page or section, then build to what it returns.',
-        domain: 'nibwp',
-    ),
+    'label' => __('Design Direction', 'nibwp'),
+    'description' => 'Decides how a page should look on THIS site before anything is built: color roles with contrast already validated, a type pairing, spacing rhythm, shape language, the layout pattern for this kind of page, and the specific generic defaults to refuse. Reads the site first — ACSS variables, theme.json, the logo — and only falls back to a design catalogue for what the site does not say. Call this before building any page or section, then build to what it returns.',
     'category' => 'design',
     'input_schema' => [
         'type' => 'object',
@@ -45,7 +42,7 @@ wp_register_ability('nibwp/design-direction', [
             ],
             'brand_color' => [
                 'type' => 'string',
-                'description' => 'Optional. A hex colour to build the palette from, overriding what the site says.',
+                'description' => 'Optional. A hex color to build the palette from, overriding what the site says.',
             ],
             'dark' => [
                 'type' => 'boolean',
@@ -64,11 +61,11 @@ wp_register_ability('nibwp/design-direction', [
     'output_schema' => [
         'type' => 'object',
         'properties' => [
-            'brand' => ['type' => 'object', 'description' => 'Colour roles, contrast ratios, and any corrections that were applied.'],
+            'brand' => ['type' => 'object', 'description' => 'Color roles, contrast ratios, and any corrections that were applied.'],
             'type' => ['type' => 'object', 'description' => 'Heading font, body font, scale, and where each came from.'],
             'space' => ['type' => 'object', 'description' => 'Spacing scale and section rhythm.'],
             'shape' => ['type' => 'object', 'description' => 'Radius, shadow and border language.'],
-            'layout' => ['type' => 'object', 'description' => 'Section sequence and hero shape for this page.'],
+            'layout' => ['type' => 'object', 'description' => 'Section sequence and hero shape for this page. scope is "section" when one section was asked for, and then no sequence is given.'],
             'motion' => ['type' => 'object', 'description' => 'What may move, and what must not.'],
             'style' => ['type' => 'object', 'description' => 'The visual style this direction sits in.'],
             'rules' => ['type' => 'array', 'description' => 'The generic defaults to refuse on this page, each with its reason.'],
@@ -82,7 +79,7 @@ wp_register_ability('nibwp/design-direction', [
         'show_in_rest' => true,
         'mcp' => ['public' => true],
         'annotations' => [
-            'instructions' => "Call this BEFORE building any page, section or component — not after.\nBuild to what it returns: use the colour roles, the type pairing, the spacing rhythm and the layout sequence given.\nThe rules[] array lists the specific defaults to refuse on this page. Each carries a reason; follow the reason, not just the ban.\nbuilder{} says how to express the direction in the builder this site actually uses — use those tokens rather than hex values and px sizes.\nIt remembers the site-wide half of the direction — brand, type, spacing, shape — so a second page matches the first. That is the one thing it stores. Pass fresh:true only when the user asks for a different look.\nIt returns no markup, changes no content, and touches nothing a visitor can see.",
+            'instructions' => "Call this BEFORE building any page, section or component — not after.\nBuild to what it returns: use the color roles, the type pairing, the spacing rhythm and the layout sequence given.\nFor one section, layout.scope is \"section\" and there is no page sequence: fit the section into the page it joins.\nThe rules[] array lists the specific defaults to refuse on this page. Each carries a reason; follow the reason, not just the ban.\nbuilder{} says how to express the direction in the builder this site actually uses — use those tokens rather than hex values and px sizes.\nIt remembers the site-wide half of the direction — brand, type, spacing, shape — so a second page matches the first. That is the one thing it stores. Pass fresh:true only when the user asks for a different look.\nIt returns no markup, changes no content, and touches nothing a visitor can see.",
             // Not readonly: it stores the direction so the next page matches this
             // one. Small, but it is a write, and an ability that says otherwise
             // would be lying to the permission screen it is governed by.
@@ -114,24 +111,24 @@ function nibwp_design_direction(array $input): array|WP_Error
     $from_site = [];
     $from_catalogue = [];
 
-    // ── Colour ───────────────────────────────────────────────────────────────
+    // ── Color ───────────────────────────────────────────────────────────────
     // Order of trust: what the user just said, what this site already settled
     // on, what the site's own tokens say, then the catalogue.
     $override = nibwp_design_normalize_hex((string) ($input['brand_color'] ?? ''));
 
     if ($override !== '') {
         $seeds = [$override];
-        $from_site[] = 'brand colour given in the request';
+        $from_site[] = 'brand color given in the request';
     } elseif ($remembered !== null && !empty($remembered['brand']['seeds'])) {
         $seeds = (array) $remembered['brand']['seeds'];
-        $from_site[] = 'brand colour this site already settled on';
+        $from_site[] = 'brand color this site already settled on';
     } else {
         $seeds = nibwp_design_seeds_from_site($site, $from_site);
     }
 
     if ($seeds === []) {
         $seeds = nibwp_design_palette_seeds_for($product_type !== '' ? $product_type : $purpose);
-        $from_catalogue[] = 'palette (site has no brand colours)';
+        $from_catalogue[] = 'palette (site has no brand colors)';
     }
 
     $palette = nibwp_design_build_palette($seeds, $dark);
@@ -139,18 +136,71 @@ function nibwp_design_direction(array $input): array|WP_Error
     // ── Type ─────────────────────────────────────────────────────────────────
     $type = nibwp_design_resolve_type($site, $remembered, $purpose, $mood, $from_site, $from_catalogue);
 
-    // ── Style, layout, builder, rules ────────────────────────────────────────
-    $style_row = nibwp_design_style_for($purpose, $product_type);
-    if ($style_row !== null) {
-        $from_catalogue[] = 'visual style';
+    // ── Style and shape ──────────────────────────────────────────────────────
+    // Site-wide, like color and type. Recomputed from each purpose, one site got
+    // 16px corners on one section and 8px on the next while saying it had
+    // remembered its direction. The purpose decides the look once; after that
+    // only fresh:true changes it.
+    $look = nibwp_design_remembered_look($remembered);
+
+    if ($look !== null) {
+        $style = $look['style'];
+        $shape = $look['shape'];
+        $motion = $look['motion'];
+        $from_site[] = 'visual style this site already settled on';
+    } else {
+        $style_row = nibwp_design_style_for($purpose, $product_type);
+        if ($style_row !== null) {
+            $from_catalogue[] = 'visual style';
+        }
+
+        $style = [
+            'name' => (string) ($style_row['Style Category'] ?? ''),
+            'keywords' => (string) ($style_row['Keywords'] ?? ''),
+            'suits' => (string) ($style_row['Best For'] ?? ''),
+            'avoid_for' => (string) ($style_row['Do Not Use For'] ?? ''),
+        ];
+        $shape = nibwp_design_resolve_shape($style_row);
+        $motion = [
+            'policy' => (string) ($style_row['Effects & Animation'] ?? 'Restrained. One or two deliberate moments, nothing on every section.'),
+            'reduced_motion' => 'Respect prefers-reduced-motion — no exceptions.',
+        ];
     }
 
+    // ── Layout, builder, rules ───────────────────────────────────────────────
     $layout_row = nibwp_design_layout_for($purpose);
     $builder_row = nibwp_design_builder_notes($site['builder']);
     $rules = nibwp_design_rules_for($purpose);
     $ux = nibwp_design_ux_rules($purpose);
 
     $space = nibwp_design_resolve_space($site, $layout_row, $from_site, $from_catalogue);
+
+    // A section is built into a page that already has its sequence and its hero,
+    // so handing it a page plan only invites the agent to build the page.
+    if (nibwp_design_is_section($purpose)) {
+        $layout = [
+            'scope' => 'section',
+            'page' => '',
+            'sections' => [],
+            'hero' => '',
+            'rhythm' => (string) $space['rhythm'],
+            'emphasis' => '',
+            'note' => 'One section: fit it into the page it joins; no page sequence applies.',
+        ];
+    } else {
+        $layout = [
+            'scope' => 'page',
+            'page' => $layout_row['Page Purpose'] ?? $purpose,
+            'sections' => array_values(array_filter(array_map(
+                'trim',
+                explode(';', (string) ($layout_row['Section Sequence'] ?? ''))
+            ))),
+            'hero' => (string) ($layout_row['Hero Shape'] ?? ''),
+            'rhythm' => (string) ($layout_row['Rhythm'] ?? ''),
+            'emphasis' => (string) ($layout_row['Emphasis'] ?? ''),
+            'note' => (string) ($layout_row['Notes'] ?? ''),
+        ];
+    }
 
     $direction = [
         'brand' => [
@@ -163,35 +213,17 @@ function nibwp_design_direction(array $input): array|WP_Error
         ],
         'type' => $type,
         'space' => $space,
-        'shape' => nibwp_design_resolve_shape($style_row),
-        'layout' => [
-            'page' => $layout_row['Page Purpose'] ?? $purpose,
-            'sections' => array_values(array_filter(array_map(
-                'trim',
-                explode(';', (string) ($layout_row['Section Sequence'] ?? ''))
-            ))),
-            'hero' => (string) ($layout_row['Hero Shape'] ?? ''),
-            'rhythm' => (string) ($layout_row['Rhythm'] ?? ''),
-            'emphasis' => (string) ($layout_row['Emphasis'] ?? ''),
-            'note' => (string) ($layout_row['Notes'] ?? ''),
-        ],
-        'motion' => [
-            'policy' => (string) ($style_row['Effects & Animation'] ?? 'Restrained. One or two deliberate moments, nothing on every section.'),
-            'reduced_motion' => 'Respect prefers-reduced-motion — no exceptions.',
-        ],
-        'style' => [
-            'name' => (string) ($style_row['Style Category'] ?? ''),
-            'keywords' => (string) ($style_row['Keywords'] ?? ''),
-            'suits' => (string) ($style_row['Best For'] ?? ''),
-            'avoid_for' => (string) ($style_row['Do Not Use For'] ?? ''),
-        ],
+        'shape' => $shape,
+        'layout' => $layout,
+        'motion' => $motion,
+        'style' => $style,
         'rules' => $rules,
         'ux' => $ux,
         'builder' => [
             'name' => $site['builder'],
             'structure' => (string) ($builder_row['Structure'] ?? ''),
             'type_tokens' => (string) ($builder_row['Type Tokens'] ?? ''),
-            'color_tokens' => (string) ($builder_row['Colour Tokens'] ?? ''),
+            'color_tokens' => (string) ($builder_row['Color Tokens'] ?? ''),
             'spacing' => (string) ($builder_row['Spacing'] ?? ''),
             'do' => (string) ($builder_row['Do'] ?? ''),
             'do_not' => (string) ($builder_row['Do Not'] ?? ''),
@@ -212,7 +244,7 @@ function nibwp_design_direction(array $input): array|WP_Error
 }
 
 /**
- * Brand colours the site itself already has.
+ * Brand colors the site itself already has.
  *
  * @param array<string, mixed> $site
  * @param array<int, string> $from_site
@@ -229,13 +261,13 @@ function nibwp_design_seeds_from_site(array $site, array &$from_site): array
     }
 
     if ($seeds !== []) {
-        $from_site[] = $site['tokens'] === 'acss' ? 'ACSS colour variables' : 'theme palette';
+        $from_site[] = $site['tokens'] === 'acss' ? 'ACSS color variables' : 'theme palette';
         return $seeds;
     }
 
-    // No named roles: the logo is the next most honest source of a brand colour.
+    // No named roles: the logo is the next most honest source of a brand color.
     if (!empty($site['logo'])) {
-        $from_site[] = 'colours sampled from the site logo';
+        $from_site[] = 'colors sampled from the site logo';
         return array_slice((array) $site['logo'], 0, 2);
     }
 

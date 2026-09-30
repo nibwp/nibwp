@@ -1,0 +1,1015 @@
+/* rtl-source: 7836ae9b6ab123b90b1010316fa75c7675f51856 */
+/* Generated from admin-connect.css by build/rtl.sh (rtlcss 4.3.0). Do not edit; change the source and re-run. */
+/* NibWP — Connect page: the two connection methods.
+ *
+ * Tabs come from admin-integrations.css (.nw-int-tab*), copy rows and buttons
+ * from admin-status.css and admin.css. Only what is unique to this screen. */
+
+/* Only the two method tabs run green — choosing how to connect is the decision
+ * this screen exists for. The client tabs below stay on the app blue, so the
+ * colour marks the one choice that matters rather than everything on the page. */
+.nw-oc,
+.nw-oc-conns {
+    --nw-oc-green: #00a32a;
+    --nw-oc-green-soft: #ecfdf5;
+    --nw-oc-green-ink: #0a4d17;
+    /* --nw-danger on --nw-danger-soft is 4.44:1 — a hair under the floor for
+       the 11px chip text, so the chip darkens its own red. */
+    --nw-oc-danger-ink: #b91c1c;
+}
+
+html.nw-dark .nw-oc,
+body.nw-dark .nw-oc,
+html.nw-dark .nw-oc-conns,
+body.nw-dark .nw-oc-conns {
+    --nw-oc-green-soft: #10291c;
+    --nw-oc-green-ink: #6ee7a8;
+    --nw-oc-danger-ink: #fca5a5;
+}
+
+.nw-oc-methods .nw-int-tab:hover {
+    background: var(--nw-oc-green-soft);
+    color: var(--nw-oc-green-ink);
+}
+
+.nw-oc-methods .nw-int-tab.is-active,
+.nw-oc-methods .nw-int-tab.is-active:hover {
+    background: var(--nw-oc-green);
+    color: #fff;
+}
+
+.nw-oc-methods { margin: 0 0 20px; }
+
+.nw-oc-method { display: none; }
+.nw-oc-method.is-active { display: block; }
+
+/* The recommended path is labelled rather than merely first. */
+.nw-oc-rec {
+    display: inline-block;
+    margin-right: 7px;
+    padding: 2px 7px;
+    border-radius: var(--nw-radius-full);
+    background: var(--nw-oc-green-ink);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+/* Inverted on the active tab — a green pill on a green fill would vanish, and
+   translucent white over green lands well under the floor for 10px bold text. */
+.nw-oc-methods .nw-int-tab.is-active .nw-oc-rec {
+    background: #fff;
+    color: var(--nw-oc-green-ink);
+}
+
+/* ------------------------------------------------------------------ copy -- */
+
+/* Still used by the manual-client panel and the connections list — both places
+   where a line of explanation earns its space. The sign-in pane dropped its
+   lead because the numbered steps already said it. */
+.nw-oc-lead {
+    margin: 0 0 16px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--nw-text-2);
+    max-width: 68ch;
+}
+
+.nw-oc-label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--nw-text-muted);
+}
+
+.nw-oc-steps {
+    margin: 18px 0 22px;
+    padding-right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-width: 68ch;
+}
+
+.nw-oc-steps li {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+}
+
+/* --------------------------------------------------------------- warning -- */
+
+.nw-oc-warn {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    margin: 0 0 18px;
+    border: 1px solid var(--nw-warn);
+    border-radius: var(--nw-radius);
+    background: var(--nw-warn-soft);
+}
+
+.nw-oc-warn strong { font-size: 13px; color: var(--nw-text); }
+.nw-oc-warn span { font-size: 12.5px; line-height: 1.6; color: var(--nw-text-2); }
+
+/* ----------------------------------------------------------- client panes -- */
+
+.nw-oc-tabs { margin: 0 0 14px; }
+
+.nw-oc-pane { display: none; }
+.nw-oc-pane.is-active { display: block; }
+
+.nw-oc-pane .nibwp-config-block { position: relative; }
+
+.nw-oc-pane .nw-status-copy {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+.nw-oc-act { margin: 0 0 14px; }
+
+.nw-oc-act .nibwp-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.nw-oc-hint {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--nw-text-2);
+}
+
+.nw-oc-hint code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--nw-surface-3);
+    font-size: 12px;
+}
+
+.nw-oc-paths {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nw-oc-paths li {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    margin: 0;
+    font-size: 12px;
+}
+
+.nw-oc-paths span {
+    flex: 0 0 96px;
+    color: var(--nw-text-muted);
+}
+
+.nw-oc-paths code {
+    font-family: var(--nw-mono);
+    font-size: 11.5px;
+    color: var(--nw-text-2);
+    word-break: break-all;
+}
+
+/* -------------------------------------------------------- manual clients -- */
+
+.nw-oc-manual > .nw-oc-manual__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--nw-text);
+}
+
+.nw-oc-manual > .nw-oc-manual__summary::marker { content: ''; }
+.nw-oc-manual > .nw-oc-manual__summary::-webkit-details-marker { display: none; }
+
+.nw-oc-manual__chev {
+    display: inline-flex;
+    color: var(--nw-text-muted);
+    transition: transform .15s ease;
+}
+.nw-oc-manual[open] .nw-oc-manual__chev { transform: rotate(-180deg); }
+.nw-oc-manual[open] > .nw-oc-manual__summary { margin-bottom: 14px; }
+
+.nw-oc-manual__form { margin: 18px 0 0; }
+.nw-oc-manual__form .nw-oc-label { margin-top: 14px; }
+.nw-oc-manual__form .nw-oc-label:first-child { margin-top: 0; }
+
+.nw-oc-manual .nw-oc-conns { margin-top: 18px; }
+.nw-oc-manual .nw-oc-conn__meta { font-family: var(--nw-mono); word-break: break-all; }
+
+/* ----------------------------------------------------------- connections -- */
+
+.nw-oc-conns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nw-oc-conn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    background: var(--nw-surface);
+}
+
+.nw-oc-conn__main {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    flex: 1 1 320px;
+}
+
+.nw-oc-conn__main strong { font-size: 13.5px; color: var(--nw-text); }
+
+.nw-oc-conn__meta { font-size: 12px; color: var(--nw-text-muted); }
+
+.nw-oc-conn__act { margin: 0; flex: 0 0 auto; }
+
+.nw-oc-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 2px;
+}
+
+.nw-oc-chip {
+    padding: 3px 9px;
+    border-radius: var(--nw-radius-full);
+    border: 1px solid var(--nw-border);
+    background: var(--nw-surface-2);
+    font-size: 11px;
+    color: var(--nw-text-2);
+}
+
+/* Dangerous grants stay visible in the list, not just at the moment of
+   approval — this is where someone audits what they handed over. */
+.nw-oc-chip.is-danger {
+    border-color: var(--nw-oc-danger-ink);
+    background: var(--nw-danger-soft);
+    color: var(--nw-oc-danger-ink);
+    font-weight: 600;
+}
+
+@media (max-width: 782px) {
+    .nw-oc-conn { flex-direction: column; align-items: stretch; }
+    .nw-oc-conn__act button { width: 100%; }
+    .nw-oc-paths li { flex-direction: column; gap: 2px; }
+    .nw-oc-paths span { flex: none; }
+}
+
+.nw-oc-extra { margin-top: 12px; }
+
+/* ---------------------------------------------------------- optional -- */
+
+/* Everything past the ready-made prompt: renaming the server, or setting a
+   client up by hand. Shut by default, because the prompt above already does
+   the job and a page that shows every path at once reads as a page with no
+   recommended one. */
+.nibwp-optional {
+    margin: 34px 0 0;
+    border: 1px solid var(--nw-border);
+    border-radius: 12px;
+    background: var(--nw-surface);
+}
+
+/* Padding on the panel, not margins on its children. Those children are older
+   markup carrying inline style="margin: ..." shorthands, and an inline
+   shorthand beats a stylesheet's margin-left — so every child that had one
+   ignored the indent and sat flush against the border, while the one child
+   without an inline margin was the only thing indented. The summary is pulled
+   back out to the edges so its hover band still spans the full width. */
+.nibwp-optional[open] {
+    padding: 0 20px 18px;
+}
+
+.nibwp-optional[open] > .nibwp-optional__summary {
+    margin-right: -20px;
+    margin-left: -20px;
+}
+
+.nibwp-optional__summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    list-style: none;
+    border-radius: 12px;
+    user-select: none;
+}
+
+/* Both markers, or the browser draws its own triangle beside our chevron and
+   the row carries two icons pointing different ways. */
+.nibwp-optional__summary::marker { content: ''; }
+.nibwp-optional__summary::-webkit-details-marker { display: none; }
+
+/* The whole row is the control, so every part of it says so on hover. */
+.nibwp-optional__summary,
+.nibwp-optional__summary * { cursor: pointer; }
+
+.nibwp-optional__summary:hover { background: var(--nw-surface-2); }
+
+.nibwp-optional__summary:focus-visible {
+    outline: 2px solid var(--nw-brand, #2563eb);
+    outline-offset: -2px;
+}
+
+.nibwp-optional__chev {
+    display: inline-flex;
+    color: var(--nw-text-muted);
+    transition: transform 140ms ease;
+    /* A "more this way" chevron points the way the line reads. Both states keep
+       the same function list in RTL so the turn still animates. */
+    transform: rotate(0deg) scaleX(-1);
+}
+
+.nibwp-optional[open] .nibwp-optional__chev { transform: rotate(-90deg) scaleX(-1); }
+
+.nibwp-optional__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--nw-text);
+}
+
+/* A secondary way in, offered rather than urged: smaller than the primary
+   action it sits beside. */
+.nibwp-btn-ghost--small {
+    padding: 5px 11px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+ * Connect flow — three steps you can follow.
+ *
+ * The page's own copy always promised three steps; this is the shell that makes
+ * the UI say the same thing. A finished step collapses to its summary line, so
+ * a return visit (grab the config for a second client, mint a fresh key) is a
+ * glance and a click rather than a flow to walk through again.
+ *
+ * Reuses the page's existing tokens rather than introducing a palette. The
+ * complaint that started this was "colors colors buttons" — the fix is fewer
+ * coloured things, not better-chosen ones, so only the step number and the
+ * active client carry brand colour.
+ * ------------------------------------------------------------------------- */
+
+/* The green lives on .nw-oc in this file, so the flow declares its own copy
+   rather than inheriting nothing and painting white on white. */
+.nw-cf { --nw-cf-green: #00a32a; display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+
+.nw-cf-step {
+    background: var(--nw-surface);
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    overflow: hidden;
+}
+
+.nw-cf-step__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+}
+
+/* Only a finished step is clickable to fold; current and locked are not, so
+   they must not look it. */
+.nw-cf-step.is-done > .nw-cf-step__head { cursor: pointer; }
+
+.nw-cf-step__n {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--nw-radius-full);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    background: var(--nw-surface-3);
+    color: var(--nw-text-muted);
+}
+
+.nw-cf-step.is-current > .nw-cf-step__head .nw-cf-step__n { background: var(--nw-brand); color: #fff; }
+.nw-cf-step.is-done    > .nw-cf-step__head .nw-cf-step__n { background: var(--nw-cf-green); color: #fff; }
+
+.nw-cf-step__title { margin: 0; font-size: 15px; font-weight: 650; color: var(--nw-text); }
+.nw-cf-step.is-locked .nw-cf-step__title { color: var(--nw-text-muted); }
+
+.nw-cf-step__summary {
+    margin-right: auto;
+    font-size: 13px;
+    color: var(--nw-text-muted);
+}
+
+.nw-cf-step__body { padding: 0 18px 18px; }
+
+/* A finished step folds away; clicking the header adds is-open to bring it
+   back. Locked steps stay shut and inert. */
+.nw-cf-step.is-done:not(.is-open) > .nw-cf-step__body { display: none; }
+.nw-cf-step.is-locked > .nw-cf-step__body { display: none; }
+.nw-cf-step.is-locked { opacity: .55; }
+
+.nw-cf-hint { margin: 0 0 12px; font-size: 13px; color: var(--nw-text-muted); }
+
+/* Client picker — the one place the page asks which tool you use. */
+.nw-cf-clients { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.nw-cf-client {
+    appearance: none;
+    cursor: pointer;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 550;
+    color: var(--nw-text-2);
+    background: var(--nw-surface-2);
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius-full);
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.nw-cf-client:hover { background: var(--nw-surface-3); color: var(--nw-text); }
+
+.nw-cf-client.is-active {
+    background: var(--nw-brand);
+    border-color: var(--nw-brand);
+    color: #fff;
+}
+
+.nw-cf-client:focus-visible { outline: 2px solid var(--nw-brand); outline-offset: 2px; }
+
+/* The other route, offered as a sentence rather than a second button competing
+   with the one the reader is meant to press. */
+.nw-cf-alt { margin: 14px 0 0; }
+
+.nw-cf-link {
+    appearance: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: 13px;
+    color: var(--nw-brand);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.nw-cf-link:hover { text-decoration: none; }
+
+/* Everything that is not the path through, kept out of the path. */
+.nw-cf-manage {
+    margin-top: 20px;
+    background: var(--nw-surface);
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+}
+
+.nw-cf-manage__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--nw-text-2);
+    list-style: none;
+}
+
+.nw-cf-manage__summary::-webkit-details-marker { display: none; }
+.nw-cf-manage[open] .nw-cf-manage__chev { transform: rotate(-180deg); }
+.nw-cf-manage__chev { transition: transform .15s ease; color: var(--nw-text-muted); }
+.nw-cf-manage__body { padding: 0 18px 18px; }
+
+@media (max-width: 640px) {
+    .nw-cf-step__head { padding: 14px; gap: 10px; }
+    .nw-cf-step__body { padding: 0 14px 14px; }
+    .nw-cf-step__summary { margin-right: 0; flex-basis: 100%; }
+    .nw-cf-step__head { flex-wrap: wrap; }
+}
+
+/* Each pane shipped with its own client picker — the sign-in pane had one, the
+   config block had another, from lists that did not agree. That double-ask was
+   the main thing that made the page hard to follow. Inside the flow the client
+   is chosen once at step 2, so the panes' own strips are hidden and driven from
+   that choice instead. They are left in the markup, not deleted, because the
+   panes are still rendered standalone elsewhere. */
+.nw-cf .nw-oc-tabs,
+.nw-cf #nibwp-client-tabs-wrap { display: none; }
+
+/* ---------------------------------------------------------------------------
+   Step 3 — how to connect.
+
+   Two cards rather than two links: this is the one real fork in the page, and
+   the old version buried the alternative in a sentence under the panel, which
+   read as "unsupported" rather than "your other option". Each card carries the
+   shape of its route — a shield for the one that stores nothing, a key for the
+   one that mints a credential — so the difference lands before the copy does.
+   --------------------------------------------------------------------------- */
+
+.nw-cf-methods {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.nw-cf-method {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+    gap: 14px;
+    width: 100%;
+    padding: 16px;
+    text-align: right;
+    cursor: pointer;
+    appearance: none;
+    background: var(--nw-surface-2);
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.nw-cf-method:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: var(--nw-brand);
+    box-shadow: 0 6px 18px -8px rgba(0, 0, 0, .35);
+}
+
+.nw-cf-method:focus-visible { outline: 2px solid var(--nw-brand); outline-offset: 2px; }
+
+.nw-cf-method.is-active {
+    border-color: var(--nw-brand);
+    background:
+        linear-gradient(-135deg, color-mix(in srgb, var(--nw-brand) 12%, transparent), transparent 60%),
+        var(--nw-surface-2);
+    box-shadow: inset 0 0 0 1px var(--nw-brand);
+}
+
+/* Disabled means the route cannot work for this client, and the note says why.
+   It stays readable — greying it into illegibility hides the reason. */
+.nw-cf-method:disabled { cursor: not-allowed; opacity: .6; }
+.nw-cf-method:disabled .nw-cf-method__icon { background: var(--nw-surface-3); color: var(--nw-text-muted); }
+
+.nw-cf-method__icon {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--nw-radius);
+    background: var(--nw-surface-3);
+    color: var(--nw-brand);
+    transition: background .16s ease, color .16s ease;
+}
+
+.nw-cf-method__icon svg { width: 22px; height: 22px; }
+.nw-cf-method.is-active .nw-cf-method__icon { background: var(--nw-brand); color: #fff; }
+
+.nw-cf-method__body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.nw-cf-method__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--nw-text);
+}
+
+.nw-cf-method__note { font-size: 13px; line-height: 1.45; color: var(--nw-text-2); }
+.nw-cf-method__meta { font-size: 12px; color: var(--nw-text-muted); }
+
+.nw-cf-pill {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--nw-brand);
+    background: var(--nw-surface-3); /* where color-mix is not understood */
+    background: color-mix(in srgb, var(--nw-brand) 14%, transparent);
+    border-radius: var(--nw-radius-full);
+}
+
+/* The radio itself. A card this size needs somewhere for the eye to confirm
+   the choice landed; the border alone is too quiet at a glance. */
+.nw-cf-method__dot {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    border: 2px solid var(--nw-border-strong, var(--nw-border));
+    border-radius: var(--nw-radius-full);
+    transition: border-color .16s ease, background .16s ease;
+}
+
+.nw-cf-method.is-active .nw-cf-method__dot {
+    border-color: var(--nw-brand);
+    background:
+        radial-gradient(circle at center, #fff 0 2.5px, transparent 3px),
+        var(--nw-brand);
+}
+
+/* Client chips lift the same way the cards do, so the two pickers read as one
+   control rather than two unrelated widgets. */
+.nw-cf-client { transition: transform .16s ease, background .15s ease, border-color .15s ease, color .15s ease; }
+.nw-cf-client:hover { transform: translateY(-1px); }
+.nw-cf-client.is-active { box-shadow: 0 4px 12px -6px var(--nw-brand); }
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-cf-method,
+    .nw-cf-client { transition: none; }
+    .nw-cf-method:hover:not(:disabled),
+    .nw-cf-client:hover { transform: none; }
+}
+
+/* A route that cannot work should not still advertise how fast it is. */
+.nw-cf-method:disabled .nw-cf-method__meta { display: none; }
+
+/* ---------------------------------------------------------------------------
+   Step 4 — the application-password route.
+
+   This part had three controls competing to be the thing you press: a
+   "Customize password name" toggle, a "Generate application password" submit,
+   and an "I already have one" toggle — with the name field forced open (and
+   its toggle gone) as soon as any key existed, so the layout changed shape
+   depending on state nobody could see. One primary action now, one optional
+   field that is always just a field, and the reuse path folded into a
+   <details> the browser opens for us.
+   --------------------------------------------------------------------------- */
+
+.nw-pw__lead {
+    margin: 0 0 16px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+}
+
+.nw-pw__form { margin: 0; }
+.nw-pw__field { margin: 0 0 16px; }
+
+.nw-pw__label {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--nw-text);
+}
+
+.nw-pw__opt {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: var(--nw-text-muted);
+}
+
+.nw-pw__input {
+    width: 100%;
+    max-width: 360px;
+    padding: 8px 11px;
+    font-size: 13px;
+    color: var(--nw-text);
+    background: var(--nw-surface);
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+    box-shadow: none;
+}
+
+.nw-pw__input:focus {
+    border-color: var(--nw-brand);
+    box-shadow: 0 0 0 1px var(--nw-brand);
+    outline: none;
+}
+
+.nw-pw__input--mono { font-family: var(--nw-mono); max-width: 320px; }
+
+.nw-pw__hint {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--nw-text-muted);
+}
+
+.nw-pw__go { display: inline-flex; align-items: center; }
+
+/* The quiet path. It should read as an aside, not as a third thing to weigh
+   against the button above it. */
+.nw-pw__have { margin: 18px 0 0; }
+
+.nw-pw__have-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    list-style: none;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--nw-text-2);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--nw-border);
+}
+
+.nw-pw__have-summary::-webkit-details-marker { display: none; }
+.nw-pw__have-summary::marker { content: ''; }
+.nw-pw__have-summary::after { content: '\25be'; font-size: 10px; text-decoration: none; }
+.nw-pw__have[open] .nw-pw__have-summary::after { content: '\25b4'; }
+.nw-pw__have-summary:hover { color: var(--nw-text); }
+
+.nw-pw__have-form {
+    margin: 12px 0 0;
+    padding: 14px 16px;
+    background: var(--nw-surface-2);
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius);
+}
+
+.nw-pw__have-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nw-pw__err { margin: 10px 0 0; }
+.nw-pw__err p { margin: 0; }
+
+/* ---------------------------------------------------------------------------
+   The flow as a flow.
+
+   Four separate white cards on grey read as four unrelated panels; nothing
+   said they were one path or where you were in it. A rail joins the badges,
+   the current step is the only one with an accent, and a finished step now
+   shows a chevron so it is obvious the summary line reopens it.
+   --------------------------------------------------------------------------- */
+
+/* The rail runs through the gap between cards, so the cards must not clip it.
+   Nothing here bleeds past the rounded corners, so hidden was not buying
+   anything. */
+.nw-cf-step { position: relative; overflow: visible; }
+
+.nw-cf-step:not(:last-of-type)::after {
+    content: '';
+    position: absolute;
+    right: 30px;
+    bottom: -13px;
+    width: 2px;
+    height: 14px;
+    background: var(--nw-border);
+    border-radius: 1px;
+}
+
+.nw-cf-step.is-done:not(:last-of-type)::after { background: var(--nw-cf-green); }
+.nw-cf-step.is-locked::after { opacity: .5; }
+
+/* Only one step is the one you are on. */
+.nw-cf-step.is-current {
+    border-color: var(--nw-brand);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 8px 24px -16px var(--nw-brand);
+}
+
+.nw-cf-step__title { letter-spacing: -.01em; }
+
+.nw-cf-step.is-done > .nw-cf-step__head .nw-cf-step__title { font-weight: 600; color: var(--nw-text-2); }
+
+.nw-cf-step__summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 550;
+    color: var(--nw-text-2);
+}
+
+/* The chevron says the row opens. It belongs to the summary because only a
+   finished step has one. */
+.nw-cf-step.is-done > .nw-cf-step__head .nw-cf-step__summary::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-left: 1.5px solid var(--nw-text-muted);
+    border-bottom: 1.5px solid var(--nw-text-muted);
+    transform: rotate(-45deg) translate(1px, -1px);
+    transition: transform .15s ease;
+}
+
+.nw-cf-step.is-done.is-open > .nw-cf-step__head .nw-cf-step__summary::after {
+    transform: rotate(-225deg) translate(1px, -1px);
+}
+
+.nw-cf-step.is-done > .nw-cf-step__head:hover { background: var(--nw-surface-2); }
+.nw-cf-step.is-done > .nw-cf-step__head { border-radius: var(--nw-radius); transition: background .15s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-cf-step__summary::after,
+    .nw-cf-step.is-done > .nw-cf-step__head { transition: none; }
+}
+
+/* The tool strip. The wrap and its edge fades come from admin-integrations.css,
+   which this page already loads; only the chip spacing is local. */
+.nw-cf-strip { margin: 0; padding: 8px 10px; }
+/* .nw-cf-clients still wraps outside a strip, and it is defined later in this
+   file than .nw-int-tabs is in its own — so the strip has to say nowrap again. */
+.nw-cf-strip .nw-cf-clients {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 8px;
+    align-items: center;
+    scrollbar-width: none;
+}
+.nw-cf-strip .nw-cf-clients::-webkit-scrollbar { display: none; }
+.nw-cf-strip .nw-cf-client { flex: 0 0 auto; white-space: nowrap; }
+
+/* Lifting a chip inside a strip that hides its overflow clips the lift, so the
+   chips in here shift colour instead of moving. */
+.nw-cf-strip .nw-cf-client:hover { transform: none; }
+
+/* ---------------------------------------------------------------------------
+   "How it works" — the explainer, off the path.
+
+   It used to sit inline above the steps as a second list describing the same
+   four things, which is where its copy quietly drifted out of date. One click
+   from the page header now, in a native <dialog>: the browser owns the
+   backdrop, Esc, focus trapping and the inertness of the page behind it.
+   --------------------------------------------------------------------------- */
+
+.nw-hiw__open {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--nw-text-2);
+    background: var(--nw-surface);
+    border: 1px solid var(--nw-border);
+    border-radius: var(--nw-radius-full);
+    box-shadow: var(--nw-shadow-sm, 0 1px 2px rgba(15, 23, 42, .04));
+    transition: color .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.nw-hiw__open:hover {
+    color: var(--nw-brand);
+    border-color: var(--nw-brand);
+    transform: translateY(-1px);
+}
+
+.nw-hiw__open:focus-visible { outline: 2px solid var(--nw-brand); outline-offset: 2px; }
+
+.nw-hiw {
+    width: min(560px, calc(100vw - 32px));
+    padding: 0;
+    color: var(--nw-text);
+    background: var(--nw-surface);
+    border: 1px solid var(--nw-border);
+    border-radius: 16px;
+    box-shadow: 0 24px 64px -20px rgba(15, 23, 42, .45);
+}
+
+.nw-hiw::backdrop { background: rgba(15, 23, 42, .55); backdrop-filter: blur(2px); }
+
+.nw-hiw__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--nw-border);
+    /* A tint rather than a solid band: the dialog should feel like part of the
+       app, not like a different product's modal. */
+    background: linear-gradient(-160deg, color-mix(in srgb, var(--nw-brand) 9%, transparent), transparent 70%);
+    border-radius: 16px 16px 0 0;
+}
+
+.nw-hiw__eyebrow {
+    margin: 0 0 3px;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--nw-brand);
+}
+
+.nw-hiw__title { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.01em; color: var(--nw-text); }
+
+.nw-hiw__x {
+    display: inline-flex;
+    padding: 6px;
+    cursor: pointer;
+    color: var(--nw-text-muted);
+    background: transparent;
+    border: 0;
+    border-radius: var(--nw-radius);
+    transition: color .15s ease, background .15s ease;
+}
+
+.nw-hiw__x:hover { color: var(--nw-text); background: var(--nw-surface-3); }
+
+.nw-hiw__steps {
+    margin: 0;
+    padding: 20px 24px 4px;
+    list-style: none;
+    counter-reset: none;
+}
+
+.nw-hiw__step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    margin: 0 0 18px;
+}
+
+.nw-hiw__icon {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    color: var(--nw-brand);
+    background: var(--nw-surface-3);
+    background: color-mix(in srgb, var(--nw-brand) 11%, transparent);
+}
+
+.nw-hiw__icon svg { width: 20px; height: 20px; }
+
+.nw-hiw__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.nw-hiw__step-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--nw-text);
+}
+
+.nw-hiw__n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 19px;
+    height: 19px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--nw-brand);
+    border-radius: var(--nw-radius-full);
+}
+
+.nw-hiw__text { font-size: 13px; line-height: 1.55; color: var(--nw-text-2); }
+
+.nw-hiw__foot {
+    margin: 0;
+    padding: 14px 24px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--nw-text-2);
+    background: var(--nw-surface-2);
+    border-top: 1px solid var(--nw-border);
+}
+
+.nw-hiw__actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 14px 24px 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nw-hiw__open { transition: none; }
+    .nw-hiw__open:hover { transform: none; }
+}
+
+@media (max-width: 782px) {
+    .nw-hiw__head { padding: 18px 18px 14px; }
+    .nw-hiw__steps { padding: 16px 18px 4px; }
+    .nw-hiw__foot, .nw-hiw__actions { padding-right: 18px; padding-left: 18px; }
+}

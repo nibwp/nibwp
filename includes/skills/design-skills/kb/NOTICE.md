@@ -3,8 +3,8 @@
 ## Third-party, MIT licensed
 
 These six tables are the work of **Next Level Builder**, taken from the
-`ui-ux-pro-max` skill and redistributed here under the MIT licence. The full
-licence text is in `LICENSE` in this directory and travels with any copy of this
+`ui-ux-pro-max` skill and redistributed here under the MIT license. The full
+license text is in `LICENSE` in this directory and travels with any copy of this
 plugin.
 
 | File | Rows | What it holds |

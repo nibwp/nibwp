@@ -83,7 +83,7 @@ function nibwp_design_read_site(): array
     $logo = nibwp_design_read_logo_colors();
     if ($logo !== []) {
         $site['logo'] = $logo;
-        $site['found'][] = 'logo-colours';
+        $site['found'][] = 'logo-colors';
     }
 
     return $site;
@@ -123,20 +123,27 @@ function nibwp_design_active_builder(): string
 }
 
 /**
- * ACSS colour variables, as the site has them configured.
+ * ACSS color variables, as the site has them configured.
  *
- * Read from the plugin's own options rather than by parsing generated CSS: the
- * options are what the user set, the CSS is a build artefact that may be stale.
+ * Read from the plugin's own settings rather than by parsing generated CSS: the
+ * settings are what the user set, the CSS is a build artefact that may be stale.
+ *
+ * Goes through nibwp_acss_read_settings() rather than reading an option here.
+ * This function used to name the option itself, with `acss_settings` as its
+ * fallback — a spelling ACSS has never used — which is the same class of bug as
+ * the one that made the ACSS abilities return empty on every configured 4.x
+ * site. One resolver knows the names; nothing else should guess at them.
  *
  * @return array<string, string>
  */
 function nibwp_design_read_acss(): array
 {
-    $raw = get_option('automatic_css_settings', []);
-    if (!is_array($raw) || $raw === []) {
-        $raw = get_option('acss_settings', []);
+    if (!function_exists('nibwp_acss_read_settings')) {
+        return [];
     }
-    if (!is_array($raw) || $raw === []) {
+
+    $raw = nibwp_acss_read_settings();
+    if ($raw === []) {
         return [];
     }
 
@@ -160,7 +167,7 @@ function nibwp_design_read_acss(): array
  * The theme's own palette, fonts, sizes and spacing.
  *
  * Uses WP_Theme_JSON_Resolver so a child theme, a block theme and a user's
- * Global Styles customisations all resolve the way the front end sees them —
+ * Global Styles customizations all resolve the way the front end sees them —
  * reading theme.json off disk would miss everything the user changed in the
  * editor.
  *
@@ -228,10 +235,10 @@ function nibwp_design_read_theme_json(): array
 }
 
 /**
- * The colours in the site's logo.
+ * The colors in the site's logo.
  *
- * A brand's real colours are in its mark far more reliably than in whatever the
- * theme shipped with. Sampled coarsely — we want the two or three colours that
+ * A brand's real colors are in its mark far more reliably than in whatever the
+ * theme shipped with. Sampled coarsely — we want the two or three colors that
  * dominate, not a histogram.
  *
  * @return array<int, string>
@@ -280,7 +287,7 @@ function nibwp_design_read_logo_colors(): array
     $h = imagesy($img);
     $counts = [];
 
-    // A 12x12 grid: enough to find the dominant colours in a mark, cheap enough
+    // A 12x12 grid: enough to find the dominant colors in a mark, cheap enough
     // to run on every request without thinking about it.
     for ($x = 0; $x < 12; $x++) {
         for ($y = 0; $y < 12; $y++) {
@@ -325,8 +332,8 @@ function nibwp_design_read_logo_colors(): array
 }
 
 /**
- * Any colour notation we might meet, as #rrggbb — or '' when it is not a colour
- * we can use (a var(), a gradient, a named colour we would only be guessing at).
+ * Any color notation we might meet, as #rrggbb — or '' when it is not a color
+ * we can use (a var(), a gradient, a named color we would only be guessing at).
  */
 function nibwp_design_normalize_hex(string $value): string
 {

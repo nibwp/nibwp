@@ -25,7 +25,7 @@ return [
     'tagline'        => 'Convert HTML, URLs, images, or screenshots into validated Kadence Blocks layouts, templates, and reusable patterns',
     'description'    => 'Paste raw HTML, drop a screenshot, or share a URL — the agent rebuilds it as a clean Kadence Blocks layout (rowlayout/column sections, advancedheading, singlebtn, image, infobox, iconlist, testimonials…). A hard validator rejects unknown block names, illegal nesting (column outside rowlayout, button outside advancedbtn), missing/duplicate uniqueIDs, and empty headings/buttons; a round-trip guard makes sure no block is ever dropped on save. Persist to a page, post, Kadence Element (header/footer/hook), or a reusable pattern.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.0.2',
+    'version'        => '1.0.3',
     'category'       => 'page-builders',
     'premium'        => true,
     'price'          => 49,
@@ -56,11 +56,22 @@ return [
     'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg>',
 
     // ─── v2 routing contract ──────────────────────────────────────────────
+    // What this skill OWNS, in the words a model can reason about. The
+    // regexes below are a fast path; this sentence is the boundary.
+    'use_when' => 'The user wants anything built, rebuilt or restyled with Kadence Blocks on this site - a section, page, pattern or template. Owns it however it is phrased. Do NOT emit core/html for things Kadence has a real block for.',
+
     'triggers' => [
         '/(?i)\b(?:convert|kadencify|rebuild|port|turn|make)\b[^.\n]{0,40}\bkadence\b/',
         '/(?i)\bkadence\b[^.\n]{0,40}\b(?:blocks?|layout|template|section|page|pattern|header|footer)\b/',
         '/(?i)\b(?:html|url|page|image|screenshot)\b[^.\n]{0,40}\b(?:to|into|as)\b[^.\n]{0,20}\bkadence\b/',
         '/(?i)\b(?:kadencify|html to kadence)\b/',
+        // Order-agnostic build intent. The patterns above all require the
+        // builder's name BEFORE the thing being built, so the most natural way
+        // anyone phrases it — "create a hero section with X" — matched nothing,
+        // the skill never loaded, and the agent improvised a tree with no
+        // classes and no styles. That is what a customer reported.
+        '/(?i)\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b[^.\n]{0,80}\b(?:kadence)\b/',
+        '/(?i)\b(?:kadence)\b[^.\n]{0,80}\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b/',
     ],
     'commands' => [
         '/kadencify'        => ['description' => 'Convert HTML / URL / image to a validated Kadence Blocks layout, template, or pattern.'],
@@ -75,7 +86,7 @@ return [
             [
                 'ability'       => 'nibwp/design-direction',
                 'args_template' => ['purpose' => '{what the user asked for, in their words}'],
-                'why'           => 'Decide how this site should look before building: colour roles with contrast already checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if the Design Skills skill is switched off.',
+                'why'           => 'Decide how this site should look before building: color roles with contrast already checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if the Design Skills skill is switched off.',
             ],
             [
                 'ability'       => 'nibwp/skill-preflight',

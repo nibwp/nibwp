@@ -82,8 +82,8 @@ function nibwp_render_memory_page(): void
     $memories = nibwp_admin_memory_get_all();
 
     $result_message = match ($_GET['nibwp_result'] ?? null) {
-        'deleted' => __('Memory entry deleted.', domain: 'nibwp'),
-        'cleared' => __('All memories cleared.', domain: 'nibwp'),
+        'deleted' => __('Memory entry deleted.', 'nibwp'),
+        'cleared' => __('All memories cleared.', 'nibwp'),
         default => null,
     };
 
@@ -105,9 +105,15 @@ function nibwp_render_memory_page(): void
     <div class="wrap nibwp-wrap">
         <div class="nibwp-page-header">
             <div>
-                <h1><?php esc_html_e('AI Memory', domain: 'nibwp'); ?></h1>
+                <h1><?php esc_html_e('AI Memory', 'nibwp'); ?></h1>
                 <p class="nibwp-subtitle"><?php printf(
-                    esc_html__('%d memories stored. AI agents use these to retain context across sessions.', domain: 'nibwp'),
+                    /* translators: %d: number of stored memory entries */
+                    esc_html(_n(
+                        '%d memory stored. AI agents use these to retain context across sessions.',
+                        '%d memories stored. AI agents use these to retain context across sessions.',
+                        $total,
+                        'nibwp'
+                    )),
                     $total,
                 ); ?></p>
             </div>
@@ -119,9 +125,9 @@ function nibwp_render_memory_page(): void
                     ); ?>
                     <a href="#"
                        class="button nibwp-btn-danger nw-confirm-delete"
-                       data-name="<?php esc_attr_e('all memories', domain: 'nibwp'); ?>"
+                       data-name="<?php esc_attr_e('all memories', 'nibwp'); ?>"
                        data-url="<?php echo esc_url($clear_url); ?>"
-                    ><?php esc_html_e('Clear All', domain: 'nibwp'); ?></a>
+                    ><?php esc_html_e('Clear All', 'nibwp'); ?></a>
                 </div>
             <?php endif; ?>
         </div>
@@ -134,11 +140,11 @@ function nibwp_render_memory_page(): void
             <form method="get" class="nibwp-search-form">
                 <input type="hidden" name="page" value="nibwp-memory" />
                 <input type="search" name="s" value="<?php echo esc_attr($search); ?>"
-                       placeholder="<?php esc_attr_e('Search memories...', domain: 'nibwp'); ?>"
+                       placeholder="<?php esc_attr_e('Search memories...', 'nibwp'); ?>"
                        class="nibwp-search-input" />
-                <button type="submit" class="button"><?php esc_html_e('Search', domain: 'nibwp'); ?></button>
+                <button type="submit" class="button"><?php esc_html_e('Search', 'nibwp'); ?></button>
                 <?php if ($search !== ''): ?>
-                    <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-memory')); ?>" class="button"><?php esc_html_e('Clear', domain: 'nibwp'); ?></a>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-memory')); ?>" class="button"><?php esc_html_e('Clear', 'nibwp'); ?></a>
                 <?php endif; ?>
             </form>
         <?php endif; ?>
@@ -152,9 +158,9 @@ function nibwp_render_memory_page(): void
                     </svg>
                 </div>
                 <h3><?php echo $search !== ''
-                    ? esc_html__('No memories match your search.', domain: 'nibwp')
-                    : esc_html__('No memories yet.', domain: 'nibwp'); ?></h3>
-                <p><?php esc_html_e('AI agents will store project context here automatically during sessions.', domain: 'nibwp'); ?></p>
+                    ? esc_html__('No memories match your search.', 'nibwp')
+                    : esc_html__('No memories yet.', 'nibwp'); ?></h3>
+                <p><?php esc_html_e('AI agents will store project context here automatically during sessions.', 'nibwp'); ?></p>
             </div>
         <?php else: ?>
             <div class="nibwp-memory-grid">
@@ -165,7 +171,7 @@ function nibwp_render_memory_page(): void
                     $tags = $memory['tags'] ?? [];
                     $updated = ($memory['updated_at'] ?? null) !== null
                         ? wp_date($dt_format, strtotime($memory['updated_at']))
-                        : __('Unknown', domain: 'nibwp');
+                        : __('Unknown', 'nibwp');
                     $delete_url = wp_nonce_url(
                         admin_url('admin.php?page=nibwp-memory&nibwp_memory_action=delete&memory_key=' . urlencode($memory['key'] ?? '')),
                         'nibwp_delete_memory_' . ($memory['key'] ?? ''),
@@ -176,7 +182,7 @@ function nibwp_render_memory_page(): void
                             <code class="nibwp-memory-key"><?php echo $key; ?></code>
                             <a href="<?php echo esc_url($delete_url); ?>"
                                class="nibwp-memory-delete"
-                               title="<?php esc_attr_e('Delete', domain: 'nibwp'); ?>"
+                               title="<?php esc_attr_e('Delete', 'nibwp'); ?>"
                                class="nw-confirm-delete" data-name="<?php echo esc_attr($memory['key'] ?? ''); ?>" data-url="<?php echo esc_url($delete_url); ?>"
                             >&times;</a>
                         </div>

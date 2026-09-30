@@ -79,7 +79,7 @@ unticked:
 |---|---|
 | **Read your site** | View posts, pages, media, settings, site information. Changes nothing. |
 | **Create and edit** | Add and update content. Cannot delete. |
-| **Delete and reorganise** | Delete content, users, media; run bulk changes. Not reversible from here. |
+| **Delete and reorganize** | Delete content, users, media; run bulk changes. Not reversible from here. |
 | **Read and write files** | Theme and plugin files, uploads, configuration. |
 | **Run code** | Write and run PHP in the sandbox. The widest permission here. |
 
@@ -107,12 +107,12 @@ and site information, through one signed endpoint.
 see each page open and each change land, with a running list of what was done,
 instead of waiting and hoping.
 
-**NibWP Design** — reads your site's own colours, fonts and spacing and decides
+**NibWP Design** — reads your site's own colors, fonts and spacing and decides
 how a page should look *before* anything is placed, so what comes out belongs to
 your brand rather than to a generic template.
 
 **Workflows** — write a way of working once, run it whenever, share it with the
-other sites on your licence or with the community. A library of ready-made ones
+other sites on your license or with the community. A library of ready-made ones
 ships with the plugin.
 
 **Memory** — namespaced notes the assistant can keep between sessions, so you do
@@ -138,7 +138,7 @@ activate per site, each gets its own endpoint.
 
 ## Upgrading to Pro
 
-Pro is the same plugin with more of your site unlocked. Buy a licence at
+Pro is the same plugin with more of your site unlocked. Buy a license at
 [nibwp.com](https://nibwp.com), paste the key into **NibWP → License**, and the
 matching add-ons install themselves — nothing to download by hand.
 
@@ -174,6 +174,6 @@ Free stays free and keeps working. Nothing here expires your existing setup.
 - Changelog: [nibwp.com/changelog](https://nibwp.com/changelog)
 - Questions and bug reports: [nibwp.com](https://nibwp.com)
 
-## Licence
+## License
 
 GPLv2 or later. See [LICENSE](LICENSE).

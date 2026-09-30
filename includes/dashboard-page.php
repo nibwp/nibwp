@@ -95,7 +95,7 @@ function nibwp_render_dashboard_page(): void
         'antigravity' => 'Antigravity',
     ];
 
-    $copied_label = esc_js(__('Copied!', domain: 'nibwp'));
+    $copied_label = esc_js(__('Copied!', 'nibwp'));
 
     // Getting Started checklist.
     $step1_done = $is_enabled;
@@ -109,8 +109,8 @@ function nibwp_render_dashboard_page(): void
 
         <div class="nibwp-page-header">
             <div>
-                <h1><?php esc_html_e('Dashboard', domain: 'nibwp'); ?></h1>
-                <p class="nibwp-subtitle"><?php esc_html_e('Overview and quick access to connect AI agents to your WordPress site.', domain: 'nibwp'); ?></p>
+                <h1><?php esc_html_e('Dashboard', 'nibwp'); ?></h1>
+                <p class="nibwp-subtitle"><?php esc_html_e('Overview and quick access to connect AI agents to your WordPress site.', 'nibwp'); ?></p>
             </div>
         </div>
 
@@ -129,9 +129,9 @@ function nibwp_render_dashboard_page(): void
                 </div>
                 <div class="nibwp-dash-stat-info">
                     <div class="nibwp-dash-stat-value"><?php echo $is_enabled
-                        ? esc_html__('ON', domain: 'nibwp')
-                        : esc_html__('OFF', domain: 'nibwp'); ?></div>
-                    <div class="nibwp-dash-stat-label"><?php esc_html_e('MCP Status', domain: 'nibwp'); ?></div>
+                        ? esc_html__('ON', 'nibwp')
+                        : esc_html__('OFF', 'nibwp'); ?></div>
+                    <div class="nibwp-dash-stat-label"><?php esc_html_e('MCP Status', 'nibwp'); ?></div>
                 </div>
             </div>
             <div class="nibwp-dash-stat">
@@ -140,7 +140,7 @@ function nibwp_render_dashboard_page(): void
                 </div>
                 <div class="nibwp-dash-stat-info">
                     <div class="nibwp-dash-stat-value"><?php echo esc_html((string) $active_integrations_count); ?></div>
-                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Integrations', domain: 'nibwp'); ?></div>
+                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Integrations', 'nibwp'); ?></div>
                 </div>
             </div>
             <div class="nibwp-dash-stat">
@@ -149,7 +149,7 @@ function nibwp_render_dashboard_page(): void
                 </div>
                 <div class="nibwp-dash-stat-info">
                     <div class="nibwp-dash-stat-value"><?php echo esc_html((string) $available_tools); ?></div>
-                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Available Tools', domain: 'nibwp'); ?></div>
+                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Available Tools', 'nibwp'); ?></div>
                 </div>
             </div>
             <div class="nibwp-dash-stat">
@@ -158,7 +158,7 @@ function nibwp_render_dashboard_page(): void
                 </div>
                 <div class="nibwp-dash-stat-info">
                     <div class="nibwp-dash-stat-value"><?php echo esc_html((string) $memory_count); ?></div>
-                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Memory Entries', domain: 'nibwp'); ?></div>
+                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Memory Entries', 'nibwp'); ?></div>
                 </div>
             </div>
             <div class="nibwp-dash-stat">
@@ -167,7 +167,7 @@ function nibwp_render_dashboard_page(): void
                 </div>
                 <div class="nibwp-dash-stat-info">
                     <div class="nibwp-dash-stat-value"><?php echo esc_html((string) $workflow_count); ?></div>
-                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Workflows', domain: 'nibwp'); ?></div>
+                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Workflows', 'nibwp'); ?></div>
                 </div>
             </div>
             <div class="nibwp-dash-stat">
@@ -176,7 +176,7 @@ function nibwp_render_dashboard_page(): void
                 </div>
                 <div class="nibwp-dash-stat-info">
                     <div class="nibwp-dash-stat-value"><?php echo esc_html((string) $skills_active); ?></div>
-                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Skills', domain: 'nibwp'); ?></div>
+                    <div class="nibwp-dash-stat-label"><?php esc_html_e('Skills', 'nibwp'); ?></div>
                 </div>
             </div>
         </div>
@@ -191,32 +191,33 @@ function nibwp_render_dashboard_page(): void
                 <div class="nibwp-dash-card">
                     <div class="nibwp-dash-card-title">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                        <?php esc_html_e('Quick Connect', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Quick Connect', 'nibwp'); ?>
                     </div>
                     <div class="nibwp-connect-row">
-                        <span class="nibwp-connect-label"><?php esc_html_e('Server URL', domain: 'nibwp'); ?></span>
+                        <span class="nibwp-connect-label"><?php esc_html_e('Server URL', 'nibwp'); ?></span>
                         <span class="nibwp-connect-value" id="nibwp-dash-url"><?php echo esc_html($rest_url); ?>
-                            <button type="button" class="button-link" onclick="nibwpDashCopy('nibwp-dash-url', this)"><?php esc_html_e('Copy', domain: 'nibwp'); ?></button>
+                            <button type="button" class="button-link" onclick="nibwpDashCopy('nibwp-dash-url', this)"><?php esc_html_e('Copy', 'nibwp'); ?></button>
                         </span>
                     </div>
                     <div class="nibwp-connect-row">
-                        <span class="nibwp-connect-label"><?php esc_html_e('Username', domain: 'nibwp'); ?></span>
+                        <span class="nibwp-connect-label"><?php esc_html_e('Username', 'nibwp'); ?></span>
                         <span class="nibwp-connect-value"><?php echo esc_html($username); ?></span>
                     </div>
                     <div class="nibwp-connect-row">
-                        <span class="nibwp-connect-label"><?php esc_html_e('Password', domain: 'nibwp'); ?></span>
+                        <span class="nibwp-connect-label"><?php esc_html_e('Password', 'nibwp'); ?></span>
                         <span class="nibwp-connect-value" style="font-family:inherit;">
                             <?php if ($has_password): ?>
                                 <span style="color:#00a32a; font-weight:600;">
                                     <?php printf(
-                                        esc_html__('%d app password(s) ready', domain: 'nibwp'),
-                                        count($mcp_passwords),
+                                        /* translators: %s: number of application passwords */
+                                        esc_html(_n('%s app password ready', '%s app passwords ready', count($mcp_passwords), 'nibwp')),
+                                        esc_html(number_format_i18n(count($mcp_passwords))),
                                     ); ?>
                                 </span>
                             <?php else: ?>
-                                <span style="color:#dba617; font-weight:600;"><?php esc_html_e('Not created yet', domain: 'nibwp'); ?></span>
+                                <span style="color:#dba617; font-weight:600;"><?php esc_html_e('Not created yet', 'nibwp'); ?></span>
                                 &mdash;
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>"><?php esc_html_e('Create one', domain: 'nibwp'); ?></a>
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>"><?php esc_html_e('Create one', 'nibwp'); ?></a>
                             <?php endif; ?>
                         </span>
                     </div>
@@ -226,15 +227,15 @@ function nibwp_render_dashboard_page(): void
                 <div class="nibwp-dash-card" id="nibwp-ide-config-card">
                     <div class="nibwp-dash-card-title">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                        <?php esc_html_e('IDE Config Generator', domain: 'nibwp'); ?>
+                        <?php esc_html_e('IDE Config Generator', 'nibwp'); ?>
                     </div>
                     <p style="margin:0 0 14px; font-size:13px; color:#646970;">
-                        <?php esc_html_e('Select your AI client to get the ready-to-use MCP config snippet.', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Select your AI client to get the ready-to-use MCP config snippet.', 'nibwp'); ?>
                     </p>
 
                     <!-- Server Name -->
                     <div style="margin:0 0 14px; display:flex; align-items:center; gap:8px;">
-                        <label for="nibwp-dash-mcp-name" style="font-size:12px; font-weight:600; color:#646970; text-transform:uppercase; letter-spacing:0.3px;"><?php esc_html_e('Server Name', domain: 'nibwp'); ?></label>
+                        <label for="nibwp-dash-mcp-name" style="font-size:12px; font-weight:600; color:#646970; text-transform:uppercase; letter-spacing:0.3px;"><?php esc_html_e('Server Name', 'nibwp'); ?></label>
                         <input type="text" id="nibwp-dash-mcp-name"
                                value="<?php echo esc_attr($default_name); ?>"
                                placeholder="<?php echo esc_attr($default_name); ?>"
@@ -259,7 +260,7 @@ function nibwp_render_dashboard_page(): void
                     <div class="nibwp-tab-content" style="border-radius:6px;">
                         <div class="nibwp-config-block">
                             <pre id="nibwp-dash-config-code" style="min-height:80px;"></pre>
-                            <button type="button" class="button nibwp-copy-btn" onclick="nibwpDashCopyConfig(this)"><?php esc_html_e('Copy', domain: 'nibwp'); ?></button>
+                            <button type="button" class="button nibwp-copy-btn" onclick="nibwpDashCopyConfig(this)"><?php esc_html_e('Copy', 'nibwp'); ?></button>
                         </div>
                         <div id="nibwp-dash-config-footer" style="font-size:13px; color:#666; border-top:1px solid #c3c4c7;">
                             <div id="nibwp-dash-config-hint" style="padding:10px 16px;"></div>
@@ -278,9 +279,9 @@ function nibwp_render_dashboard_page(): void
                                         onclick="nibwpDashToggleExpandPaste(this)"
                                         aria-expanded="false"
                                         aria-controls="nibwp-dash-paste-content"
-                                ><?php esc_html_e('Show full text', domain: 'nibwp'); ?></button>
+                                ><?php esc_html_e('Show full text', 'nibwp'); ?></button>
                                 <button type="button" class="button button-primary" onclick="nibwpDashCopyPaste(this)">
-                                    <?php esc_html_e('Copy prompt to paste in AI chat', domain: 'nibwp'); ?>
+                                    <?php esc_html_e('Copy prompt to paste in AI chat', 'nibwp'); ?>
                                 </button>
                             </div>
                         </div>
@@ -291,10 +292,10 @@ function nibwp_render_dashboard_page(): void
                 <div class="nibwp-dash-card">
                     <div class="nibwp-dash-card-title">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                        <?php esc_html_e('Active Integrations', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Active Integrations', 'nibwp'); ?>
                     </div>
                     <?php if ($integrations === []): ?>
-                        <p style="color:#646970; font-size:13px; margin:0;"><?php esc_html_e('No integrations configured.', domain: 'nibwp'); ?></p>
+                        <p style="color:#646970; font-size:13px; margin:0;"><?php esc_html_e('No integrations configured.', 'nibwp'); ?></p>
                     <?php else: ?>
                         <div class="nibwp-dash-integrations">
                             <?php foreach ($integrations as $key => $integration):
@@ -308,7 +309,7 @@ function nibwp_render_dashboard_page(): void
                         </div>
                         <p style="margin:12px 0 0;">
                             <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-integrations')); ?>">
-                                <?php esc_html_e('Manage Integrations', domain: 'nibwp'); ?> &rarr;
+                                <?php esc_html_e('Manage Integrations', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">→</span>
                             </a>
                         </p>
                     <?php endif; ?>
@@ -322,7 +323,7 @@ function nibwp_render_dashboard_page(): void
                 <div class="nibwp-dash-card">
                     <div class="nibwp-dash-card-title">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        <?php esc_html_e('Getting Started', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Getting Started', 'nibwp'); ?>
                     </div>
 
                     <!-- Step 1 -->
@@ -335,11 +336,11 @@ function nibwp_render_dashboard_page(): void
                             <?php endif; ?>
                         </div>
                         <div class="nibwp-checklist-text">
-                            <strong><?php esc_html_e('Enable AI Abilities', domain: 'nibwp'); ?></strong>
+                            <strong><?php esc_html_e('Enable AI Abilities', 'nibwp'); ?></strong>
                             <?php if ($step1_done): ?>
-                                <span style="color:#00a32a;"><?php esc_html_e('Active', domain: 'nibwp'); ?></span>
+                                <span style="color:#00a32a;"><?php esc_html_e('Active', 'nibwp'); ?></span>
                             <?php else: ?>
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>"><?php esc_html_e('Go to Configuration', domain: 'nibwp'); ?></a>
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>"><?php esc_html_e('Go to Configuration', 'nibwp'); ?></a>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -354,11 +355,15 @@ function nibwp_render_dashboard_page(): void
                             <?php endif; ?>
                         </div>
                         <div class="nibwp-checklist-text">
-                            <strong><?php esc_html_e('Create App Password', domain: 'nibwp'); ?></strong>
+                            <strong><?php esc_html_e('Create App Password', 'nibwp'); ?></strong>
                             <?php if ($step2_done): ?>
-                                <span style="color:#00a32a;"><?php printf(esc_html__('%d password(s) created', domain: 'nibwp'), count($mcp_passwords)); ?></span>
+                                <span style="color:#00a32a;"><?php printf(
+                                    /* translators: %s: number of application passwords */
+                                    esc_html(_n('%s password created', '%s passwords created', count($mcp_passwords), 'nibwp')),
+                                    esc_html(number_format_i18n(count($mcp_passwords))),
+                                ); ?></span>
                             <?php else: ?>
-                                <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>"><?php esc_html_e('Create password', domain: 'nibwp'); ?></a>
+                                <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-connect')); ?>"><?php esc_html_e('Create password', 'nibwp'); ?></a>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -373,11 +378,11 @@ function nibwp_render_dashboard_page(): void
                             <?php endif; ?>
                         </div>
                         <div class="nibwp-checklist-text">
-                            <strong><?php esc_html_e('Connect your AI client', domain: 'nibwp'); ?></strong>
+                            <strong><?php esc_html_e('Connect your AI client', 'nibwp'); ?></strong>
                             <?php if ($step3_done): ?>
-                                <span><?php esc_html_e('Use the IDE Config Generator on the left', domain: 'nibwp'); ?></span>
+                                <span><?php esc_html_e('Use the IDE Config Generator on the left', 'nibwp'); ?></span>
                             <?php else: ?>
-                                <span><?php esc_html_e('Complete steps 1 and 2 first', domain: 'nibwp'); ?></span>
+                                <span><?php esc_html_e('Complete steps 1 and 2 first', 'nibwp'); ?></span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -387,12 +392,12 @@ function nibwp_render_dashboard_page(): void
                 <div class="nibwp-dash-card">
                     <div class="nibwp-dash-card-title">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                        <?php esc_html_e('Recent Activity', domain: 'nibwp'); ?>
+                        <?php esc_html_e('Recent Activity', 'nibwp'); ?>
                     </div>
 
                     <?php if ($recent_entries === []): ?>
                         <p style="color:#a7aaad; font-size:13px; margin:0; text-align:center; padding:16px 0;">
-                            <?php esc_html_e('No activity yet. Tool calls will appear here.', domain: 'nibwp'); ?>
+                            <?php esc_html_e('No activity yet. Tool calls will appear here.', 'nibwp'); ?>
                         </p>
                     <?php else: ?>
                         <?php foreach ($recent_entries as $entry):
@@ -402,12 +407,16 @@ function nibwp_render_dashboard_page(): void
                             <div class="nibwp-activity-item">
                                 <span class="nibwp-activity-dot <?php echo $is_error ? 'is-error' : 'is-success'; ?>"></span>
                                 <span class="nibwp-activity-name"><?php echo esc_html($entry->tool_name); ?></span>
-                                <span class="nibwp-activity-time"><?php printf(esc_html__('%s ago', domain: 'nibwp'), $time_ago); ?></span>
+                                <span class="nibwp-activity-time"><?php printf(
+                                    /* translators: %s: human-readable time difference, e.g. "5 mins" */
+                                    esc_html__('%s ago', 'nibwp'),
+                                    esc_html($time_ago),
+                                ); ?></span>
                             </div>
                         <?php endforeach; ?>
                         <p style="margin:10px 0 0;">
                             <a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-audit-log')); ?>">
-                                <?php esc_html_e('View full audit log', domain: 'nibwp'); ?> &rarr;
+                                <?php esc_html_e('View full audit log', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">→</span>
                             </a>
                         </p>
                     <?php endif; ?>
@@ -420,14 +429,14 @@ function nibwp_render_dashboard_page(): void
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         </span>
                         <div>
-                            <strong><?php esc_html_e('Join the community', domain: 'nibwp'); ?></strong>
-                            <span><?php esc_html_e('Share workflows, get help, see what others build with NIBWP.', domain: 'nibwp'); ?></span>
+                            <strong><?php esc_html_e('Join the community', 'nibwp'); ?></strong>
+                            <span><?php esc_html_e('Share workflows, get help, see what others build with NIBWP.', 'nibwp'); ?></span>
                         </div>
                     </div>
                     <div class="nibwp-dash-community__actions">
                         <a class="nibwp-dash-community__btn is-fb" href="https://www.facebook.com/groups/nibwp" target="_blank" rel="noopener">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg>
-                            <?php esc_html_e('Facebook Group', domain: 'nibwp'); ?>
+                            <?php esc_html_e('Facebook Group', 'nibwp'); ?>
                         </a>
                         <a class="nibwp-dash-community__btn" href="https://community.nibwp.com" target="_blank" rel="noopener">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
@@ -492,7 +501,7 @@ function nibwp_render_dashboard_page(): void
             var pathsEl = document.getElementById('nibwp-dash-config-paths');
             var keys = Object.keys(cfg.paths);
             if (keys.length > 0) {
-                var html = '<ul style="margin:4px 0 0; padding-left:20px;">';
+                var html = '<ul style="margin:4px 0 0; padding-inline-start:20px;">';
                 keys.forEach(function (label) {
                     html += '<li><strong>' + label + '</strong>: <code>' + cfg.paths[label] + '</code></li>';
                 });
@@ -530,11 +539,11 @@ function nibwp_render_dashboard_page(): void
             if (expanded) {
                 content.classList.remove('is-expanded');
                 btn.setAttribute('aria-expanded', 'false');
-                btn.textContent = <?php echo wp_json_encode(__('Show full text', domain: 'nibwp')); ?>;
+                btn.textContent = <?php echo wp_json_encode(__('Show full text', 'nibwp')); ?>;
             } else {
                 content.classList.add('is-expanded');
                 btn.setAttribute('aria-expanded', 'true');
-                btn.textContent = <?php echo wp_json_encode(__('Show less', domain: 'nibwp')); ?>;
+                btn.textContent = <?php echo wp_json_encode(__('Show less', 'nibwp')); ?>;
             }
         };
 
@@ -573,8 +582,11 @@ function nibwp_render_dashboard_page(): void
             var DEAD_ZONE = 0.05, MAX_SPEED = 32;
             function updateShadows() {
                 var max = strip.scrollWidth - strip.clientWidth;
-                wrap.classList.toggle('has-scroll-left', strip.scrollLeft > 2);
-                wrap.classList.toggle('has-scroll-right', strip.scrollLeft < max - 2);
+                // Right to left, scrollLeft runs from 0 at the start down to -max at
+                // the end, and the RTL stylesheet swaps the fades, so the distance
+                // from the start is what both classes need.
+                wrap.classList.toggle('has-scroll-left', Math.abs(strip.scrollLeft) > 2);
+                wrap.classList.toggle('has-scroll-right', Math.abs(strip.scrollLeft) < max - 2);
             }
             function animate() {
                 if (Math.abs(velocity) < 0.1) { rafId = null; return; }

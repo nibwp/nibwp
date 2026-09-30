@@ -78,9 +78,14 @@ function nibwp_oauth_handle_authorize(): void
         nibwp_oauth_redirect_error($redirect_uri, 'invalid_request', 'code_challenge with method S256 is required.', $state);
     }
 
-    if ($resource !== '' && !in_array(untrailingslashit($resource), nibwp_oauth_valid_audiences(), true)) {
+    if ($resource !== '' && !nibwp_oauth_audience_matches($resource)) {
         nibwp_oauth_redirect_error($redirect_uri, 'invalid_target', 'The requested resource does not match this server.', $state);
     }
+
+    // Record the canonical spelling, never the caller's. The audience check on
+    // every later request compares against this value, so storing a variant
+    // would mint a token that authenticates once and then never again.
+    $resource = nibwp_oauth_resource_id();
 
     $requested = nibwp_oauth_sanitize_scopes($scope);
     $asked_for_nothing = $requested === [];
@@ -154,7 +159,7 @@ function nibwp_oauth_handle_authorize(): void
 }
 
 /**
- * Scopes this user has already granted this client and not revoked.
+ * Scopes this user has already granted this client on THIS site, and not revoked.
  *
  * @return array<int, string>
  */
@@ -167,6 +172,33 @@ function nibwp_oauth_client_scopes_held(string $client_id): array
         if ((string) ($record['client_id'] ?? '') !== $client_id) {
             continue;
         }
+
+        // Consent belongs to the site it was given on.
+        //
+        // Tokens live in user meta, and on Multisite user meta is a single
+        // network-wide row: every site in the network reads the same records.
+        // Matching on client_id and expiry alone therefore read a grant made on
+        // one site as standing permission on every other site the same
+        // administrator can reach. Together with the `prompt=none` path below
+        // that is a silent re-grant, so a client a customer had deliberately
+        // limited to one site could collect mcp:files or mcp:code on a sibling
+        // site whose owner never saw a consent screen. The audience recorded
+        // with the token (RFC 8707) is the site it was granted for, and is the
+        // same value every later API call is checked against, so it is the
+        // right thing to compare — by identity, so www., a proxied scheme and
+        // the legacy route alias all still count as this site.
+        //
+        // A token that recorded no audience is not treated as consent at all.
+        // The only honest answer to "which site was this granted on?" is that we
+        // cannot tell, and the safe way to not know is to draw the screen: a
+        // `prompt=none` client then gets interaction_required and reconnects
+        // with a visible approval, which costs one click and cannot cross a
+        // site boundary.
+        $granted_for = (string) ($record['resource'] ?? '');
+        if ($granted_for === '' || !nibwp_oauth_audience_matches($granted_for)) {
+            continue;
+        }
+
         // A dead token is not a standing permission. Refresh counts: the client
         // holding one is still connected, it just has not called anything since
         // its access token aged out.
@@ -232,7 +264,7 @@ function nibwp_oauth_handle_decision(): void
     }
 
     // The ticked boxes are the whole decision. The old approve-everything
-    // submit value went when every box started ticked; honouring it still
+    // submit value went when every box started ticked; honoring it still
     // would mean a crafted POST could grant the lot regardless of what the
     // screen showed.
     $granted = nibwp_oauth_sanitize_scopes(
@@ -520,7 +552,7 @@ function nibwp_oauth_consent_head(string $client_name): void
     );
 ?></title>
 <?php wp_admin_css('login', true); ?>
-<link rel="stylesheet" href="<?php echo esc_url(NIBWP_PLUGIN_URL . 'assets/css/admin-oauth.css?v=' . (defined('NIBWP_VERSION') ? NIBWP_VERSION : '1')); ?>">
+<link rel="stylesheet" href="<?php echo esc_url((function_exists('nibwp_css_url') ? nibwp_css_url('admin-oauth.css') : NIBWP_PLUGIN_URL . 'assets/css/admin-oauth.css') . '?v=' . (defined('NIBWP_VERSION') ? NIBWP_VERSION : '1')); ?>">
 </head>
 <body class="nw-oa-body">
 <?php

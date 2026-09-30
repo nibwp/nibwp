@@ -43,7 +43,7 @@ function nibwp_load_skill_playbook_ability_args(): array
 {
     return [
     'label'       => __('Load skill playbook on demand', 'nibwp'),
-    'description' => __('Load the full SKILL.md and selected references for an installed skill (e.g. etchwp-pro). Call this once you have decided to start a conversion — keeps the discover response small. When brand + element_type are given, injects aggregated thumb-down lessons-learned for that pair.', 'nibwp'),
+    'description' => 'Load the full SKILL.md and selected references for an installed skill (e.g. etchwp-pro). Call this once you have decided to start a conversion — keeps the discover response small. When brand + element_type are given, injects aggregated thumb-down lessons-learned for that pair.',
     'category'    => 'nibwp',
     'input_schema' => [
         'type' => 'object',
@@ -55,7 +55,7 @@ function nibwp_load_skill_playbook_ability_args(): array
             'sections' => [
                 'type' => 'array',
                 'items' => ['type' => 'string'],
-                'description' => 'Optional list of reference paths to inline, relative to the skill\'s `etchedy-authoring/references/` (or root if no etchedy-authoring/) dir. Examples: ["acss-tokens","anti-patterns","checklists/hero"].',
+                'description' => 'Optional list of reference paths to inline, relative to the playbook\'s own `references/` dir. Examples: ["acss-tokens","anti-patterns","checklists/hero"]. The "references/" prefix and ".md" suffix are optional; names that match no file come back in unknown_sections.',
             ],
             'element_type' => [
                 'type' => 'string',
@@ -72,9 +72,12 @@ function nibwp_load_skill_playbook_ability_args(): array
     'output_schema' => [
         'type' => 'object',
         'properties' => [
-            'skill_md'        => ['type' => 'string'],
-            'sections'        => ['type' => 'object'],
-            'lessons_learned' => ['type' => 'string'],
+            'skill_md'           => ['type' => 'string'],
+            'sections'           => ['type' => 'object'],
+            'lessons_learned'    => ['type' => 'string'],
+            'unknown_sections'   => ['type' => 'array', 'items' => ['type' => 'string']],
+            'available_sections' => ['type' => 'array', 'items' => ['type' => 'string']],
+            'site_tokens'        => ['type' => 'object', 'description' => 'Automatic.css token names this site defines, grouped by family. Present when ACSS is active.'],
         ],
     ],
     'execute_callback'    => 'nibwp_load_skill_playbook',
@@ -83,7 +86,7 @@ function nibwp_load_skill_playbook_ability_args(): array
         'show_in_rest' => true,
         'mcp'          => ['public' => true, 'type' => 'tool'],
         'annotations'  => [
-            'instructions' => "Call before starting a conversion. Pass skill_id and (when known) brand + element_type. Use sections[] to pull additional reference files (anti-patterns, acss-tokens, json-schema, examples, etc.) only as needed.",
+            'instructions' => "Call before starting a conversion. Pass skill_id and (when known) brand + element_type. Use sections[] to pull additional reference files (anti-patterns, acss-tokens, json-schema, examples, etc.) only as needed.\nWhen Automatic.css is active the response carries site_tokens: the token names this site defines. Write var() names from that list; the validator flags any name the site does not define.",
             'readonly'    => true,
             'destructive' => false,
             'idempotent'  => true,
@@ -114,14 +117,22 @@ function nibwp_load_skill_playbook(array $input): array|WP_Error
     }
 
     $base = rtrim((string) $skill['path'], '/\\') . DIRECTORY_SEPARATOR;
-    // The skill's playbook either lives at the skill root or inside an
-    // etchedy-authoring/ subdir (EtchWP Pro). Probe both.
-    $skill_md_path = $base . 'etchedy-authoring' . DIRECTORY_SEPARATOR . 'SKILL.md';
-    $references_dir = $base . 'etchedy-authoring' . DIRECTORY_SEPARATOR . 'references' . DIRECTORY_SEPARATOR;
+
+    // Where the playbook lives is the manifest's business, not this loader's.
+    // A skill's folder name used to be hard-coded here, so a skill that
+    // organised itself differently loaded its SKILL.md through the fallback
+    // and then looked for references in the wrong directory — the playbook
+    // arrived with none of its checklists inlined, and nothing said so.
+    // Deriving the references directory from wherever SKILL.md actually
+    // resolved keeps the two together whatever the layout.
+    $skill_md_path = $base . ltrim((string) ($skill['instructions_file'] ?? 'SKILL.md'), '/\\');
     if (!file_exists($skill_md_path)) {
-        $skill_md_path = $base . ltrim((string) ($skill['instructions_file'] ?? 'SKILL.md'), '/\\');
-        $references_dir = $base . 'references' . DIRECTORY_SEPARATOR;
+        $skill_md_path = $base . 'authoring' . DIRECTORY_SEPARATOR . 'SKILL.md';
     }
+    if (!file_exists($skill_md_path)) {
+        $skill_md_path = $base . 'SKILL.md';
+    }
+    $references_dir = dirname($skill_md_path) . DIRECTORY_SEPARATOR . 'references' . DIRECTORY_SEPARATOR;
 
     $skill_md = file_exists($skill_md_path) ? (string) file_get_contents($skill_md_path) : '';
 
@@ -139,8 +150,13 @@ function nibwp_load_skill_playbook(array $input): array|WP_Error
     $core_checklists = ['button', 'hero', 'card-grid', 'form', 'navbar', 'footer', 'generic'];
 
     $sections_out = [];
+    $unknown_sections = [];
     foreach ($sections_requested as $sect) {
         $sect = trim((string) $sect, '/\\ ');
+        // SKILL.md's reference index links these as "references/json-schema.md",
+        // so that is the form an agent tries first. It used to match nothing
+        // and was dropped without a word.
+        $sect = (string) preg_replace('/\.md$/i', '', (string) preg_replace('#^references/#i', '', $sect));
         if ($sect === '' || str_contains($sect, '..')) {
             continue; // Path traversal guard.
         }
@@ -154,7 +170,32 @@ function nibwp_load_skill_playbook(array $input): array|WP_Error
         }
         if (file_exists($candidate)) {
             $sections_out[$sect] = (string) file_get_contents($candidate);
+        } else {
+            $unknown_sections[] = $sect;
         }
+    }
+
+    // Name what does exist when something did not, so the next call is right.
+    $available_sections = [];
+    if ($unknown_sections !== []) {
+        foreach (array_merge(glob($references_dir . '*.md') ?: [], glob($references_dir . 'checklists' . DIRECTORY_SEPARATOR . '*.md') ?: []) as $file) {
+            $available_sections[] = str_replace(DIRECTORY_SEPARATOR, '/', substr($file, strlen($references_dir), -3));
+        }
+    }
+
+    // The token names this site actually defines, so a payload is written with
+    // real names the first time instead of learning them one rejection at a time.
+    $site_tokens = [];
+    $acss_on = defined('ACSS_PLUGIN_FILE') || defined('ACSS_VERSION') || class_exists('\\Automatic_CSS\\Plugin');
+    if ($acss_on && function_exists('nibwp_acss_site_tokens')) {
+        foreach (nibwp_acss_site_tokens() as $name => $value) {
+            // Colour channels and generated alpha variants are noise here.
+            if (preg_match('/-(hex|hsl|rgb)$|-trans-\d0$/', $name) || preg_match('/^\d+(\.\d+)?%?$/', trim((string) $value))) {
+                continue;
+            }
+            $site_tokens[(string) preg_replace('/^--([a-z]+).*$/', '$1', $name)][] = $name;
+        }
+        $site_tokens = array_map(static fn(array $names): string => implode(' ', $names), $site_tokens);
     }
 
     // Render lessons-learned for (brand, element_type).
@@ -174,8 +215,11 @@ function nibwp_load_skill_playbook(array $input): array|WP_Error
 
     return [
         'skill_md'        => $skill_md,
-        'sections'        => $sections_out,
-        'lessons_learned' => $lessons_learned,
+        'sections'           => $sections_out,
+        'lessons_learned'    => $lessons_learned,
+        'unknown_sections'   => $unknown_sections,
+        'available_sections' => $available_sections,
+        'site_tokens'        => $site_tokens,
     ];
 }
 

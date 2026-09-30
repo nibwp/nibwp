@@ -481,7 +481,12 @@
     font-size: 11px;
     color: var(--nw-text-2, #3c434a);
     cursor: pointer;
+    /* A command to paste into a terminal reads left to right in any language. */
+    /*rtl:begin:ignore*/
+    direction: ltr;
+    unicode-bidi: isolate;
     text-align: left;
+    /*rtl:end:ignore*/
     transition: border-color .15s, background .15s;
 }
 
@@ -507,7 +512,7 @@
 }
 
 .nw-figma-copy.is-copied .nw-figma-copy__text::after {
-    content: " ✓ copied";
+    content: " ✓ " attr(data-copied-label);
     font-weight: 700;
 }
 

@@ -10,7 +10,7 @@ Using **NibWP + the Voxel integration** and the **Voxel Pro** skill, design the 
 ## The one law
 > **A card with hard-coded text is the same card for every listing.** Everything that varies per listing is a dynamic tag, bound to a field key read from this site.
 
-Voxel renders an unrecognised key as an empty string. A misspelled field name gives a blank heading on every card and says nothing about it.
+Voxel renders an unrecognized key as an empty string. A misspelled field name gives a blank heading on every card and says nothing about it.
 
 ## Principles
 - **Read the fields, don't remember them.** `nibwp/voxel-pro-catalog { post_type }` returns this post type's real field and filter keys.
@@ -21,7 +21,7 @@ Voxel renders an unrecognised key as an empty string. A misspelled field name gi
 
 ## Process
 1. **Read the site.** `nibwp/voxel-info`, then `nibwp/voxel-pro-catalog { topic:"widgets", post_type }` for the field keys, the existing custom cards, and which template is currently the main one.
-2. **Design direction.** `nibwp/design-direction { purpose }` — colour, type and spacing decided against this site rather than invented.
+2. **Design direction.** `nibwp/design-direction { purpose }` — color, type and spacing decided against this site rather than invented.
 3. **Look at what exists.** `nibwp/voxel-pro-refine { template_id }` with no operations returns the current card's outline. If the change is small, stop here and refine it instead of building a new one.
 4. **Preflight.** `nibwp/skill-preflight { skill_id:"voxel-pro" }`.
 5. **Playbook.** `nibwp/load-skill-playbook { skill_id:"voxel-pro", element_type:"card" }` — the card checklist and the dynamic tag reference.

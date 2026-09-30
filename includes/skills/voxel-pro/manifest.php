@@ -62,7 +62,7 @@ return [
     // ─── v2 routing contract ──────────────────────────────────────────────
     'triggers' => [
         '/(?i)\bvoxel\b[^.\n]{0,60}\b(?:card|template|archive|single|search page|header|footer|style kit|popup|timeline|layout|design|page)\b/',
-        '/(?i)\b(?:design|build|create|customize|customise|style|restyle|lay ?out)\b[^.\n]{0,50}\bvoxel\b/',
+        '/(?i)\b(?:design|build|create|customize|customize|style|restyle|lay ?out)\b[^.\n]{0,50}\bvoxel\b/',
         '/(?i)\bvoxel (?:pro|frontend|front-end|builder|templates?)\b/',
     ],
     'commands' => [
@@ -83,7 +83,7 @@ return [
             [
                 'ability'       => 'nibwp/design-direction',
                 'args_template' => ['purpose' => '{what the user asked for, in their words}'],
-                'why'           => 'Decide how this site should look before building: colour roles with contrast checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if NibWP Design is switched off.',
+                'why'           => 'Decide how this site should look before building: color roles with contrast checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if NibWP Design is switched off.',
             ],
             [
                 'ability'       => 'nibwp/skill-preflight',

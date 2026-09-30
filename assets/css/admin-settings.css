@@ -64,6 +64,12 @@
                     max-width: 400px;
                     min-height: 60px;
                     font-family: monospace;
+                    /* One IP address per line. */
+                    /*rtl:begin:ignore*/
+                    direction: ltr;
+                    unicode-bidi: isolate;
+                    text-align: left;
+                    /*rtl:end:ignore*/
                     font-size: 13px;
                 }
                 .nibwp-tool-checklist {
@@ -107,6 +113,55 @@
                     background: var(--nw-surface-3);
                     color: var(--nw-text);
                     border-color: var(--nw-border-strong);
+                }
+                /* On/off switch — same size and colours as the Integrations
+                   toggle, but a real checkbox underneath, so it saves with the
+                   form and needs no script. */
+                .nibwp-settings-switch {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    position: relative;
+                }
+                .nibwp-settings-switch input {
+                    position: absolute;
+                    opacity: 0;
+                    width: 1px;
+                    height: 1px;
+                    margin: 0;
+                }
+                .nibwp-settings-switch__track {
+                    display: block;
+                    flex-shrink: 0;
+                    width: 44px;
+                    height: 24px;
+                    border-radius: 12px;
+                    background: #c3c4c7;
+                    position: relative;
+                    transition: background 0.2s;
+                }
+                .nibwp-settings-switch__thumb {
+                    display: block;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    background: #fff;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                    position: absolute;
+                    top: 3px;
+                    left: 3px;
+                    transition: left 0.2s;
+                }
+                .nibwp-settings-switch input:checked + .nibwp-settings-switch__track {
+                    background: #00a32a;
+                }
+                .nibwp-settings-switch input:checked + .nibwp-settings-switch__track .nibwp-settings-switch__thumb {
+                    left: 23px;
+                }
+                .nibwp-settings-switch input:focus-visible + .nibwp-settings-switch__track {
+                    outline: 2px solid #2271b1;
+                    outline-offset: 2px;
                 }
                 @media screen and (max-width: 782px) {
                     .nibwp-settings-row {

@@ -3,11 +3,11 @@
 declare(strict_types=1);
 
 /**
- * Colour maths — build a role palette from a seed, and never ship a pair that
+ * Color maths — build a role palette from a seed, and never ship a pair that
  * cannot be read.
  *
  * A palette is computed rather than picked from a list, because a computed one
- * starts from this site's brand colour and a picked one starts from fashion. The
+ * starts from this site's brand color and a picked one starts from fashion. The
  * arithmetic is ordinary sRGB relative luminance, which is what WCAG contrast is
  * defined in, so "passes AA" here means the same thing it means in an audit.
  */
@@ -32,7 +32,7 @@ function nibwp_design_luminance(string $hex): float
 }
 
 /**
- * Contrast ratio between two colours, 1 to 21.
+ * Contrast ratio between two colors, 1 to 21.
  */
 function nibwp_design_contrast(string $a, string $b): float
 {
@@ -46,7 +46,7 @@ function nibwp_design_contrast(string $a, string $b): float
 }
 
 /**
- * Black or white, whichever can actually be read on this colour.
+ * Black or white, whichever can actually be read on this color.
  */
 function nibwp_design_readable_on(string $hex): string
 {
@@ -56,7 +56,7 @@ function nibwp_design_readable_on(string $hex): string
 }
 
 /**
- * Move a colour toward white or black by a fraction.
+ * Move a color toward white or black by a fraction.
  */
 function nibwp_design_mix(string $hex, string $toward, float $amount): string
 {
@@ -75,8 +75,8 @@ function nibwp_design_mix(string $hex, string $toward, float $amount): string
 /**
  * Darken or lighten a seed until text on it can be read.
  *
- * Called when a brand colour is genuinely unusable as a surface — a pale yellow
- * logo colour behind white text, say. We move the surface rather than abandoning
+ * Called when a brand color is genuinely unusable as a surface — a pale yellow
+ * logo color behind white text, say. We move the surface rather than abandoning
  * the brand: the hue survives, the contrast becomes real.
  */
 function nibwp_design_force_contrast(string $hex, string $against, float $target = 4.5): string
@@ -85,7 +85,7 @@ function nibwp_design_force_contrast(string $hex, string $against, float $target
         return $hex;
     }
 
-    // Move away from the text colour: dark text means lighten the surface.
+    // Move away from the text color: dark text means lighten the surface.
     $toward = nibwp_design_luminance($against) > 0.5 ? '#000000' : '#ffffff';
 
     for ($step = 1; $step <= 20; $step++) {
@@ -99,7 +99,7 @@ function nibwp_design_force_contrast(string $hex, string $against, float $target
 }
 
 /**
- * A full role palette derived from one or two seed colours.
+ * A full role palette derived from one or two seed colors.
  *
  * Roles match what every builder needs to be handed: a primary and something
  * readable on it, a surface and its text, a muted pair for secondary content,
@@ -119,7 +119,7 @@ function nibwp_design_build_palette(array $seeds, bool $dark = false): array
     $surface = $dark ? '#101216' : '#ffffff';
     $text = $dark ? '#f2f4f7' : '#14171c';
 
-    // A brand colour has to work as a button before it is allowed to be one.
+    // A brand color has to work as a button before it is allowed to be one.
     $on_primary = nibwp_design_readable_on($primary);
     if (nibwp_design_contrast($primary, $on_primary) < 4.5) {
         $fixed = nibwp_design_force_contrast($primary, $on_primary);
@@ -179,9 +179,9 @@ function nibwp_design_build_palette(array $seeds, bool $dark = false): array
 }
 
 /**
- * Rotate a colour's hue, keeping saturation and lightness.
+ * Rotate a color's hue, keeping saturation and lightness.
  *
- * Used to invent an accent when the site gave us only one brand colour. A
+ * Used to invent an accent when the site gave us only one brand color. A
  * rotation stays in the same family of taste as the seed, where picking from a
  * list would not.
  */

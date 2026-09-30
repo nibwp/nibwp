@@ -10,17 +10,17 @@ the user mentions design. Before any page, section, hero, card or component
 exists.
 
 It answers, from this specific site, the questions you would otherwise guess at:
-what colours, what fonts, what spacing, what shape language, what the page
+what colors, what fonts, what spacing, what shape language, what the page
 should be made of, and which defaults to refuse. Guessing produces the page
 every assistant produces. That page is why this skill exists.
 
-Do not ask the user what colours they want. The ability reads the site's ACSS
+Do not ask the user what colors they want. The ability reads the site's ACSS
 variables, its `theme.json` palette, and its logo. It already knows.
 
 ## What comes back
 
 ```
-brand    colour roles, contrast ratios, corrections applied
+brand    color roles, contrast ratios, corrections applied
 type     heading font, body font, scale, and where each came from
 space    scale, rhythm, measure
 shape    radius, shadow, border language
@@ -35,7 +35,7 @@ source   which decisions came from the site, which from the catalogue
 
 ## How to use it
 
-**Colours.** Use the roles, not the raw hex. `primary` for the main action,
+**Colors.** Use the roles, not the raw hex. `primary` for the main action,
 `on-primary` for text on it, `surface`/`on-surface` for the page, `muted` for
 secondary text, `border` for separation, `accent` for the one thing that should
 stand out. The contrast has already been checked and corrected — if you invent a
@@ -90,7 +90,7 @@ one site is the goal.
 - Never returns markup
 - Never touches content, posts, options a visitor sees, or files
 - Never overrides a token the site already has with one it invented
-- Never asks the user for a colour it could have read
+- Never asks the user for a color it could have read
 
 The one thing it stores is the direction itself, so the next page matches this
 one. That is why it is governed as a write rather than a read.

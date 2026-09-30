@@ -10,6 +10,9 @@ if (!defined('ABSPATH')) { exit(); }
 // Permission callback
 // -----------------------------------------------------------------------------
 
+// nibwp_wp_prepare_post_content() lives in includes/helpers.php: every
+// integration that writes post_content needs it, not just these abilities.
+
 function nibwp_wp_core_permission_callback(): bool {
     return current_user_can('edit_posts');
 }
@@ -32,6 +35,264 @@ function nibwp_wp_core_edit_theme_options_permission(): bool {
 
 function nibwp_wp_core_moderate_comments_permission(): bool {
     return current_user_can('moderate_comments');
+}
+
+// -----------------------------------------------------------------------------
+// Object-level authorisation
+// -----------------------------------------------------------------------------
+//
+// The callbacks above answer "may this account use this tool at all". They
+// cannot answer "may it touch THIS post, user or term" — that question needs
+// the object in hand, and WordPress answers it with the object-level
+// capabilities below. Without them an account allowed to edit its own posts
+// could rewrite an administrator's, and an account allowed to edit posts could
+// write itself a role through user meta.
+//
+// The rule every handler follows: check before acting, never after.
+
+function nibwp_wp_forbidden(string $message): \WP_Error
+{
+    return new \WP_Error('nibwp_forbidden', $message, ['status' => 403]);
+}
+
+/**
+ * Meta keys that hand out authority instead of describing content.
+ *
+ * No ability reads or writes these at any role: a capability array is how an
+ * account becomes an administrator, and a session token is a live login, not
+ * data. Matched by shape because the table prefix is part of the key and
+ * Multisite puts the blog id in it too — wp_capabilities, wp_7_capabilities.
+ */
+function nibwp_wp_is_privileged_meta_key(string $key): bool
+{
+    $key = strtolower(ltrim($key, '_'));
+
+    return in_array($key, ['session_tokens', 'application_passwords', 'nibwp_oauth_tokens'], true)
+        || (bool) preg_match('/(^|_)(capabilities|user_level|user_roles)$/', $key);
+}
+
+function nibwp_wp_strip_privileged_meta(array $meta): array
+{
+    foreach (array_keys($meta) as $key) {
+        if (nibwp_wp_is_privileged_meta_key((string) $key)) {
+            unset($meta[$key]);
+        }
+    }
+
+    return $meta;
+}
+
+/**
+ * Protected meta is the site's own bookkeeping — builder payloads, edit locks,
+ * anything a plugin prefixed with an underscore. It goes to someone who could
+ * open the post in the editor and read the same thing, and to nobody else.
+ */
+function nibwp_wp_visible_post_meta(int $post_id): array
+{
+    $meta = get_post_meta($post_id);
+    if (current_user_can('edit_post', $post_id)) {
+        return $meta;
+    }
+
+    foreach (array_keys($meta) as $key) {
+        if (is_protected_meta((string) $key, 'post')) {
+            unset($meta[$key]);
+        }
+    }
+
+    return $meta;
+}
+
+function nibwp_wp_guard_post_read(int $post_id): ?\WP_Error
+{
+    return current_user_can('read_post', $post_id)
+        ? null
+        : nibwp_wp_forbidden(__('You are not allowed to read this post.', 'nibwp'));
+}
+
+function nibwp_wp_guard_post_edit(int $post_id): ?\WP_Error
+{
+    return current_user_can('edit_post', $post_id)
+        ? null
+        : nibwp_wp_forbidden(__('You are not allowed to edit this post.', 'nibwp'));
+}
+
+function nibwp_wp_guard_post_delete(int $post_id): ?\WP_Error
+{
+    return current_user_can('delete_post', $post_id)
+        ? null
+        : nibwp_wp_forbidden(__('You are not allowed to delete this post.', 'nibwp'));
+}
+
+function nibwp_wp_guard_post_create(string $post_type, string $status, int $author): ?\WP_Error
+{
+    $type = get_post_type_object($post_type);
+    if (!$type) {
+        return new \WP_Error('invalid_post_type', __('That post type does not exist.', 'nibwp'));
+    }
+
+    if (!current_user_can($type->cap->create_posts)) {
+        return nibwp_wp_forbidden(__('You are not allowed to create posts of that type.', 'nibwp'));
+    }
+    if (in_array($status, ['publish', 'private', 'future'], true) && !current_user_can($type->cap->publish_posts)) {
+        return nibwp_wp_forbidden(__('You are not allowed to publish posts of that type.', 'nibwp'));
+    }
+    if ($author > 0 && $author !== get_current_user_id() && !current_user_can($type->cap->edit_others_posts)) {
+        return nibwp_wp_forbidden(__('You are not allowed to create a post for another author.', 'nibwp'));
+    }
+
+    return null;
+}
+
+/**
+ * The three edits that change who a post belongs to or who gets to see it.
+ *
+ * edit_post does not cover them: a contributor may edit their own draft and
+ * still have no right to publish it, hand it to someone else, or move it into
+ * a post type they cannot create in.
+ */
+function nibwp_wp_guard_post_changes(\WP_Post $post, array $postarr): ?\WP_Error
+{
+    $type = get_post_type_object($postarr['post_type'] ?? $post->post_type);
+    if (!$type) {
+        return new \WP_Error('invalid_post_type', __('That post type does not exist.', 'nibwp'));
+    }
+
+    $status = $postarr['post_status'] ?? $post->post_status;
+    if ($status !== $post->post_status
+        && in_array($status, ['publish', 'private', 'future'], true)
+        && !current_user_can($type->cap->publish_posts)) {
+        return nibwp_wp_forbidden(__('You are not allowed to publish this post.', 'nibwp'));
+    }
+
+    if (isset($postarr['post_author'])
+        && (int) $postarr['post_author'] !== (int) $post->post_author
+        && !current_user_can($type->cap->edit_others_posts)) {
+        return nibwp_wp_forbidden(__('You are not allowed to change the author of this post.', 'nibwp'));
+    }
+
+    if (isset($postarr['post_type'])
+        && $postarr['post_type'] !== $post->post_type
+        && !current_user_can($type->cap->create_posts)) {
+        return nibwp_wp_forbidden(__('You are not allowed to move this post into that post type.', 'nibwp'));
+    }
+
+    return null;
+}
+
+function nibwp_wp_guard_term_create(string $taxonomy): ?\WP_Error
+{
+    $tax = get_taxonomy($taxonomy);
+    if (!$tax) {
+        return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist.', 'nibwp'));
+    }
+
+    return current_user_can($tax->cap->edit_terms)
+        ? null
+        : nibwp_wp_forbidden(__('You are not allowed to add terms to that taxonomy.', 'nibwp'));
+}
+
+function nibwp_wp_guard_term_edit(int $term_id): ?\WP_Error
+{
+    return current_user_can('edit_term', $term_id)
+        ? null
+        : nibwp_wp_forbidden(__('You are not allowed to edit this term.', 'nibwp'));
+}
+
+function nibwp_wp_guard_term_delete(int $term_id): ?\WP_Error
+{
+    return current_user_can('delete_term', $term_id)
+        ? null
+        : nibwp_wp_forbidden(__('You are not allowed to delete this term.', 'nibwp'));
+}
+
+function nibwp_wp_guard_meta_write(string $object_type, int $object_id, string $meta_key): ?\WP_Error
+{
+    if (nibwp_wp_is_privileged_meta_key($meta_key)) {
+        return nibwp_wp_forbidden(__('That meta key controls access to the site and cannot be written here.', 'nibwp'));
+    }
+
+    switch ($object_type) {
+        case 'post':
+            // Protected keys are how a page builder stores a layout, so they
+            // stay writable — but only by someone who could open that post in
+            // the editor and change the same thing by hand.
+            return nibwp_wp_guard_post_edit($object_id);
+        case 'user':
+            if (!current_user_can('edit_user', $object_id)) {
+                return nibwp_wp_forbidden(__('You are not allowed to edit this user.', 'nibwp'));
+            }
+            return is_protected_meta($meta_key, 'user')
+                ? nibwp_wp_forbidden(__('That user meta key is internal to WordPress and cannot be written here.', 'nibwp'))
+                : null;
+        case 'term':
+            return nibwp_wp_guard_term_edit($object_id);
+    }
+
+    return null;
+}
+
+function nibwp_wp_guard_meta_read(string $object_type, int $object_id, string $meta_key): ?\WP_Error
+{
+    switch ($object_type) {
+        case 'post':
+            // Custom fields carry a site's internals, protected or not, so the
+            // gate is the editor's: whoever could open the post and look.
+            return nibwp_wp_guard_post_edit($object_id);
+        case 'user':
+            if ($object_id !== get_current_user_id() && !current_user_can('edit_user', $object_id)) {
+                return nibwp_wp_forbidden(__('You are not allowed to read this user.', 'nibwp'));
+            }
+            return nibwp_wp_is_privileged_meta_key($meta_key)
+                ? nibwp_wp_forbidden(__('That meta key controls access to the site and cannot be read here.', 'nibwp'))
+                : null;
+    }
+
+    // Term meta describes a category; the tool's own gate already covers it.
+    return null;
+}
+
+function nibwp_wp_path_key(string $path): string
+{
+    $path = wp_normalize_path($path);
+
+    // Windows paths compare without case; POSIX ones do not.
+    return DIRECTORY_SEPARATOR === '\\' ? strtolower($path) : $path;
+}
+
+/**
+ * A path is a source, not a licence to publish.
+ *
+ * Anything readable on the box would otherwise land at a public URL under a
+ * name WordPress accepts — a backup zip, a CSV export, a log — so the source
+ * has to sit somewhere WordPress already writes to.
+ */
+function nibwp_wp_media_source_allowed(string $real_path): bool
+{
+    $uploads = wp_get_upload_dir();
+    $roots   = [(string) ($uploads['basedir'] ?? ''), (string) get_temp_dir()];
+
+    /**
+     * Filters the directories a media source file may be read from.
+     *
+     * @param string[] $roots Absolute paths.
+     */
+    $roots = (array) apply_filters('nibwp_media_source_roots', $roots);
+
+    $needle = nibwp_wp_path_key($real_path);
+
+    foreach ($roots as $root) {
+        $resolved = realpath((string) $root);
+        if (!$resolved) {
+            continue;
+        }
+        $prefix = nibwp_wp_path_key(trailingslashit(wp_normalize_path($resolved)));
+        if ($prefix !== '/' && str_starts_with($needle, $prefix)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // -----------------------------------------------------------------------------
@@ -65,6 +326,16 @@ function nibwp_wp_list_posts(array $input): array|\WP_Error {
         if (isset($input['meta_value'])) {
             $args['meta_value'] = sanitize_text_field($input['meta_value']);
         }
+    }
+
+    // A status that is not public is somebody's unfinished work. Listing other
+    // people's needs the capability that would let you open them in the editor;
+    // without it the query is pinned to the caller's own.
+    $type = get_post_type_object($args['post_type']);
+    if ($type
+        && !in_array($args['post_status'], get_post_stati(['public' => true]), true)
+        && !current_user_can($type->cap->edit_others_posts)) {
+        $args['author'] = get_current_user_id();
     }
 
     $query = new \WP_Query($args);
@@ -104,6 +375,11 @@ function nibwp_wp_get_post(array $input): array|\WP_Error {
         return new \WP_Error('not_found', __('Post not found.', 'nibwp'), ['status' => 404]);
     }
 
+    $guard = nibwp_wp_guard_post_read($post_id);
+    if ($guard) {
+        return $guard;
+    }
+
     $author = get_userdata($post->post_author);
     $cats = wp_get_post_categories($post->ID, ['fields' => 'all']);
     $tag_list = wp_get_post_tags($post->ID, ['fields' => 'all']);
@@ -137,7 +413,7 @@ function nibwp_wp_get_post(array $input): array|\WP_Error {
         'featured_image'  => $featured_image,
         'categories'      => $categories,
         'tags'            => $tags,
-        'custom_fields'   => get_post_meta($post->ID),
+        'custom_fields'   => nibwp_wp_visible_post_meta($post->ID),
     ];
 }
 
@@ -165,7 +441,7 @@ function nibwp_wp_create_post(array $input): array|\WP_Error {
 
     $postarr = [
         'post_title'   => sanitize_text_field($input['title']),
-        'post_content' => wp_kses_post($input['content'] ?? ''),
+        'post_content' => nibwp_wp_prepare_post_content($input['content'] ?? ''),
         'post_excerpt' => sanitize_textarea_field($input['excerpt'] ?? ''),
         'post_status'  => $status,
         'post_type'    => sanitize_text_field($input['post_type'] ?? 'post'),
@@ -179,6 +455,15 @@ function nibwp_wp_create_post(array $input): array|\WP_Error {
     }
     if (!empty($input['categories']) && is_array($input['categories'])) {
         $postarr['post_category'] = array_map('absint', $input['categories']);
+    }
+
+    $guard = nibwp_wp_guard_post_create(
+        $postarr['post_type'],
+        $postarr['post_status'],
+        (int) ($postarr['post_author'] ?? 0)
+    );
+    if ($guard) {
+        return $guard;
     }
 
     $post_id = wp_insert_post($postarr, true);
@@ -216,13 +501,18 @@ function nibwp_wp_update_post(array $input): array|\WP_Error {
         return new \WP_Error('not_found', __('Post not found.', 'nibwp'), ['status' => 404]);
     }
 
+    $guard = nibwp_wp_guard_post_edit($post_id);
+    if ($guard) {
+        return $guard;
+    }
+
     $postarr = ['ID' => $post_id];
 
     if (isset($input['title'])) {
         $postarr['post_title'] = sanitize_text_field($input['title']);
     }
     if (isset($input['content'])) {
-        $postarr['post_content'] = wp_kses_post($input['content']);
+        $postarr['post_content'] = nibwp_wp_prepare_post_content($input['content']);
     }
     if (isset($input['excerpt'])) {
         $postarr['post_excerpt'] = sanitize_textarea_field($input['excerpt']);
@@ -244,6 +534,11 @@ function nibwp_wp_update_post(array $input): array|\WP_Error {
     }
     if (isset($input['categories']) && is_array($input['categories'])) {
         $postarr['post_category'] = array_map('absint', $input['categories']);
+    }
+
+    $guard = nibwp_wp_guard_post_changes($post, $postarr);
+    if ($guard) {
+        return $guard;
     }
 
     $result = wp_update_post($postarr, true);
@@ -278,6 +573,11 @@ function nibwp_wp_delete_post(array $input): array|\WP_Error {
 
     if (!$post) {
         return new \WP_Error('not_found', __('Post not found.', 'nibwp'), ['status' => 404]);
+    }
+
+    $guard = nibwp_wp_guard_post_delete($post_id);
+    if ($guard) {
+        return $guard;
     }
 
     $force = (bool) ($input['force'] ?? false);
@@ -386,12 +686,140 @@ function nibwp_wp_upload_media(array $input): array|\WP_Error {
     ];
 }
 
+/**
+ * Replace the file behind an existing attachment, keeping the attachment row —
+ * and its URL, whenever the extension has not changed.
+ *
+ * This is the step image-optimisation workflows actually need and that nothing
+ * in core does in one call: swap the bytes, throw away the thumbnails that were
+ * generated from the old bytes, and regenerate from the new ones. Hand-rolled
+ * versions skip the middle step, which leaves stale thumbnails pointing at the
+ * old image — the fault nobody spots until a listing page looks wrong.
+ */
+function nibwp_wp_replace_media(array $input): array|\WP_Error
+{
+    $id = (int) ($input['attachment_id'] ?? 0);
+    if ($id <= 0 || get_post_type($id) !== 'attachment') {
+        return new \WP_Error('invalid_attachment', __('Attachment not found.', 'nibwp'));
+    }
+
+    // Before the seam below, so delegating the work cannot skip the check.
+    $guard = nibwp_wp_guard_post_edit($id);
+    if ($guard) {
+        return $guard;
+    }
+
+    // The seam an integration hooks to take the job instead — see the EtchWP
+    // handler. A handler returns the finished result, or null to stand aside.
+    $handled = apply_filters('nibwp_replace_media', null, $id, $input);
+    if ($handled !== null) {
+        return $handled;
+    }
+
+    $old = get_attached_file($id);
+    if (!$old || !file_exists($old)) {
+        return new \WP_Error('no_file', __('That attachment has no file on disk.', 'nibwp'));
+    }
+
+    // Source: a URL to fetch, or a file already sitting on this server.
+    $tmp = null;
+    if (!empty($input['url'])) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        $url = esc_url_raw((string) $input['url']);
+        $tmp = download_url($url);
+        if (is_wp_error($tmp)) {
+            return $tmp;
+        }
+        $src  = $tmp;
+        $name = basename((string) (wp_parse_url($url, PHP_URL_PATH) ?: 'file'));
+    } elseif (!empty($input['path'])) {
+        $src  = (string) $input['path'];
+        $name = basename($src);
+        if (!is_readable($src) || !is_file($src)) {
+            return new \WP_Error('unreadable_source', __('That source file cannot be read.', 'nibwp'));
+        }
+        $real = realpath($src);
+        if (!$real || !nibwp_wp_media_source_allowed($real)) {
+            return new \WP_Error(
+                'source_out_of_bounds',
+                __('A source file has to sit in the uploads directory or the temporary directory.', 'nibwp')
+            );
+        }
+        $src = $real;
+    } else {
+        return new \WP_Error('missing_source', __('Provide either url or path.', 'nibwp'));
+    }
+
+    // Being able to name a path is not permission to publish anything on the
+    // box at a public URL. Only what WordPress would have accepted as an upload
+    // gets through, which is what keeps wp-config.php and .env out of the
+    // media library.
+    $check = wp_check_filetype($name);
+    if (empty($check['ext']) || empty($check['type'])) {
+        if ($tmp) {
+            @unlink($tmp);
+        }
+        return new \WP_Error('disallowed_type', __('That file type is not allowed in the media library.', 'nibwp'));
+    }
+
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+
+    $dir     = dirname($old);
+    $old_ext = strtolower((string) pathinfo($old, PATHINFO_EXTENSION));
+    $new_ext = strtolower((string) $check['ext']);
+
+    // Generated from bytes that are about to stop existing.
+    $meta = wp_get_attachment_metadata($id);
+    foreach ((array) ($meta['sizes'] ?? []) as $size) {
+        if (!empty($size['file'])) {
+            @unlink($dir . '/' . $size['file']);
+        }
+    }
+
+    // Same extension means the file can be written straight over the old one,
+    // so every link already pointing at it keeps working.
+    $target = $old_ext === $new_ext
+        ? $old
+        : $dir . '/' . wp_unique_filename($dir, pathinfo($old, PATHINFO_FILENAME) . '.' . $new_ext);
+
+    $copied = @copy($src, $target);
+    if ($tmp) {
+        @unlink($tmp);
+    }
+    if (!$copied) {
+        return new \WP_Error('copy_failed', __('Could not write the replacement file.', 'nibwp'));
+    }
+
+    if ($target !== $old) {
+        @unlink($old);
+        update_attached_file($id, $target);
+    }
+
+    wp_update_post(['ID' => $id, 'post_mime_type' => $check['type']]);
+    wp_update_attachment_metadata($id, wp_generate_attachment_metadata($id, $target));
+    clean_post_cache($id);
+
+    return [
+        'attachment_id' => $id,
+        'url'           => wp_get_attachment_url($id),
+        'file'          => $target,
+        'url_preserved' => $target === $old,
+        'bytes'         => (int) @filesize($target),
+        'handler'       => 'native',
+    ];
+}
+
 function nibwp_wp_delete_media(array $input): array|\WP_Error {
     $attachment_id = absint($input['attachment_id'] ?? 0);
     $attachment = get_post($attachment_id);
 
     if (!$attachment || $attachment->post_type !== 'attachment') {
         return new \WP_Error('not_found', __('Attachment not found.', 'nibwp'), ['status' => 404]);
+    }
+
+    $guard = nibwp_wp_guard_post_delete($attachment_id);
+    if ($guard) {
+        return $guard;
     }
 
     $force = (bool) ($input['force'] ?? true);
@@ -468,6 +896,11 @@ function nibwp_wp_create_term(array $input): array|\WP_Error {
         return new \WP_Error('invalid_taxonomy', __('Taxonomy does not exist.', 'nibwp'));
     }
 
+    $guard = nibwp_wp_guard_term_create($taxonomy);
+    if ($guard) {
+        return $guard;
+    }
+
     $args = [];
     if (!empty($input['slug'])) {
         $args['slug'] = sanitize_title($input['slug']);
@@ -509,6 +942,11 @@ function nibwp_wp_update_term(array $input): array|\WP_Error {
     $term = get_term($term_id, $taxonomy);
     if (!$term || is_wp_error($term)) {
         return new \WP_Error('not_found', __('Term not found.', 'nibwp'), ['status' => 404]);
+    }
+
+    $guard = nibwp_wp_guard_term_edit($term_id);
+    if ($guard) {
+        return $guard;
     }
 
     $args = [];
@@ -553,6 +991,11 @@ function nibwp_wp_delete_term(array $input): array|\WP_Error {
     $term = get_term($term_id, $taxonomy);
     if (!$term || is_wp_error($term)) {
         return new \WP_Error('not_found', __('Term not found.', 'nibwp'), ['status' => 404]);
+    }
+
+    $guard = nibwp_wp_guard_term_delete($term_id);
+    if ($guard) {
+        return $guard;
     }
 
     $result = wp_delete_term($term_id, $taxonomy);
@@ -877,7 +1320,9 @@ function nibwp_wp_get_user(array $input): array|\WP_Error {
         'registered'   => $user->user_registered,
         'description'  => $user->description,
         'url'          => $user->user_url,
-        'meta'         => get_user_meta($user->ID),
+        // Session tokens are live logins and the capability array is the role
+        // itself; neither is a profile field, so neither leaves through here.
+        'meta'         => nibwp_wp_strip_privileged_meta(get_user_meta($user->ID)),
     ];
 }
 
@@ -1020,19 +1465,35 @@ function nibwp_wp_get_meta(array $input): array|\WP_Error {
             if (!get_post($object_id)) {
                 return new \WP_Error('not_found', __('Post not found.', 'nibwp'), ['status' => 404]);
             }
-            $meta = $meta_key ? get_post_meta($object_id, sanitize_text_field($meta_key), true) : get_post_meta($object_id);
             break;
         case 'user':
             if (!get_userdata($object_id)) {
                 return new \WP_Error('not_found', __('User not found.', 'nibwp'), ['status' => 404]);
             }
-            $meta = $meta_key ? get_user_meta($object_id, sanitize_text_field($meta_key), true) : get_user_meta($object_id);
             break;
         case 'term':
             $term = get_term($object_id);
             if (!$term || is_wp_error($term)) {
                 return new \WP_Error('not_found', __('Term not found.', 'nibwp'), ['status' => 404]);
             }
+            break;
+    }
+
+    $guard = nibwp_wp_guard_meta_read($object_type, $object_id, (string) $meta_key);
+    if ($guard) {
+        return $guard;
+    }
+
+    switch ($object_type) {
+        case 'post':
+            $meta = $meta_key ? get_post_meta($object_id, sanitize_text_field($meta_key), true) : get_post_meta($object_id);
+            break;
+        case 'user':
+            $meta = $meta_key
+                ? get_user_meta($object_id, sanitize_text_field($meta_key), true)
+                : nibwp_wp_strip_privileged_meta(get_user_meta($object_id));
+            break;
+        case 'term':
             $meta = $meta_key ? get_term_meta($object_id, sanitize_text_field($meta_key), true) : get_term_meta($object_id);
             break;
     }
@@ -1067,19 +1528,33 @@ function nibwp_wp_update_meta(array $input): array|\WP_Error {
             if (!get_post($object_id)) {
                 return new \WP_Error('not_found', __('Post not found.', 'nibwp'), ['status' => 404]);
             }
-            $result = update_post_meta($object_id, $meta_key, $meta_value);
             break;
         case 'user':
             if (!get_userdata($object_id)) {
                 return new \WP_Error('not_found', __('User not found.', 'nibwp'), ['status' => 404]);
             }
-            $result = update_user_meta($object_id, $meta_key, $meta_value);
             break;
         case 'term':
             $term = get_term($object_id);
             if (!$term || is_wp_error($term)) {
                 return new \WP_Error('not_found', __('Term not found.', 'nibwp'), ['status' => 404]);
             }
+            break;
+    }
+
+    $guard = nibwp_wp_guard_meta_write($object_type, $object_id, $meta_key);
+    if ($guard) {
+        return $guard;
+    }
+
+    switch ($object_type) {
+        case 'post':
+            $result = update_post_meta($object_id, $meta_key, $meta_value);
+            break;
+        case 'user':
+            $result = update_user_meta($object_id, $meta_key, $meta_value);
+            break;
+        case 'term':
             $result = update_term_meta($object_id, $meta_key, $meta_value);
             break;
     }
@@ -1133,8 +1608,8 @@ function nibwp_wp_list_plugins(array $input): array|\WP_Error {
 // -----------------------------------------------------------------------------
 
 wp_register_ability('nibwp/wp-list-posts', [
-    'label'       => __('List Posts', domain: 'nibwp'),
-    'description' => __('List WordPress posts with filtering, search, and pagination.', domain: 'nibwp'),
+    'label'       => __('List Posts', 'nibwp'),
+    'description' => 'List WordPress posts with filtering, search, and pagination.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1177,8 +1652,8 @@ wp_register_ability('nibwp/wp-list-posts', [
 ]);
 
 wp_register_ability('nibwp/wp-get-post', [
-    'label'       => __('Get Post', domain: 'nibwp'),
-    'description' => __('Get a single WordPress post with full content and metadata.', domain: 'nibwp'),
+    'label'       => __('Get Post', 'nibwp'),
+    'description' => 'Get a single WordPress post with full content and metadata.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1220,8 +1695,8 @@ wp_register_ability('nibwp/wp-get-post', [
 ]);
 
 wp_register_ability('nibwp/wp-create-post', [
-    'label'       => __('Create Post', domain: 'nibwp'),
-    'description' => __('Create a new WordPress post or custom post type entry.', domain: 'nibwp'),
+    'label'       => __('Create Post', 'nibwp'),
+    'description' => 'Create a new WordPress post or custom post type entry.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1263,8 +1738,8 @@ wp_register_ability('nibwp/wp-create-post', [
 ]);
 
 wp_register_ability('nibwp/wp-update-post', [
-    'label'       => __('Update Post', domain: 'nibwp'),
-    'description' => __('Update an existing WordPress post.', domain: 'nibwp'),
+    'label'       => __('Update Post', 'nibwp'),
+    'description' => 'Update an existing WordPress post.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1306,8 +1781,8 @@ wp_register_ability('nibwp/wp-update-post', [
 ]);
 
 wp_register_ability('nibwp/wp-delete-post', [
-    'label'       => __('Delete Post', domain: 'nibwp'),
-    'description' => __('Delete or trash a WordPress post.', domain: 'nibwp'),
+    'label'       => __('Delete Post', 'nibwp'),
+    'description' => 'Delete or trash a WordPress post.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1343,8 +1818,8 @@ wp_register_ability('nibwp/wp-delete-post', [
 // -----------------------------------------------------------------------------
 
 wp_register_ability('nibwp/wp-list-media', [
-    'label'       => __('List Media', domain: 'nibwp'),
-    'description' => __('List media library items with optional filters.', domain: 'nibwp'),
+    'label'       => __('List Media', 'nibwp'),
+    'description' => 'List media library items with optional filters.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1378,8 +1853,8 @@ wp_register_ability('nibwp/wp-list-media', [
 ]);
 
 wp_register_ability('nibwp/wp-upload-media', [
-    'label'       => __('Upload Media', domain: 'nibwp'),
-    'description' => __('Upload media to the library from a URL.', domain: 'nibwp'),
+    'label'       => __('Upload Media', 'nibwp'),
+    'description' => 'Upload media to the library from a URL.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1413,9 +1888,47 @@ wp_register_ability('nibwp/wp-upload-media', [
     ],
 ]);
 
+wp_register_ability('nibwp/wp-replace-media', [
+    'label'       => __('Replace Media File', 'nibwp'),
+    'description' => 'Replace the file behind an existing attachment and regenerate its thumbnails. Keeps the same attachment and URL when the extension is unchanged — for swapping in an optimised or recompressed image.',
+    'category'    => 'wordpress',
+    'input_schema' => [
+        'type'       => 'object',
+        'required'   => ['attachment_id'],
+        'properties' => [
+            'attachment_id' => ['type' => 'integer', 'description' => 'The attachment whose file should be replaced.'],
+            'url'           => ['type' => 'string', 'description' => 'URL of the replacement file to download. Use this or path.'],
+            'path'          => ['type' => 'string', 'description' => 'Absolute path to a replacement file already on this server. Use this or url.'],
+        ],
+    ],
+    'output_schema' => [
+        'type'       => 'object',
+        'properties' => [
+            'attachment_id' => ['type' => 'integer'],
+            'url'           => ['type' => 'string'],
+            'file'          => ['type' => 'string'],
+            'url_preserved' => ['type' => 'boolean'],
+            'bytes'         => ['type' => 'integer'],
+            'handler'       => ['type' => 'string'],
+        ],
+    ],
+    'execute_callback'    => 'nibwp_wp_replace_media',
+    'permission_callback' => 'nibwp_wp_core_upload_permission',
+    'meta' => [
+        'show_in_rest' => true,
+        'mcp'          => ['public' => true],
+        'annotations'  => [
+            'instructions' => 'Swap the file behind an attachment, keeping the attachment ID and (where the extension matches) its URL. Old thumbnails are deleted and regenerated from the new file. Use this after optimising or converting an image rather than uploading a second copy.',
+            'readonly'     => false,
+            'destructive'  => true,
+            'idempotent'   => false,
+        ],
+    ],
+]);
+
 wp_register_ability('nibwp/wp-delete-media', [
-    'label'       => __('Delete Media', domain: 'nibwp'),
-    'description' => __('Delete a media attachment from the library.', domain: 'nibwp'),
+    'label'       => __('Delete Media', 'nibwp'),
+    'description' => 'Delete a media attachment from the library.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1446,13 +1959,53 @@ wp_register_ability('nibwp/wp-delete-media', [
     ],
 ]);
 
+
+// -----------------------------------------------------------------------------
+// DESIGN SYSTEM
+// -----------------------------------------------------------------------------
+
+wp_register_ability('nibwp/design-system-detect', [
+    'label'       => __('Detect Design System', 'nibwp'),
+    'description' => 'Report which design system is active and configured on this site (Automatic.css, Core Framework, theme.json, or none) and return its tokens — colors, type scale, spacing, radius, shadow — in one normalised shape. Call this before converting any design, so the build references tokens instead of raw hex and px.',
+    'category'    => 'wordpress',
+    'input_schema' => [
+        'type'       => 'object',
+        'properties' => [
+            'include_tokens' => ['type' => 'boolean', 'default' => true, 'description' => 'Return the full token vocabulary. False returns only which system is active and whether it is configured.'],
+        ],
+    ],
+    'output_schema' => [
+        'type'       => 'object',
+        'properties' => [
+            'system'         => ['type' => 'string', 'description' => 'acss | core-framework | theme-json | none'],
+            'configured'     => ['type' => 'boolean', 'description' => 'True when the system holds real settings, not just defaults. Only then are its tokens a source of truth.'],
+            'candidates'     => ['type' => 'array', 'items' => ['type' => 'string']],
+            'base_font_size' => ['type' => 'number'],
+            'counts'         => ['type' => 'object'],
+            'tokens'         => ['type' => 'object'],
+        ],
+    ],
+    'execute_callback'    => 'nibwp_design_system_detect_ability',
+    'permission_callback' => 'nibwp_wp_core_permission_callback',
+    'meta' => [
+        'show_in_rest' => true,
+        'mcp'          => ['public' => true],
+        'annotations'  => [
+            'instructions' => 'Step 0 of any design conversion. Returns the active, configured design system and its tokens. If configured is true, emit var(--token) references for every color and size that has one and list what you could not map; if it is false or system is "none", literals are acceptable and you should say so.',
+            'readonly'     => true,
+            'destructive'  => false,
+            'idempotent'   => true,
+        ],
+    ],
+]);
+
 // -----------------------------------------------------------------------------
 // TAXONOMIES
 // -----------------------------------------------------------------------------
 
 wp_register_ability('nibwp/wp-list-terms', [
-    'label'       => __('List Terms', domain: 'nibwp'),
-    'description' => __('List terms for any taxonomy.', domain: 'nibwp'),
+    'label'       => __('List Terms', 'nibwp'),
+    'description' => 'List terms for any taxonomy.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1488,8 +2041,8 @@ wp_register_ability('nibwp/wp-list-terms', [
 ]);
 
 wp_register_ability('nibwp/wp-create-term', [
-    'label'       => __('Create Term', domain: 'nibwp'),
-    'description' => __('Create a new taxonomy term.', domain: 'nibwp'),
+    'label'       => __('Create Term', 'nibwp'),
+    'description' => 'Create a new taxonomy term.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1524,8 +2077,8 @@ wp_register_ability('nibwp/wp-create-term', [
 ]);
 
 wp_register_ability('nibwp/wp-update-term', [
-    'label'       => __('Update Term', domain: 'nibwp'),
-    'description' => __('Update an existing taxonomy term.', domain: 'nibwp'),
+    'label'       => __('Update Term', 'nibwp'),
+    'description' => 'Update an existing taxonomy term.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1561,8 +2114,8 @@ wp_register_ability('nibwp/wp-update-term', [
 ]);
 
 wp_register_ability('nibwp/wp-delete-term', [
-    'label'       => __('Delete Term', domain: 'nibwp'),
-    'description' => __('Delete a taxonomy term.', domain: 'nibwp'),
+    'label'       => __('Delete Term', 'nibwp'),
+    'description' => 'Delete a taxonomy term.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1598,8 +2151,8 @@ wp_register_ability('nibwp/wp-delete-term', [
 // -----------------------------------------------------------------------------
 
 wp_register_ability('nibwp/wp-list-comments', [
-    'label'       => __('List Comments', domain: 'nibwp'),
-    'description' => __('List comments with optional filters.', domain: 'nibwp'),
+    'label'       => __('List Comments', 'nibwp'),
+    'description' => 'List comments with optional filters.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1631,8 +2184,8 @@ wp_register_ability('nibwp/wp-list-comments', [
 ]);
 
 wp_register_ability('nibwp/wp-create-comment', [
-    'label'       => __('Create Comment', domain: 'nibwp'),
-    'description' => __('Create a new comment on a post.', domain: 'nibwp'),
+    'label'       => __('Create Comment', 'nibwp'),
+    'description' => 'Create a new comment on a post.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1668,8 +2221,8 @@ wp_register_ability('nibwp/wp-create-comment', [
 ]);
 
 wp_register_ability('nibwp/wp-update-comment', [
-    'label'       => __('Update Comment', domain: 'nibwp'),
-    'description' => __('Update an existing comment.', domain: 'nibwp'),
+    'label'       => __('Update Comment', 'nibwp'),
+    'description' => 'Update an existing comment.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1702,8 +2255,8 @@ wp_register_ability('nibwp/wp-update-comment', [
 ]);
 
 wp_register_ability('nibwp/wp-delete-comment', [
-    'label'       => __('Delete Comment', domain: 'nibwp'),
-    'description' => __('Delete or trash a comment.', domain: 'nibwp'),
+    'label'       => __('Delete Comment', 'nibwp'),
+    'description' => 'Delete or trash a comment.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1739,8 +2292,8 @@ wp_register_ability('nibwp/wp-delete-comment', [
 // -----------------------------------------------------------------------------
 
 wp_register_ability('nibwp/wp-list-menus', [
-    'label'       => __('List Menus', domain: 'nibwp'),
-    'description' => __('List all registered navigation menus.', domain: 'nibwp'),
+    'label'       => __('List Menus', 'nibwp'),
+    'description' => 'List all registered navigation menus.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1767,8 +2320,8 @@ wp_register_ability('nibwp/wp-list-menus', [
 ]);
 
 wp_register_ability('nibwp/wp-get-menu-items', [
-    'label'       => __('Get Menu Items', domain: 'nibwp'),
-    'description' => __('Get all items for a navigation menu.', domain: 'nibwp'),
+    'label'       => __('Get Menu Items', 'nibwp'),
+    'description' => 'Get all items for a navigation menu.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1798,8 +2351,8 @@ wp_register_ability('nibwp/wp-get-menu-items', [
 ]);
 
 wp_register_ability('nibwp/wp-create-menu', [
-    'label'       => __('Create Menu', domain: 'nibwp'),
-    'description' => __('Create a new navigation menu.', domain: 'nibwp'),
+    'label'       => __('Create Menu', 'nibwp'),
+    'description' => 'Create a new navigation menu.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1830,8 +2383,8 @@ wp_register_ability('nibwp/wp-create-menu', [
 ]);
 
 wp_register_ability('nibwp/wp-add-menu-item', [
-    'label'       => __('Add Menu Item', domain: 'nibwp'),
-    'description' => __('Add an item to a navigation menu.', domain: 'nibwp'),
+    'label'       => __('Add Menu Item', 'nibwp'),
+    'description' => 'Add an item to a navigation menu.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1871,8 +2424,8 @@ wp_register_ability('nibwp/wp-add-menu-item', [
 // -----------------------------------------------------------------------------
 
 wp_register_ability('nibwp/wp-list-users', [
-    'label'       => __('List Users', domain: 'nibwp'),
-    'description' => __('List WordPress users with optional filters.', domain: 'nibwp'),
+    'label'       => __('List Users', 'nibwp'),
+    'description' => 'List WordPress users with optional filters.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1906,8 +2459,8 @@ wp_register_ability('nibwp/wp-list-users', [
 ]);
 
 wp_register_ability('nibwp/wp-get-user', [
-    'label'       => __('Get User', domain: 'nibwp'),
-    'description' => __('Get detailed information about a user.', domain: 'nibwp'),
+    'label'       => __('Get User', 'nibwp'),
+    'description' => 'Get detailed information about a user.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1949,8 +2502,8 @@ wp_register_ability('nibwp/wp-get-user', [
 // -----------------------------------------------------------------------------
 
 wp_register_ability('nibwp/wp-get-site-info', [
-    'label'       => __('Get Site Info', domain: 'nibwp'),
-    'description' => __('Get WordPress site information and configuration.', domain: 'nibwp'),
+    'label'       => __('Get Site Info', 'nibwp'),
+    'description' => 'Get WordPress site information and configuration.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -1989,8 +2542,8 @@ wp_register_ability('nibwp/wp-get-site-info', [
 ]);
 
 wp_register_ability('nibwp/wp-get-site-stats', [
-    'label'       => __('Get Site Stats', domain: 'nibwp'),
-    'description' => __('Get site content statistics and counts.', domain: 'nibwp'),
+    'label'       => __('Get Site Stats', 'nibwp'),
+    'description' => 'Get site content statistics and counts.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -2024,8 +2577,8 @@ wp_register_ability('nibwp/wp-get-site-stats', [
 ]);
 
 wp_register_ability('nibwp/wp-update-option', [
-    'label'       => __('Update Option', domain: 'nibwp'),
-    'description' => __('Update a WordPress option value.', domain: 'nibwp'),
+    'label'       => __('Update Option', 'nibwp'),
+    'description' => 'Update a WordPress option value.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -2057,8 +2610,8 @@ wp_register_ability('nibwp/wp-update-option', [
 ]);
 
 wp_register_ability('nibwp/wp-get-option', [
-    'label'       => __('Get Option', domain: 'nibwp'),
-    'description' => __('Get a WordPress option value.', domain: 'nibwp'),
+    'label'       => __('Get Option', 'nibwp'),
+    'description' => 'Get a WordPress option value.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -2089,8 +2642,8 @@ wp_register_ability('nibwp/wp-get-option', [
 ]);
 
 wp_register_ability('nibwp/wp-search', [
-    'label'       => __('Search', domain: 'nibwp'),
-    'description' => __('Global search across WordPress content types.', domain: 'nibwp'),
+    'label'       => __('Search', 'nibwp'),
+    'description' => 'Global search across WordPress content types.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -2128,8 +2681,8 @@ wp_register_ability('nibwp/wp-search', [
 // -----------------------------------------------------------------------------
 
 wp_register_ability('nibwp/wp-get-meta', [
-    'label'       => __('Get Meta', domain: 'nibwp'),
-    'description' => __('Get meta values for a post, user, or term.', domain: 'nibwp'),
+    'label'       => __('Get Meta', 'nibwp'),
+    'description' => 'Get meta values for a post, user, or term.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -2164,8 +2717,8 @@ wp_register_ability('nibwp/wp-get-meta', [
 ]);
 
 wp_register_ability('nibwp/wp-update-meta', [
-    'label'       => __('Update Meta', domain: 'nibwp'),
-    'description' => __('Update a meta value for a post, user, or term.', domain: 'nibwp'),
+    'label'       => __('Update Meta', 'nibwp'),
+    'description' => 'Update a meta value for a post, user, or term.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',
@@ -2201,8 +2754,8 @@ wp_register_ability('nibwp/wp-update-meta', [
 ]);
 
 wp_register_ability('nibwp/wp-list-plugins', [
-    'label'       => __('List Plugins', domain: 'nibwp'),
-    'description' => __('List all installed WordPress plugins.', domain: 'nibwp'),
+    'label'       => __('List Plugins', 'nibwp'),
+    'description' => 'List all installed WordPress plugins.',
     'category'    => 'wordpress',
     'input_schema' => [
         'type'       => 'object',

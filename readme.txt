@@ -4,7 +4,7 @@ Tags: ai, mcp, claude, automation, chatgpt
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.0
-Stable tag: 1.2.1
+Stable tag: 1.2.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,6 +13,12 @@ NIBWP turns your WordPress site into a Model Context Protocol (MCP) server so AI
 == Description ==
 
 NIBWP exposes a curated set of WordPress abilities (read posts, search content, manage media, run a key-value memory, query options) as MCP tools. Connect any MCP-compatible AI client and let it work with your site through a single signed endpoint — no copy-pasting, no scraping.
+
+Documentation, setup guides and the full ability reference live at [nibwp.com](https://www.nibwp.com).
+
+See it working:
+
+https://www.youtube.com/watch?v=N4UX7ABmroA
 
 = What you get =
 
@@ -64,10 +70,124 @@ Yes — activate per-site. Each subsite gets its own endpoint.
 
 == Changelog ==
 
+= 1.2.12 =
+Every tool now checks the thing you asked about, not just who asked. Plus pairing for the headless runner.
+
+* Each WordPress tool now weighs the particular post, user, term or file in front of it, so an account reaches exactly what its role reaches in wp-admin and no further.
+* Custom fields, user profiles and sign-in sessions stay with the people entitled to them.
+* On a multisite network the file tools answer to the network owner, the same line WordPress draws for the theme and plugin editors.
+* wp-config.php, .env and their neighbours are out of reach of the file tools altogether.
+* **One step for the headless runner:** it now wants a pairing key alongside its application password. Open NibWP → Agent View, create one under "Headless runner", and give it to the runner as --pass (or NIBWP_PASS) — tick "for scheduled runs" if it lives in a cron. Revoking a key also signs out the runner it paired.
+* Licensed sites take their updates from nibwp.com only.
+* Every new panel and message is translated into all eight languages, Arabic included.
+
+= 1.2.11 =
+NIBWP speaks your language, and Bit Form joins the forms it works with.
+
+* The whole admin is now available in French, Spanish, Portuguese (Portugal and Brazil), Italian, Dutch, German and Arabic.
+* Arabic comes with a full right-to-left layout.
+* Agent View, Connect, skills, workflows, jobs and the help drawer all follow your WordPress language.
+* Counts read naturally in every language, English included: "1 site", not "1 site(s)".
+* **New: Bit Form.** Forms, fields, entries and notifications, read straight from the tables Bit Form keeps for itself, plus an export of entries.
+* Every Bit Form form is audited for the two ways an enquiry disappears quietly: every notification switched off, or the submission restriction discarding the entry after the visitor has been thanked.
+* Bit Form also answers through the universal form tools, so "list my forms" covers it alongside every other form plugin.
+
+= 1.2.10 =
+Etch builds that look the way you asked.
+
+* Ask for reusable Etch components and they are saved as real Etch components, with their content, properties and styles, ready to use on any page.
+* Etch builds use the Automatic.css tokens your site actually defines, with the right colours and borders for light and dark sections.
+* Inline icons, slots and conditions come out in Etch exactly as designed, and the playbook examples are ready to copy.
+* A new repair tool brings Etch pages built with earlier versions up to date: classes restored and components made reusable.
+* Design direction fits a single section into the page it joins and keeps one consistent look across your pages.
+* Agents can check what they built: page reads include layout and styles, and the page check spots borders that do not show.
+* Upload a local image straight into the Media Library, with alt text.
+* Suggestions you decline are not repeated, and every build starts by asking where it should go.
+* Etch sections with soft shadows and overlays go through smoothly.
+* New in Settings: a switch for update emails, off until you turn it on.
+
+= 1.2.9 =
+Ask in your own words, get it built properly.
+
+* Say what you want however you like - "create a hero section with Etch and ACSS" - and NibWP now reaches for the right builder skill.
+* Sections arrive fully styled, with your brand classes and design tokens applied.
+* Signing in from ChatGPT and Claude works on more hosting setups, including sites behind a proxy or CDN.
+* Bricks: change one element without rebuilding the whole section, and header and footer templates save exactly where Bricks expects them.
+* Text with special characters stays exactly as written, everywhere it is saved.
+* More ready-made workflows included, covering every builder NibWP supports.
+
+= 1.2.8 =
+Sign-in that just works.
+
+* Signing in from ChatGPT, Claude and other AI clients now works on many more hosts, including behind Cloudflare.
+* Where a host genuinely blocks sign-in, the Connect page now says exactly what to ask your host, word for word.
+* A one-click fix on the Status page when your server drops sign-in credentials (Apache and LiteSpeed).
+
+= 1.2.7 =
+Smoother connecting and building.
+
+* Connecting is clearer: the application password leads, and signing in is offered only where your host supports it.
+* Choosing your AI tool no longer skips past the connection choice.
+* Page builds tell you exactly what was created, and stop early rather than leaving a page half-made.
+
+= 1.2.6 =
+Elementor fix.
+
+* Fixed: pages built with the Elementor tools now save and render correctly.
+* Fixed: building onto an existing page keeps that page's template.
+
+= 1.2.5 =
+Small fixes.
+
+* Fixed a minor issue on the Connect page.
+* General stability improvements.
+
+= 1.2.4 =
+Connecting an AI client, as a flow you can follow.
+
+* **The Connect page is a guided flow.** Turn on abilities, pick your tool, choose how to connect, connect it. Finished steps fold to a single line and reopen with a click, so coming back for a second client is one glance rather than a page to re-read.
+* **Sign in or use an application password — your choice.** Both are offered side by side, with the one your tool supports marked. Where signing in cannot work, the page says why instead of offering a button that fails.
+* **Your key and your connection text are separate steps.** Create the key, and it folds away to make room for the text you actually came to copy.
+* **Pick your tool from one scrolling row.** Seventeen clients on a single line that scrolls under the mouse.
+* **A "How it works" explainer.** The whole thing in four plain sentences, one click from the page header.
+* Fixed: Automatic.css — your variables and classes are read on every install, so your assistant styles with your own tokens instead of guessing.
+* Fixed: Agent View can take a screenshot, so your assistant sees the page the way you see it.
+* Fixed: Agent View can hover, so menus, dropdowns and hover styles can be checked without clicking them.
+* Fixed: Agent View no longer has to stay open in a browser tab for your assistant to work on the page.
+
+= 1.2.3 =
+A fuller store integration, richer table and redirect control.
+
+* **FluentCart, end to end.** Customers, coupons, subscriptions, stock, abandoned carts and revenue reporting, alongside products and orders.
+* **More of Redirection.** Groups, the redirect and 404 logs, a summary of your most-hit 404s, and a check that shows what any URL will do.
+* **Edit TablePress tables in place.** Change a single cell, row or column instead of sending the whole grid.
+* **Built-in toolkits are yours to choose.** Security, Migration, Notifications, SEO Advanced, Content Planner and Content Fetcher can each be switched on or off.
+* **Integration cards show what you get.** Each one lists how many AI actions it provides.
+
+= 1.2.2 =
+Two builders, a translator, ten form plugins and an affiliate program.
+
+* **New: Breakdance Pro skill.** The Breakdance integration gives your assistant the data layer; this skill is the part that designs. Hand it a screenshot, an HTML page, a URL or a Figma frame and it builds the Breakdance page — every element validated against Breakdance's own registry before anything is written, so a mistyped element name cannot ship as a broken section. It reads Figma as nodes, frames and tokens rather than as a picture, which is why the spacing and the type scale survive the trip. €29.
+* **Custom integration requests reach our team.** Ask for an integration from the Integrations page and it goes straight to support, with confirmation that it was sent.
+
+* **New: Affiliate Program page.** NibWP now has an affiliate program, and you can join it from inside your own dashboard rather than going looking for a form on our site. The page sits below Settings and shows the current commission, cookie window and payout terms — fetched from nibwp.com, so what you are reading is what we are actually offering today rather than whatever was true when your copy of the plugin was built. There is an estimator that turns "how many people might I refer" into a monthly figure, and it says on the page that it is an estimate. Promote NibWP wherever you like: client sites, your own sites, a channel, a newsletter, a course, a community. Once you have joined the page stops advertising and becomes your referral link and status.
+
+* **New: Breakdance.** Your assistant can now build Breakdance sites — pages and the elements on them, headers, footers, popups, templates and global blocks, where each one displays, and the global settings, selectors, presets and variables behind them. It edits one element at a time rather than rewriting a page to change a heading, so work you already did stays where it is. Revisions are covered too, which means a change can be undone. Oxygen 6 is the same builder under a different name, and it works there as well.
+* **New: Weglot.** Translating a site is mostly configuration, and the mistakes are quiet ones — a missing hreflang tag that costs you rankings, code samples translated into nonsense, a language added without anyone checking what it does to the word count. Your assistant now handles the whole setup: languages, hreflang, translated URLs, the switcher, and the exclusions that keep code and brand names out of the translator. It can audit a Weglot site you already have and tell you what is wrong with it, and it plans the work in the right order — exclusions before the first translation pass, because a word translated once is billed whatever you do afterwards.
+* **New: Formidable, Forminator and HappyForms.** Each hides the same problem somewhere different. Formidable keeps a form\u2019s email actions in separate records, so a form that stores every entry and emails nobody looks completely normal. Forminator is really three products \u2014 forms, polls and quizzes \u2014 and your assistant now reads all three rather than a third of the site. HappyForms allows the worst case of all: a form that neither emails anyone nor keeps what was submitted, where the enquiry simply disappears. Every one of them is audited for exactly that.
+* **New: Ninja Forms.** The one form plugin where saving a submission is itself optional. Ninja Forms treats storing an entry as an action, exactly like sending an email, so a form can be set up to email you without keeping anything, to keep everything without telling anyone, or to do neither \u2014 and all three look identical from the outside. Your assistant now reads the actions, the fields, the submissions and the exports, and audits every form for all three cases.
+* **New: WPForms and JetFormBuilder.** WPForms gets forms, fields, notifications, confirmations and settings, with entries on Pro \u2014 and it knows that WPForms Lite saves no submissions at all, so when you ask where your enquiries went it tells you they were never stored rather than showing an empty list. JetFormBuilder is a different animal: the form is Gutenberg blocks and everything it does lives in separate settings, so your assistant reads the fields out of the block markup and can see the post-submit actions \u2014 including the case where a form has none at all and has been quietly throwing every submission away.
+* **New: Fluent Forms, free and Pro.** Forms and fields, submissions, email notifications, confirmations and settings \u2014 plus every integration feed an add-on writes to a form, discovered rather than guessed, so whatever you have installed is reachable. With Pro it also reads payments and subscriptions. And it audits every form for the fault that quietly costs enquiries: submissions arriving with no enabled notification, so nobody is ever told.
+* **New: Gravity Forms, in full.** Forms and fields, entries and their notes, and \u2014 the parts a generic form tool never sees \u2014 notifications, confirmations and add-on feeds. Feeds are how Mailchimp, Stripe and User Registration are wired to a form, and they are where the money is. Your assistant can also validate a set of answers against a form\u0027s rules without submitting anything, and audit every form on the site for the fault that costs real enquiries: a form quietly collecting entries with no active notification, so nobody is ever told.
+* **New: Contact Form 7, in depth.** The universal forms tool could already list and read CF7 forms. This goes to the part that actually breaks: the mail template. A contact form with the wrong recipient looks like it works and delivers nowhere. Your assistant can now read and change both mail templates, the form fields themselves, the messages visitors see, and the settings that quietly stop delivery — and it warns you when a mail template names a field that no longer exists, or when a form has no spam protection at all.
+* **New: WS Form.** Your assistant can now build and run WS Form end to end — forms and their whole JSON definition, fields, tabs and sections, the actions that fire when someone submits, submissions and their exports, styles and templates. Ask for a form and get one that works, not an empty shell: the actions are the part that decides whether anyone is actually told about a submission, and they are covered too.
+* Deleting anything in WS Form sits behind its own permission and asks for confirmation first. Trashing does not, because putting something back should never be the harder option.
+* Submission exports are paginated on purpose, so a form with thousands of entries returns something usable instead of failing slowly.
+
 = 1.2.1 =
 An important fix, and the start of something new: NibWP from the command line.
 
-* **Fixed: a Skill add-on next to Pro could take a site down.** Activating a licence could install a Skill add-on that your Pro plugin already contained. Two copies of the same file then loaded at once, which PHP refuses outright — the site went blank with no way in from the dashboard. Reported by a customer on a live site. Four things changed so it cannot happen again: your licence no longer installs a Skill you already have; if the two are already side by side, they now agree on which one loads; a site already in that state switches the duplicate off by itself and comes back on the next page load; and our release process now refuses to build if any file could load twice. Every Skill add-on has been rebuilt — update yours.
+* **Fixed: a Skill add-on next to Pro could take a site down.** Activating a license could install a Skill add-on that your Pro plugin already contained. Two copies of the same file then loaded at once, which PHP refuses outright — the site went blank with no way in from the dashboard. Reported by a customer on a live site. Four things changed so it cannot happen again: your license no longer installs a Skill you already have; if the two are already side by side, they now agree on which one loads; a site already in that state switches the duplicate off by itself and comes back on the next page load; and our release process now refuses to build if any file could load twice. Every Skill add-on has been rebuilt — update yours.
 * **New: NibWP from the terminal.** `npx nibwp-cli auth login https://yoursite.com` opens your browser, shows your site's own approval screen, and connects — no configuration file, no password anywhere. From there one command wires up Cursor, VS Code, Claude Code, Codex, Gemini CLI and others, and another bridges assistants that cannot speak to a site directly. Free and open source. It also lets you choose exactly what to grant: a connection approved for reading cannot write, and your site is what enforces that.
 * **New: work across every site at once.** Run the same thing on one site, a named site, or all of them, with a result for each. Built for anyone looking after more than a handful of installs.
 * **New: edit your theme in your own editor.** Pull a folder down, change it locally with whatever tools you like, push back only what you changed. It refuses to overwrite anything that changed on the site while you were working.
@@ -79,13 +199,13 @@ An important fix, and the start of something new: NibWP from the command line.
 Our biggest release yet — a new way to watch your assistant work, control over who can use it, and much more of your site it can build.
 
 * **New: Agent View — watch your assistant work.** Until now you asked for something and waited. Agent View gives you a live window onto your own site: you see each page open, each change land, and a running list of what was done. Included on every plan, free ones too.
-* **New: NibWP Design — pages that don't look AI-made.** Ask for a page and you usually get the same safe, forgettable layout. NibWP Design reads your site's own colours, fonts and spacing first, and decides how the page should look before a single block is placed — so what comes out belongs to your brand. Free.
+* **New: NibWP Design — pages that don't look AI-made.** Ask for a page and you usually get the same safe, forgettable layout. NibWP Design reads your site's own colors, fonts and spacing first, and decides how the page should look before a single block is placed — so what comes out belongs to your brand. Free.
 * **New: Status — find out why a connection won't work.** One screen that checks your setup end to end and tells you, in plain words, what is wrong and how to fix it. No more guessing.
 * **New: User Access — decide who gets to use AI on your site.** Choose exactly which administrators can see NibWP, and which cannot. Off for everyone but you by default. You can also rename the plugin inside your own dashboard, which agencies asked for again and again.
 * **New: sign in instead of copying passwords.** Connecting Claude, ChatGPT, Cursor and the rest is now a sign-in and an approval screen that lists, in readable language, exactly what you are allowing — and lets you refuse anything you would rather not grant. Application passwords still work if you prefer them.
 * **New: Voxel support.** If your site runs the Voxel theme, your assistant can finally work with what makes it a Voxel site — listings and their fields, categories, orders and memberships, reviews, messages, and the search itself.
 * **New add-on: Voxel Pro (€29).** Build the templates a Voxel site is made of: preview cards, listing pages, archives, headers, and search pages whose filters, results and map are wired together properly. Every field it uses is checked against your real listings first, so a card never goes live with a blank line where the price should be.
-* **New: share a workflow with your other sites.** Write a way of working once and hand it to every site on your licence, or offer it to the community. Your workflows stay private unless you say otherwise.
+* **New: share a workflow with your other sites.** Write a way of working once and hand it to every site on your license, or offer it to the community. Your workflows stay private unless you say otherwise.
 * **Improved: Skills are easier to browse.** Free and Pro tabs, search, and sorting — with the free ones first.
 * **Improved: a calmer connection screen.** Fewer words, one clear choice, and the fiddly parts tucked away until you want them.
 * Fixed minor issues and made general improvements throughout.
@@ -123,7 +243,7 @@ Our biggest release yet — a new way to watch your assistant work, control over
 = 1.1.2 =
 * New: when Application Passwords are disabled, the Connect page now explains exactly why — no HTTPS, or a security plugin blocking them — with an expandable, step-by-step guide to switch them back on.
 * Improved (Pro): ACSS Pro writes your global design config through Automatic.css's own engine, so it saves and recompiles instantly in ACSS's exact schema (full ACSS 4.x / OKLCH support) — no manual re-save.
-* Improved (Pro): EtchWP Pro recognises loops, conditions, components and dynamic data from the start, and establishes the ACSS design system before building.
+* Improved (Pro): EtchWP Pro recognizes loops, conditions, components and dynamic data from the start, and establishes the ACSS design system before building.
 
 = 1.1.1 =
 * New: Discover community + curated workflows right inside the Workflows page — browse what NIBWP.COM and other users share, see upvotes and Featured picks, and import any with one click (you get your own editable copy).
@@ -132,7 +252,7 @@ Our biggest release yet — a new way to watch your assistant work, control over
 * Improved: Featured workflows are marked with a ★ and surface first in Discover.
 
 = 1.1.0 =
-* New: Workflows — reusable, AI-followed operating playbooks. Build a library of structured procedures (build a site, full SEO audit, content pass, convert to EtchWP, safe changes, and more); pin one as always-on, or let NIBWP auto-route to the right one when a task matches its "when to use". Ships with 18 ready-made workflows across 9 categories. Create your own, import a `.md`, duplicate and customise, attribute a creator, and choose visibility (Private / License Circle / Community). Five MCP abilities expose them to your AI client, and the active workflow is injected as mandatory context so the agent actually follows it.
+* New: Workflows — reusable, AI-followed operating playbooks. Build a library of structured procedures (build a site, full SEO audit, content pass, convert to EtchWP, safe changes, and more); pin one as always-on, or let NIBWP auto-route to the right one when a task matches its "when to use". Ships with 18 ready-made workflows across 9 categories. Create your own, import a `.md`, duplicate and customize, attribute a creator, and choose visibility (Private / License Circle / Community). Five MCP abilities expose them to your AI client, and the active workflow is injected as mandatory context so the agent actually follows it.
 * New: Workflow popularity — a cross-install upvote on each shipped workflow card, so you can see what the wider NIBWP community finds most useful. One vote per install; instant.
 * New: Tools detection on workflows — pick the plugins, themes, and skills a workflow relies on from an auto-detected list (with live active / available / missing status), or type your own.
 * New: NibWP Library (nibwp.com) — a community + curated asset hub behind the Workflows experience: moderation, ratings, and a distribution API, ready to grow beyond workflows.

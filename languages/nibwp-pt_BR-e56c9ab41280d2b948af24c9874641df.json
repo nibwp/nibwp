@@ -1,0 +1,244 @@
+{
+    "translation-revision-date": "YEAR-MO-DA HO:MI+ZONE",
+    "generator": "WP-CLI\/2.12.0",
+    "source": "assets\/js\/visual-workspace.js",
+    "domain": "messages",
+    "locale_data": {
+        "messages": {
+            "": {
+                "domain": "messages",
+                "lang": "pt_BR",
+                "plural-forms": "nplurals=2; plural=(n > 1);"
+            },
+            "Copy": [
+                "Copiar"
+            ],
+            "Copied": [
+                "Copiado"
+            ],
+            "%1$s \u2014 %2$s": [
+                "%1$s \u2014 %2$s"
+            ],
+            "Ready": [
+                "Pronto"
+            ],
+            "Connect another assistant": [
+                "Conectar outro assistente"
+            ],
+            "No AI client connected": [
+                "Nenhum cliente de IA conectado"
+            ],
+            "It is connected": [
+                "Est\u00e1 conectado"
+            ],
+            "This page refused to be framed": [
+                "Esta p\u00e1gina se recusou a ser exibida em um frame"
+            ],
+            "A security plugin or server rule is sending X-Frame-Options: DENY, or a Content-Security-Policy frame-ancestors that excludes this site. Allow same-origin framing and reopen the page.": [
+                "Um plugin de seguran\u00e7a ou regra do servidor est\u00e1 enviando X-Frame-Options: DENY, ou um Content-Security-Policy frame-ancestors que exclui este site. Permita frames da mesma origem e abra a p\u00e1gina novamente."
+            ],
+            "showing %s": [
+                "exibindo %s"
+            ],
+            "reloaded %s": [
+                "recarregou %s"
+            ],
+            "opening %s": [
+                "abrindo %s"
+            ],
+            "Click %s on this page.": [
+                "Clique em %s nesta p\u00e1gina."
+            ],
+            "Click an element on this page.": [
+                "Clique em um elemento nesta p\u00e1gina."
+            ],
+            "Hover over %s and report what changes.": [
+                "Passe o mouse sobre %s e informe o que muda."
+            ],
+            "Hover over an element and report what changes.": [
+                "Passe o mouse sobre um elemento e informe o que muda."
+            ],
+            "Take a screenshot of %s.": [
+                "Fa\u00e7a uma captura de tela de %s."
+            ],
+            "Take a screenshot of this page.": [
+                "Fa\u00e7a uma captura de tela desta p\u00e1gina."
+            ],
+            "a field": [
+                "um campo"
+            ],
+            "Type \u201c%1$s\u201d into %2$s, then submit the form.": [
+                "Digite \u201c%1$s\u201d em %2$s e depois envie o formul\u00e1rio."
+            ],
+            "Type \u201c%1$s\u201d into %2$s.": [
+                "Digite \u201c%1$s\u201d em %2$s."
+            ],
+            "%d step in one go:": [
+                "%d passo de uma vez:",
+                "%d passos de uma vez:"
+            ],
+            "Insert a %s block into the page being edited.": [
+                "Insira um bloco %s na p\u00e1gina em edi\u00e7\u00e3o."
+            ],
+            "Insert a block into the page being edited.": [
+                "Insira um bloco na p\u00e1gina em edi\u00e7\u00e3o."
+            ],
+            "Change %1$s on block %2$s.": [
+                "Altere %1$s no bloco %2$s."
+            ],
+            "Delete block %s and everything inside it.": [
+                "Exclua o bloco %s e tudo o que est\u00e1 dentro dele."
+            ],
+            "Open %s in the workspace.": [
+                "Abra %s no espa\u00e7o de trabalho."
+            ],
+            "Open a page in the workspace.": [
+                "Abra uma p\u00e1gina no espa\u00e7o de trabalho."
+            ],
+            "Read the current page.": [
+                "Leia a p\u00e1gina atual."
+            ],
+            "Check the current page for accessibility and layout problems.": [
+                "Verifique a p\u00e1gina atual em busca de problemas de acessibilidade e de layout."
+            ],
+            "Approval off \u2014 turn it back on in the bar": [
+                "Aprova\u00e7\u00e3o desligada \u2014 ligue-a novamente na barra"
+            ],
+            "Approval required": [
+                "Aprova\u00e7\u00e3o obrigat\u00f3ria"
+            ],
+            "Approval off": [
+                "Aprova\u00e7\u00e3o desligada"
+            ],
+            "Load the %s skill with nibwp\/get-skill and follow it for this task. Work in the NibWP visual workspace so I can watch each step.": [
+                "Carregue a skill %s com nibwp\/get-skill e siga-a nesta tarefa. Trabalhe no espa\u00e7o de trabalho visual do NibWP para que eu possa acompanhar cada passo."
+            ],
+            "Run the NibWP workflow \"%s\" on this site. Work in the NibWP visual workspace so I can watch each step, and ask me before anything that changes something.": [
+                "Execute o fluxo de trabalho \"%s\" do NibWP neste site. Trabalhe no espa\u00e7o de trabalho visual do NibWP para que eu possa acompanhar cada passo, e pergunte-me antes de qualquer coisa que altere algo."
+            ],
+            "Use %s on this site, in the NibWP visual workspace so I can watch, and tell me what you find.": [
+                "Use %s neste site, no espa\u00e7o de trabalho visual do NibWP para que eu possa acompanhar, e conte-me o que encontrar."
+            ],
+            "search result kind\u0004ability": [
+                "habilidade"
+            ],
+            "search result kind\u0004workflow": [
+                "fluxo de trabalho"
+            ],
+            "search result kind\u0004skill": [
+                "skill"
+            ],
+            "search result kind\u0004task": [
+                "tarefa"
+            ],
+            "Nothing matches \u201c%s\u201d.": [
+                "Nada corresponde a \u201c%s\u201d."
+            ],
+            "%d more match. Type a little further.": [
+                "Mais %d resultado. Digite um pouco mais.",
+                "Mais %d resultados. Digite um pouco mais."
+            ],
+            "Checking\u2026": [
+                "Verificando\u2026"
+            ],
+            "This screen is listening": [
+                "Esta tela est\u00e1 escutando"
+            ],
+            "This screen is not reaching WordPress": [
+                "Esta tela n\u00e3o est\u00e1 alcan\u00e7ando o WordPress"
+            ],
+            "AI Abilities are on": [
+                "As habilidades de IA est\u00e3o ligadas"
+            ],
+            "AI Abilities are switched off": [
+                "As habilidades de IA est\u00e3o desligadas"
+            ],
+            "%s can reach this site": [
+                "%s consegue acessar este site"
+            ],
+            "No AI client is connected": [
+                "Nenhum cliente de IA est\u00e1 conectado"
+            ],
+            "Fix this on the Connect screen": [
+                "Corrija isso na tela Conectar"
+            ],
+            "Could not reach WordPress from this screen.": [
+                "N\u00e3o foi poss\u00edvel acessar o WordPress a partir desta tela."
+            ],
+            "Switch to light": [
+                "Mudar para claro"
+            ],
+            "Switch to dark": [
+                "Mudar para escuro"
+            ],
+            "Ready to switch on": [
+                "Pronto para ligar"
+            ],
+            "Not included in your plan": [
+                "N\u00e3o inclu\u00eddo no seu plano"
+            ],
+            "%s can reach this site. Loading the workspace\u2026": [
+                "%s consegue acessar este site. Carregando o espa\u00e7o de trabalho\u2026"
+            ],
+            "Nothing has connected yet. Finish the sign-in in your assistant, then check again.": [
+                "Nada se conectou ainda. Conclua o login no seu assistente e verifique novamente."
+            ],
+            "AI Abilities are switched off on this site, so nothing can connect until they are on.": [
+                "As habilidades de IA est\u00e3o desligadas neste site, ent\u00e3o nada pode se conectar at\u00e9 que sejam ligadas."
+            ],
+            "Still nothing": [
+                "Ainda nada"
+            ],
+            "No client has connected yet": [
+                "Nenhum cliente se conectou ainda"
+            ],
+            "refused": [
+                "recusado"
+            ],
+            "%d issue": [
+                "%d problema",
+                "%d problemas"
+            ],
+            "%d element": [
+                "%d elemento",
+                "%d elementos"
+            ],
+            "Reconnecting\u2026": [
+                "Reconectando\u2026"
+            ],
+            "This workspace was opened somewhere else": [
+                "Este espa\u00e7o de trabalho foi aberto em outro lugar"
+            ],
+            "This workspace is open in another tab": [
+                "Este espa\u00e7o de trabalho est\u00e1 aberto em outra aba"
+            ],
+            "Only one workspace can take the agent\u2019s commands at a time, so this one stopped listening.": [
+                "Apenas um espa\u00e7o de trabalho pode receber os comandos do agente por vez, ent\u00e3o este parou de escutar."
+            ],
+            "Take it back": [
+                "Retomar"
+            ],
+            "Copy the key": [
+                "Copiar a chave"
+            ],
+            "Shown once. Reusable for scheduled runs until you revoke it, or until %s.": [
+                "Exibida uma \u00fanica vez. Reutiliz\u00e1vel em execu\u00e7\u00f5es agendadas at\u00e9 voc\u00ea revog\u00e1-la, ou at\u00e9 %s."
+            ],
+            "Shown once, good for one run, and only until %s.": [
+                "Exibida uma \u00fanica vez, v\u00e1lida para uma execu\u00e7\u00e3o e somente at\u00e9 %s."
+            ],
+            "Creating\u2026": [
+                "Criando\u2026"
+            ],
+            "Revoking\u2026": [
+                "Revogando\u2026"
+            ],
+            "Revoked. Any runner signed in with one of those keys is now signed out.": [
+                "Revogadas. Qualquer executor conectado com uma dessas chaves foi desconectado."
+            ],
+            "There was nothing to revoke.": [
+                "N\u00e3o havia nada para revogar."
+            ]
+        }
+    }
+}

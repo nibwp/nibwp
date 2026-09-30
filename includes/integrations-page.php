@@ -10,6 +10,98 @@ if (!defined('ABSPATH')) {
  * Integrations admin page — activate/deactivate page builder and custom field integrations.
  */
 
+add_action('wp_ajax_nibwp_request_integration', 'nibwp_handle_integration_request');
+
+/**
+ * Receive a custom integration / skill request and mail it to support.
+ *
+ * The modal used to call showSuccess() without sending anything, so every
+ * request anyone made went nowhere while telling them it had arrived.
+ */
+function nibwp_handle_integration_request(): void
+{
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => __('You are not allowed to do that.', 'nibwp')], 403);
+    }
+
+    check_ajax_referer('nibwp_request_integration');
+
+    $request = [
+        'type'        => sanitize_text_field(wp_unslash($_POST['request_type'] ?? '')),
+        'plugin_name' => sanitize_text_field(wp_unslash($_POST['plugin_name'] ?? '')),
+        'plugin_url'  => esc_url_raw(trim((string) wp_unslash($_POST['plugin_url'] ?? ''))),
+        'description' => sanitize_textarea_field(wp_unslash($_POST['description'] ?? '')),
+        'priority'    => sanitize_text_field(wp_unslash($_POST['priority'] ?? '')),
+        'name'        => sanitize_text_field(wp_unslash($_POST['user_name'] ?? '')),
+        'email'       => sanitize_email(wp_unslash($_POST['user_email'] ?? '')),
+        'notify'      => !empty($_POST['newsletter']),
+    ];
+
+    if ($request['description'] === '' || !is_email($request['email'])) {
+        wp_send_json_error(
+            ['message' => __('We need a description and an email address we can reply to.', 'nibwp')],
+            400
+        );
+    }
+
+    if (!nibwp_mail_integration_request($request)) {
+        wp_send_json_error([
+            'message' => sprintf(
+                /* translators: %s: support email address. */
+                __('This site could not send the mail. Please write to %s instead.', 'nibwp'),
+                nibwp_support_email()
+            ),
+        ], 500);
+    }
+
+    wp_send_json_success();
+}
+
+/**
+ * Mail one integration request to support.
+ *
+ * Split from the handler so it can be checked without a request cycle. Site
+ * and WordPress version ride along because "it does not work with my setup"
+ * is answerable only if we know the setup.
+ */
+function nibwp_mail_integration_request(array $request): bool
+{
+    global $wp_version;
+
+    $lines = [
+        sprintf('Type:        %s', $request['type'] !== '' ? $request['type'] : '(not chosen)'),
+        sprintf('Priority:    %s', $request['priority'] !== '' ? $request['priority'] : '(not set)'),
+        sprintf('Plugin:      %s', $request['plugin_name'] !== '' ? $request['plugin_name'] : '(not named)'),
+        sprintf('URL:         %s', $request['plugin_url'] !== '' ? $request['plugin_url'] : '(none)'),
+        '',
+        'What they want AI agents to be able to do:',
+        $request['description'],
+        '',
+        '----',
+        sprintf('From:        %s <%s>', $request['name'], $request['email']),
+        sprintf('Notify when built: %s', !empty($request['notify']) ? 'yes' : 'no'),
+        sprintf('Site:        %s', home_url()),
+        sprintf('WordPress:   %s', $wp_version ?? 'unknown'),
+        sprintf('NIBWP:       %s', defined('NIBWP_VERSION') ? NIBWP_VERSION : 'unknown'),
+    ];
+
+    // Both of these can be empty — only the description is required — and a
+    // subject line ending in a dash is an inbox nobody can sort.
+    $label = $request['plugin_name'] !== ''
+        ? $request['plugin_name']
+        : ($request['type'] !== '' ? $request['type'] : __('unspecified', 'nibwp'));
+
+    return (bool) wp_mail(
+        nibwp_support_email(),
+        sprintf('NibWP integration request — %s', $label),
+        implode("\n", $lines),
+        [
+            'Content-Type: text/plain; charset=UTF-8',
+            sprintf('Reply-To: %s <%s>', $request['name'], $request['email']),
+        ]
+    );
+}
+
 /**
  * Get the list of enabled integrations from options.
  *
@@ -39,14 +131,84 @@ function nibwp_get_enabled_integrations(): array
 /**
  * Check if a specific integration is enabled by the user.
  */
+/**
+ * How many distinct operations an integration actually offers.
+ *
+ * Most integrations expose one ability carrying an `action` enum — the
+ * FluentAffiliate hub alone runs 33 actions, Directorist 39. Counting the
+ * ability NAMES reported every one of those as "1 AI ability", which reads as
+ * a stub rather than the most complete integrations we ship.
+ *
+ * Reads the enum off the registered ability, so the number cannot drift from
+ * what the ability really accepts. An integration that is switched off has
+ * nothing registered to inspect, so it falls back to the name count.
+ *
+ * @param array<int, string> $abilities Ability slugs, with or without the nibwp/ prefix.
+ */
+function nibwp_integration_operation_count(array $abilities): int
+{
+    $total = 0;
+
+    foreach ($abilities as $slug) {
+        $slug = (string) $slug;
+        $name = str_contains($slug, '/') ? $slug : 'nibwp/' . $slug;
+
+        $ability = function_exists('nibwp_has_ability') && nibwp_has_ability($name)
+            ? wp_get_ability($name)
+            : null;
+
+        if ($ability === null || !method_exists($ability, 'get_input_schema')) {
+            $total++;
+            continue;
+        }
+
+        // A schema can come back with nested stdClass — WP_Ability keeps
+        // whatever shape it was given, and some abilities are registered from
+        // decoded JSON. A plain (array) cast only converts the top level, so
+        // reaching into ['properties']['action'] then fatals on an object.
+        $schema = $ability->get_input_schema();
+        $schema = json_decode(json_encode($schema) ?: '[]', true);
+        $enum   = is_array($schema) ? ($schema['properties']['action']['enum'] ?? null) : null;
+
+        $total += is_array($enum) && $enum !== [] ? count($enum) : 1;
+    }
+
+    return $total;
+}
+
+/**
+ * Integrations that ship switched ON.
+ *
+ * These are the built-in toolkits rather than third-party plugin bridges —
+ * there is nothing to detect, so they are useful from the moment Pro is
+ * active. They still have to be switchable off, which is what was broken:
+ * their cards hardcoded `enabled => true`, so the toggle wrote the option and
+ * the page read back the literal.
+ *
+ * @return array<int, string>
+ */
+function nibwp_integrations_default_on(): array
+{
+    return ['security', 'notifications', 'migration', 'content-fetcher', 'content-planner', 'seo-advanced'];
+}
+
 function nibwp_is_integration_enabled(string $key): bool
 {
     // Memory is always enabled.
     if ($key === 'memory') {
         return true;
     }
+
     $enabled = nibwp_get_enabled_integrations();
-    return !empty($enabled[$key]);
+
+    // array_key_exists, not empty(): a stored `false` is a deliberate "off"
+    // and must beat the default. Reading it with empty() is what would turn
+    // every switched-off toolkit back on at the next page load.
+    if (array_key_exists($key, $enabled)) {
+        return (bool) $enabled[$key];
+    }
+
+    return in_array($key, nibwp_integrations_default_on(), true);
 }
 
 /**
@@ -78,7 +240,30 @@ function nibwp_is_integration_available(string $key): bool
             || function_exists('load_formidable_forms') || class_exists('FrmForm')
             || defined('FORMINATOR_VERSION') || class_exists('Forminator_API')
             || defined('HAPPYFORMS_VERSION')
+            || defined('BITFORMS_VERSION')
             || class_exists('\\Jet_Form_Builder\\Plugin'),
+        // BREAKDANCE_MODE alone is not enough. Breakdance defines it at the top
+        // of its bootstrap and THEN returns early when migration mode is on, so
+        // the constant can exist on a request where nothing else of Breakdance
+        // loaded. Requiring get_tree() as well makes this agree with what the
+        // abilities can actually do, rather than promising a surface that is
+        // not there.
+        'breakdance' => defined('BREAKDANCE_MODE') && function_exists('Breakdance\\Data\\get_tree'),
+        'cf7' => defined('WPCF7_VERSION') || class_exists('WPCF7'),
+        'gravityforms' => class_exists('GFAPI') && class_exists('GFCommon'),
+        'fluentform' => defined('FLUENTFORM') && function_exists('fluentFormApi'),
+        'wpforms' => function_exists('wpforms') && defined('WPFORMS_VERSION'),
+        'jetformbuilder' => defined('JET_FORM_BUILDER_VERSION'),
+        'formidable' => class_exists('FrmForm') && class_exists('FrmField'),
+        'forminator' => class_exists('Forminator_API'),
+        'happyforms' => defined('HAPPYFORMS_VERSION') && function_exists('happyforms_get_form_controller'),
+        // BITFORMS_VERSION is defined at the top of bitforms.php, before its
+        // autoloader runs, so the constant alone would report a half-loaded
+        // plugin as available. FormModel is what the abilities actually need.
+        'bitform' => defined('BITFORMS_VERSION') && class_exists('BitCode\BitForm\Core\Database\FormModel'),
+        'ninjaforms' => function_exists('Ninja_Forms'),
+        'weglot' => defined('WEGLOT_VERSION') || function_exists('weglot_get_options'),
+        'wsform' => defined('WS_FORM_VERSION'),
         'fluentcrm' => defined('FLUENTCRM'),
         'fluentcart' => defined('FLUENTCART_VERSION') || class_exists('FluentCart\\App\\App'),
         'fluentaffiliate' => defined('FLUENT_AFFILIATE_VERSION') || class_exists('FluentAffiliate\\App\\App'),
@@ -144,7 +329,7 @@ function nibwp_get_integrations(): array
     return [
         'figma' => [
             'name' => 'Figma',
-            'description' => __('Connect a Figma account to read designs — node tree, auto-layout, Variables and styles — and convert frames or components into native WordPress via the figma-pro skill. Read-only (v1); pixel-diff verified.', domain: 'nibwp'),
+            'description' => __('Connect a Figma account to read designs — node tree, auto-layout, Variables and styles — and convert frames or components into native WordPress via the figma-pro skill. Read-only (v1); pixel-diff verified.', 'nibwp'),
             'plugin_available' => function_exists('nibwp_figma_is_connected')
                 ? nibwp_figma_is_connected()
                 : (bool) get_option('nibwp_figma_token'),
@@ -159,7 +344,7 @@ function nibwp_get_integrations(): array
         ],
         'elementor' => [
             'name' => 'Elementor',
-            'description' => __('Create pages with sections, build custom atomic widgets, manage global colors/fonts, create and manage templates.', domain: 'nibwp'),
+            'description' => __('Create pages with sections, build custom atomic widgets, manage global colors/fonts, create and manage templates.', 'nibwp'),
             'plugin_available' => defined('ELEMENTOR_VERSION'),
             'enabled' => nibwp_is_integration_enabled('elementor'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zM8 17V7h2v10H8zm4 0V7h4v2h-2v2h2v2h-2v2h2v2h-4z"/></svg>',
@@ -169,7 +354,7 @@ function nibwp_get_integrations(): array
         ],
         'bricks' => [
             'name' => 'Bricks',
-            'description' => __('Create templates (header, footer, content, archive), build custom elements, manage global classes and styles.', domain: 'nibwp'),
+            'description' => __('Create templates (header, footer, content, archive), build custom elements, manage global classes and styles.', 'nibwp'),
             'plugin_available' => defined('BRICKS_VERSION'),
             'enabled' => nibwp_is_integration_enabled('bricks'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg>',
@@ -179,7 +364,7 @@ function nibwp_get_integrations(): array
         ],
         'builderius' => [
             'name' => 'Builderius',
-            'description' => __('Read the template/version graph, components, releases and global settings; author templates, components and fragments by committing configs through Builderius\'s own git-like versioning.', domain: 'nibwp'),
+            'description' => __('Read the template/version graph, components, releases and global settings; author templates, components and fragments by committing configs through Builderius\'s own git-like versioning.', 'nibwp'),
             'plugin_available' => function_exists('builderius_check_requirements') || post_type_exists('builderius_template'),
             'enabled' => nibwp_is_integration_enabled('builderius'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.5 3.6L12 11.5 5.5 7.9 12 4.3zM5 9.6l6 3.3v6.8l-6-3.3V9.6zm14 0v6.8l-6 3.3v-6.8l6-3.3z"/></svg>',
@@ -189,7 +374,7 @@ function nibwp_get_integrations(): array
         ],
         'acf' => [
             'name' => 'ACF',
-            'description' => __('CRUD field groups and fields, manage custom post types, taxonomies, options pages, and read/write field values.', domain: 'nibwp'),
+            'description' => __('CRUD field groups and fields, manage custom post types, taxonomies, options pages, and read/write field values.', 'nibwp'),
             'plugin_available' => function_exists('acf_get_field_groups'),
             'enabled' => nibwp_is_integration_enabled('acf'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h4v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z"/></svg>',
@@ -199,7 +384,7 @@ function nibwp_get_integrations(): array
         ],
         'jetengine' => [
             'name' => 'JetEngine',
-            'description' => __('Manage meta boxes, Custom Content Types (CCT), options pages, and read/write dynamic content values.', domain: 'nibwp'),
+            'description' => __('Manage meta boxes, Custom Content Types (CCT), options pages, and read/write dynamic content values.', 'nibwp'),
             'plugin_available' => function_exists('jet_engine'),
             'enabled' => nibwp_is_integration_enabled('jetengine'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
@@ -209,7 +394,7 @@ function nibwp_get_integrations(): array
         ],
         'metabox' => [
             'name' => 'Meta Box',
-            'description' => __('Manage field groups, register custom post types and taxonomies, create relationships, read/write meta values.', domain: 'nibwp'),
+            'description' => __('Manage field groups, register custom post types and taxonomies, create relationships, read/write meta values.', 'nibwp'),
             'plugin_available' => function_exists('rwmb_meta'),
             'enabled' => nibwp_is_integration_enabled('metabox'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v2H8V8zm0 4h8v2H8v-2z"/></svg>',
@@ -219,7 +404,7 @@ function nibwp_get_integrations(): array
         ],
         'pods' => [
             'name' => 'Pods',
-            'description' => __('Manage Pods, custom post types, advanced content types, add fields, list/create/update items.', domain: 'nibwp'),
+            'description' => __('Manage Pods, custom post types, advanced content types, add fields, list/create/update items.', 'nibwp'),
             'plugin_available' => function_exists('pods'),
             'enabled' => nibwp_is_integration_enabled('pods'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><circle cx="12" cy="12" r="3"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
@@ -229,7 +414,7 @@ function nibwp_get_integrations(): array
         ],
         'acpt' => [
             'name' => 'ACPT',
-            'description' => __('Manage post types, taxonomies, meta groups, and option pages via the ACPT framework.', domain: 'nibwp'),
+            'description' => __('Manage post types, taxonomies, meta groups, and option pages via the ACPT framework.', 'nibwp'),
             'plugin_available' => defined('ACPT_PLUGIN_VERSION'),
             'enabled' => nibwp_is_integration_enabled('acpt'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 13h8v2H8v-2zm0 4h5v2H8v-2z"/></svg>',
@@ -239,7 +424,7 @@ function nibwp_get_integrations(): array
         ],
         'ase' => [
             'name' => 'ASE',
-            'description' => __('Manage custom field groups, post types, taxonomies, and field values via Admin and Site Enhancements.', domain: 'nibwp'),
+            'description' => __('Manage custom field groups, post types, taxonomies, and field values via Admin and Site Enhancements.', 'nibwp'),
             'plugin_available' => defined('ASENHA_VERSION'),
             'enabled' => nibwp_is_integration_enabled('ase'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 15.5A3.5 3.5 0 018.5 12 3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z"/></svg>',
@@ -249,7 +434,7 @@ function nibwp_get_integrations(): array
         ],
         'woocommerce' => [
             'name' => 'WooCommerce',
-            'description' => __('Manage products, orders, customers, coupons, and sales reports. Full store management via AI.', domain: 'nibwp'),
+            'description' => __('Manage products, orders, customers, coupons, and sales reports. Full store management via AI.', 'nibwp'),
             'plugin_available' => class_exists('WooCommerce'),
             'enabled' => nibwp_is_integration_enabled('woocommerce'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M2 4h20a1 1 0 011 1v11a1 1 0 01-1 1h-7l2 4h-2l-2-4H11l-2 4H7l2-4H2a1 1 0 01-1-1V5a1 1 0 011-1zm5.5 4a1.5 1.5 0 00-1.49 1.32l-.8 4.68H6.5L7.3 9.5h.01a.5.5 0 01.44-.5h.5a.5.5 0 01.49.5l.56 4.5H10l-.8-4.68A1.5 1.5 0 007.5 8zm5 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm5 0a1.5 1.5 0 00-1.49 1.32l-.8 4.68h1.29l.8-4.5h.01a.5.5 0 01.44-.5h.5a.5.5 0 01.49.5l.56 4.5H20l-.8-4.68A1.5 1.5 0 0017.5 8z"/></svg>',
@@ -259,7 +444,7 @@ function nibwp_get_integrations(): array
         ],
         'seo' => [
             'name' => 'SEO Tools',
-            'description' => __('Get and update SEO metadata, analyze content, check sitemaps. Works with Yoast, Rank Math, and AIOSEO.', domain: 'nibwp'),
+            'description' => __('Get and update SEO metadata, analyze content, check sitemaps. Works with Yoast, Rank Math, and AIOSEO.', 'nibwp'),
             'plugin_available' => defined('WPSEO_VERSION') || class_exists('WPSEO_Options')
                 || defined('RANK_MATH_VERSION') || class_exists('RankMath')
                 || defined('AIOSEO_VERSION') || function_exists('aioseo'),
@@ -270,18 +455,154 @@ function nibwp_get_integrations(): array
             'plugin_name' => 'Yoast / Rank Math / AIOSEO',
         ],
         'forms' => [
-            'name' => __('Forms (Universal)', domain: 'nibwp'),
-            'description' => __('One ability that talks to whichever form plugin you have: Contact Form 7, WPForms, Gravity Forms, Fluent Forms, Ninja Forms, Formidable, Forminator, Happy Forms, or JetFormBuilder. List forms, read submissions, create or delete entries.', domain: 'nibwp'),
+            'name' => __('Forms (Universal)', 'nibwp'),
+            'description' => __('One ability that talks to whichever form plugin you have: Contact Form 7, WPForms, Gravity Forms, Fluent Forms, Ninja Forms, Formidable, Forminator, Happy Forms, or JetFormBuilder. List forms, read submissions, create or delete entries.', 'nibwp'),
             'plugin_available' => nibwp_is_integration_available('forms'),
             'enabled' => nibwp_is_integration_enabled('forms'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>',
             'category' => 'forms',
             'abilities' => ['forms-manage'],
             'plugin_name' => 'Contact Form 7 / WPForms / Gravity / Fluent / Ninja / Formidable / Forminator / Happy / JetForm',
+            // Not shown as a card. Every plugin it covers now has a dedicated
+            // integration with far more of that plugin's surface, so offering
+            // both only invites an agent to choose the shallower one. The key
+            // stays registered so anything already enabled keeps working and
+            // no recorded workflow calling nibwp/forms-manage breaks.
+            'hidden' => true,
+        ],
+        'weglot' => [
+            'name' => 'Weglot',
+            'description' => __('Set up and audit a Weglot translation: languages, hreflang and translated slugs, the switcher, and the exclusions that keep code and brand names out of the translator. Includes a readiness audit and a step-by-step plan built from what the site already has.', 'nibwp'),
+            'plugin_available' => defined('WEGLOT_VERSION') || function_exists('weglot_get_options'),
+            'enabled' => nibwp_is_integration_enabled('weglot'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 9h-3a15.7 15.7 0 0 0-1.2-5.4A8 8 0 0 1 18.9 11zM12 4c.8 1.2 1.6 3.4 1.8 7h-3.6C10.4 7.4 11.2 5.2 12 4zM4.3 13h3c.1 2 .5 3.9 1.2 5.4A8 8 0 0 1 4.3 13zm3-2h-3a8 8 0 0 1 4.2-5.4A15.7 15.7 0 0 0 7.3 11zm4.7 9c-.8-1.2-1.6-3.4-1.8-7h3.6c-.2 3.6-1 5.8-1.8 7zm2.7-.6c.7-1.5 1.1-3.4 1.2-5.4h3a8 8 0 0 1-4.2 5.4z"/></svg>',
+            'category' => 'multilingual',
+            'abilities' => ['weglot-info', 'weglot-languages', 'weglot-settings', 'weglot-exclusions', 'weglot-switcher', 'weglot-slugs', 'weglot-pages', 'weglot-media', 'weglot-plan', 'weglot-audit', 'weglot-workflow', 'weglot-sync'],
+            'plugin_name' => 'Weglot',
+        ],
+        'breakdance' => [
+            'name' => 'Breakdance',
+            'description' => __('Build with Breakdance end to end: the element vocabulary, page node trees and surgical edits to single nodes, headers, footers, popups, templates and global blocks, display conditions, global settings, selectors, presets, variables, form submissions and revisions. Works on Oxygen 6 too.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('breakdance'),
+            'enabled' => nibwp_is_integration_enabled('breakdance'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2 2 7l10 5 10-5-10-5zm-8.2 8.3L2 11.2l10 5 10-5-1.8-.9-8.2 4.1-8.2-4.1zm0 4.5L2 15.7l10 5 10-5-1.8-.9-8.2 4.1-8.2-4.1z"/></svg>',
+            'category' => 'page-builders',
+            'abilities' => ['breakdance-info', 'breakdance-elements', 'breakdance-tree', 'breakdance-nodes', 'breakdance-pages', 'breakdance-templates', 'breakdance-conditions', 'breakdance-global-settings', 'breakdance-selectors', 'breakdance-presets', 'breakdance-variables', 'breakdance-forms', 'breakdance-revisions', 'breakdance-delete'],
+            'plugin_name' => 'Breakdance',
+        ],
+        'ninjaforms' => [
+            'name' => 'Ninja Forms',
+            'description' => __('Forms, fields, submissions and exports, plus the actions that define what a form does. Ninja Forms treats STORING a submission as an action, so a form can be configured to lose data in two separate ways — the audit finds both.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('ninjaforms'),
+            'enabled' => nibwp_is_integration_enabled('ninjaforms'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2 4 6v6c0 5 3.4 9.4 8 10 4.6-.6 8-5 8-10V6l-8-4zm-1 13-3-3 1.4-1.4L11 12.2l4.6-4.6L17 9l-6 6z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['ninjaforms-info', 'ninjaforms-forms', 'ninjaforms-fields', 'ninjaforms-actions', 'ninjaforms-submissions', 'ninjaforms-settings', 'ninjaforms-export', 'ninjaforms-audit', 'ninjaforms-delete'],
+            'plugin_name' => 'Ninja Forms',
+        ],
+        'formidable' => [
+            'name' => 'Formidable Forms',
+            'description' => __('Forms, fields, entries and exports, plus the form actions that decide whether a submission reaches anyone — Formidable keeps those in separate posts, so nothing on the form itself reveals a form that stores every entry and emails nobody.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('formidable'),
+            'enabled' => nibwp_is_integration_enabled('formidable'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M4 4h16v4H4V4zm0 6h10v4H4v-4zm0 6h16v4H4v-4z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['formidable-info', 'formidable-forms', 'formidable-fields', 'formidable-entries', 'formidable-actions', 'formidable-export', 'formidable-audit', 'formidable-delete'],
+            'plugin_name' => 'Formidable Forms',
+        ],
+        'forminator' => [
+            'name' => 'Forminator',
+            'description' => __('All three Forminator module types, not just forms: forms, polls and quizzes, with their fields, entries and settings, an export, and an audit that finds forms storing entries nobody is notified about.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('forminator'),
+            'enabled' => nibwp_is_integration_enabled('forminator'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2 2 8v8l10 6 10-6V8l-10-6zm0 2.3L19.5 9 12 13.4 4.5 9 12 4.3zM4 10.8l7 4.1v5.3l-7-4.2v-5.2zm9 9.4v-5.3l7-4.1V16l-7 4.2z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['forminator-info', 'forminator-forms', 'forminator-fields', 'forminator-entries', 'forminator-settings', 'forminator-polls', 'forminator-quizzes', 'forminator-audit', 'forminator-delete'],
+            'plugin_name' => 'Forminator',
+        ],
+        'happyforms' => [
+            'name' => 'HappyForms',
+            'description' => __('Forms, their parts, settings and stored submissions, with an audit for the worst case HappyForms allows: a form that neither emails anyone nor keeps what was submitted, so the enquiry simply disappears.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('happyforms'),
+            'enabled' => nibwp_is_integration_enabled('happyforms'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM8.5 9a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM12 18a6 6 0 0 1-5.2-3h10.4A6 6 0 0 1 12 18z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['happyforms-info', 'happyforms-forms', 'happyforms-parts', 'happyforms-settings', 'happyforms-submissions', 'happyforms-audit', 'happyforms-delete'],
+            'plugin_name' => 'HappyForms',
+        ],
+        'bitform' => [
+            'name' => 'Bit Form',
+            'description' => __('Forms, fields, entries and exports out of the tables Bit Form keeps for itself, plus the notifications that decide whether a submission reaches a person — and an audit for the two ways Bit Form loses an enquiry quietly: every notification switched off, or the submission restriction discarding the entry after the form has said thank you.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('bitform'),
+            'enabled' => nibwp_is_integration_enabled('bitform'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 4h7v7H3V4zm2 2v3h3V6H5zm9-2h7v7h-7V4zm2 2v3h3V6h-3zM3 13h7v7H3v-7zm2 2v3h3v-3H5zm12.6-2L14 17.6h2.3l-1 3.9 4.7-5.4h-2.4l1-3.1z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['bitform-info', 'bitform-forms', 'bitform-fields', 'bitform-entries', 'bitform-settings', 'bitform-mail', 'bitform-audit', 'bitform-export', 'bitform-delete'],
+            'plugin_name' => 'Bit Form',
+        ],
+        'wpforms' => [
+            'name' => 'WPForms',
+            'description' => __('Forms, fields, notifications, confirmations and settings, plus entries on Pro. Knows that WPForms Lite stores no submissions at all, and says so instead of returning an empty list when someone asks where their enquiries went.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('wpforms'),
+            'enabled' => nibwp_is_integration_enabled('wpforms'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2 4v2h10V7H7zm0 4v2h10v-2H7zm0 4v2h6v-2H7z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['wpforms-info', 'wpforms-forms', 'wpforms-fields', 'wpforms-notifications', 'wpforms-confirmations', 'wpforms-settings', 'wpforms-entries', 'wpforms-audit', 'wpforms-delete'],
+            'plugin_name' => 'WPForms',
+        ],
+        'jetformbuilder' => [
+            'name' => 'JetFormBuilder',
+            'description' => __('Forms built from Gutenberg blocks: fields parsed from the block markup, the post-submit actions that decide whether anything happens at all, messages, settings, restrictions, gateways and records — plus an audit that catches a form silently discarding every submission.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('jetformbuilder'),
+            'enabled' => nibwp_is_integration_enabled('jetformbuilder'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 3h8v8H3V3zm10 0h8v5h-8V3zM3 13h8v8H3v-8zm10 3h8v5h-8v-5zm0-6h8v4h-8v-4z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['jetformbuilder-info', 'jetformbuilder-forms', 'jetformbuilder-fields', 'jetformbuilder-actions', 'jetformbuilder-settings', 'jetformbuilder-records', 'jetformbuilder-gateways', 'jetformbuilder-audit', 'jetformbuilder-delete'],
+            'plugin_name' => 'JetFormBuilder',
+        ],
+        'fluentform' => [
+            'name' => 'Fluent Forms',
+            'description' => __('Fluent Forms and Fluent Forms Pro in full: forms and fields, submissions, email notifications, confirmations, form settings, every integration feed an add-on writes, payments and subscriptions, analytics, export, and an audit that finds forms collecting submissions nobody is told about.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('fluentform'),
+            'enabled' => nibwp_is_integration_enabled('fluentform'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M4 3h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm0 7h10a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1zm0 7h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['fluentform-info', 'fluentform-forms', 'fluentform-fields', 'fluentform-entries', 'fluentform-notifications', 'fluentform-confirmations', 'fluentform-settings', 'fluentform-integrations', 'fluentform-payments', 'fluentform-analytics', 'fluentform-export', 'fluentform-audit', 'fluentform-delete'],
+            'plugin_name' => 'Fluent Forms',
+        ],
+        'gravityforms' => [
+            'name' => 'Gravity Forms',
+            'description' => __('The whole of Gravity Forms: forms and fields, entries and their notes, notifications, confirmations, add-on feeds (Mailchimp, Stripe, User Registration), form settings, validation and real submission, entry export, and an audit that finds forms quietly collecting entries nobody is told about.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('gravityforms'),
+            'enabled' => nibwp_is_integration_enabled('gravityforms'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.5 3.6-6.5 3.6L5.5 7.9 12 4.3zM5 9.7l6 3.3v6.6l-6-3.3V9.7zm8 9.9V13l6-3.3v6.6l-6 3.3z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['gravityforms-info', 'gravityforms-forms', 'gravityforms-fields', 'gravityforms-entries', 'gravityforms-notes', 'gravityforms-notifications', 'gravityforms-confirmations', 'gravityforms-feeds', 'gravityforms-settings', 'gravityforms-submit', 'gravityforms-export', 'gravityforms-audit', 'gravityforms-delete'],
+            'plugin_name' => 'Gravity Forms',
+        ],
+        'cf7' => [
+            'name' => 'Contact Form 7',
+            'description' => __('Go deeper than the universal forms tool: the form-tag template and its parsed fields, both mail templates, response messages, additional settings, Flamingo submissions and a spam-protection check. The mail template is where a CF7 form usually fails, and this reaches it.', 'nibwp'),
+            'plugin_available' => nibwp_is_integration_available('cf7'),
+            'enabled' => nibwp_is_integration_enabled('cf7'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4.2-8 4.8-8-4.8V6l8 4.8L20 6v2.2z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['cf7-info', 'cf7-forms', 'cf7-template', 'cf7-fields', 'cf7-mail', 'cf7-messages', 'cf7-settings', 'cf7-submissions', 'cf7-spam', 'cf7-delete'],
+            'plugin_name' => 'Contact Form 7',
+        ],
+        'wsform' => [
+            'name' => 'WS Form',
+            'description' => __('Build and run WS Form end to end: forms and their JSON, fields, tabs and sections, the actions that fire on submit, submissions and exports, styles and templates.', 'nibwp'),
+            'plugin_available' => defined('WS_FORM_VERSION'),
+            'enabled' => nibwp_is_integration_enabled('wsform'),
+            'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 4v2h12V7H6zm0 4v2h12v-2H6zm0 4v2h7v-2H6z"/></svg>',
+            'category' => 'forms',
+            'abilities' => ['wsform-info', 'wsform-forms', 'wsform-json', 'wsform-fields', 'wsform-tabs', 'wsform-sections', 'wsform-actions', 'wsform-submissions', 'wsform-export', 'wsform-notes', 'wsform-styles', 'wsform-templates', 'wsform-config', 'wsform-delete'],
+            'plugin_name' => 'WS Form',
         ],
         'fluentcrm' => [
             'name' => 'FluentCRM',
-            'description' => __('Manage contacts, tags, lists, and campaigns. View campaign stats and automate email marketing.', domain: 'nibwp'),
+            'description' => __('Manage contacts, tags, lists, and campaigns. View campaign stats and automate email marketing.', 'nibwp'),
             'plugin_available' => defined('FLUENTCRM'),
             'enabled' => nibwp_is_integration_enabled('fluentcrm'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>',
@@ -291,7 +612,7 @@ function nibwp_get_integrations(): array
         ],
         'fluentcart' => [
             'name' => 'FluentCart',
-            'description' => __('Manage FluentCart products and orders.', domain: 'nibwp'),
+            'description' => __('Manage FluentCart products and orders.', 'nibwp'),
             'plugin_available' => defined('FLUENTCART_VERSION') || class_exists('FluentCart\\App\\App'),
             'enabled' => nibwp_is_integration_enabled('fluentcart'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>',
@@ -301,7 +622,7 @@ function nibwp_get_integrations(): array
         ],
         'fluentaffiliate' => [
             'name' => 'FluentAffiliate',
-            'description' => __('Run a full affiliate program: approve/reject affiliates, set commission rates, create groups, log referrals, batch payouts, and pull revenue & top-performer reports.', domain: 'nibwp'),
+            'description' => __('Run a full affiliate program: approve/reject affiliates, set commission rates, create groups, log referrals, batch payouts, and pull revenue & top-performer reports.', 'nibwp'),
             'plugin_available' => defined('FLUENT_AFFILIATE_VERSION') || class_exists('FluentAffiliate\\App\\App'),
             'enabled' => nibwp_is_integration_enabled('fluentaffiliate'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/><path d="M19 3v3h-3v2h3v3h2V8h3V6h-3V3h-2z" opacity=".5"/></svg>',
@@ -311,7 +632,7 @@ function nibwp_get_integrations(): array
         ],
         'directorist' => [
             'name' => 'Directorist',
-            'description' => __('Manage a full business directory: listings, categories, locations, tags, reviews, orders, pricing plans, and user favorites. Publish / expire / feature listings, approve reviews, and pull directory reports.', domain: 'nibwp'),
+            'description' => __('Manage a full business directory: listings, categories, locations, tags, reviews, orders, pricing plans, and user favorites. Publish / expire / feature listings, approve reviews, and pull directory reports.', 'nibwp'),
             'plugin_available' => defined('ATBDP_VERSION'),
             'enabled' => nibwp_is_integration_enabled('directorist'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
@@ -321,7 +642,7 @@ function nibwp_get_integrations(): array
         ],
         'edd' => [
             'name' => 'Easy Digital Downloads',
-            'description' => __('Manage digital products, payments, customers, and sales statistics.', domain: 'nibwp'),
+            'description' => __('Manage digital products, payments, customers, and sales statistics.', 'nibwp'),
             'plugin_available' => class_exists('Easy_Digital_Downloads'),
             'enabled' => nibwp_is_integration_enabled('edd'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M20 6H12l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6V10h12v2z"/></svg>',
@@ -331,7 +652,7 @@ function nibwp_get_integrations(): array
         ],
         'events' => [
             'name' => 'The Events Calendar',
-            'description' => __('Manage events, venues, and organizers. Create and update event listings with dates, costs, and locations.', domain: 'nibwp'),
+            'description' => __('Manage events, venues, and organizers. Create and update event listings with dates, costs, and locations.', 'nibwp'),
             'plugin_available' => class_exists('Tribe__Events__Main'),
             'enabled' => nibwp_is_integration_enabled('events'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>',
@@ -341,7 +662,7 @@ function nibwp_get_integrations(): array
         ],
         'buddypress' => [
             'name' => 'BuddyPress',
-            'description' => __('Manage members, groups, and activity streams. Post activity and create community groups.', domain: 'nibwp'),
+            'description' => __('Manage members, groups, and activity streams. Post activity and create community groups.', 'nibwp'),
             'plugin_available' => class_exists('BuddyPress'),
             'enabled' => nibwp_is_integration_enabled('buddypress'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
@@ -351,7 +672,7 @@ function nibwp_get_integrations(): array
         ],
         'learndash' => [
             'name' => 'LearnDash',
-            'description' => __('Manage courses, lessons, quizzes. Enroll users and track learning progress.', domain: 'nibwp'),
+            'description' => __('Manage courses, lessons, quizzes. Enroll users and track learning progress.', 'nibwp'),
             'plugin_available' => defined('LEARNDASH_VERSION'),
             'enabled' => nibwp_is_integration_enabled('learndash'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>',
@@ -361,7 +682,7 @@ function nibwp_get_integrations(): array
         ],
         'lifterlms' => [
             'name' => 'LifterLMS',
-            'description' => __('Manage courses, memberships, and student enrollments.', domain: 'nibwp'),
+            'description' => __('Manage courses, memberships, and student enrollments.', 'nibwp'),
             'plugin_available' => defined('LLMS_PLUGIN_FILE'),
             'enabled' => nibwp_is_integration_enabled('lifterlms'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>',
@@ -371,7 +692,7 @@ function nibwp_get_integrations(): array
         ],
         'memberpress' => [
             'name' => 'MemberPress',
-            'description' => __('Manage memberships, members, transactions, and subscriptions.', domain: 'nibwp'),
+            'description' => __('Manage memberships, members, transactions, and subscriptions.', 'nibwp'),
             'plugin_available' => defined('MEPR_VERSION'),
             'enabled' => nibwp_is_integration_enabled('memberpress'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>',
@@ -381,7 +702,7 @@ function nibwp_get_integrations(): array
         ],
         'tutorlms' => [
             'name' => 'Tutor LMS',
-            'description' => __('Manage courses, lessons, quizzes, students, instructors, monetization, and reports.', domain: 'nibwp'),
+            'description' => __('Manage courses, lessons, quizzes, students, instructors, monetization, and reports.', 'nibwp'),
             'plugin_available' => defined('TUTOR_VERSION'),
             'enabled' => nibwp_is_integration_enabled('tutorlms'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>',
@@ -391,7 +712,7 @@ function nibwp_get_integrations(): array
         ],
         'generatepress' => [
             'name' => 'GeneratePress',
-            'description' => __('Control the GeneratePress theme — settings, layout, colors + Global Colors, typography, spacing, and Premium Elements (hooks, headers, layouts).', domain: 'nibwp'),
+            'description' => __('Control the GeneratePress theme — settings, layout, colors + Global Colors, typography, spacing, and Premium Elements (hooks, headers, layouts).', 'nibwp'),
             'plugin_available' => function_exists('generate_get_defaults') || wp_get_theme()->get_template() === 'generatepress' || wp_get_theme()->get_stylesheet() === 'generatepress',
             'enabled' => nibwp_is_integration_enabled('generatepress'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2 2 7l10 5 10-5-10-5zm-7.79 8L12 13.5 19.79 10 22 11.1l-10 5-10-5L4.21 10zm0 5L12 18.5 19.79 15 22 16.1l-10 5-10-5L4.21 15z"/></svg>',
@@ -401,7 +722,7 @@ function nibwp_get_integrations(): array
         ],
         'kadence' => [
             'name' => 'Kadence',
-            'description' => __('Control the Kadence theme — settings, layout/header rows, the Global Color Palette, typography, Kadence Blocks global settings, and Pro Elements (hooked custom content with display conditions).', domain: 'nibwp'),
+            'description' => __('Control the Kadence theme — settings, layout/header rows, the Global Color Palette, typography, Kadence Blocks global settings, and Pro Elements (hooked custom content with display conditions).', 'nibwp'),
             'plugin_available' => class_exists('Kadence\\Theme') || function_exists('kadence') || defined('KADENCE_BLOCKS_VERSION') || class_exists('Kadence_Blocks_Frontend') || wp_get_theme()->get_template() === 'kadence' || wp_get_theme()->get_stylesheet() === 'kadence',
             'enabled' => nibwp_is_integration_enabled('kadence'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M4 3h4v7.6L14.4 3h5L11 12.4 20 21h-5.2L8 13.7V21H4V3z"/></svg>',
@@ -411,7 +732,7 @@ function nibwp_get_integrations(): array
         ],
         'voxel' => [
             'name' => 'Voxel',
-            'description' => __('Run a Voxel directory with AI — listings with every Voxel field type (location, work hours, galleries, repeaters), post type schemas, search through Voxel\'s own index, taxonomy terms, orders and bookings, membership plans, timeline, and direct messages. Voxel has no REST API; this is the programmatic surface it never shipped.', domain: 'nibwp'),
+            'description' => __('Run a Voxel directory with AI — listings with every Voxel field type (location, work hours, galleries, repeaters), post type schemas, search through Voxel\'s own index, taxonomy terms, orders and bookings, membership plans, timeline, and direct messages. Voxel has no REST API; this is the programmatic surface it never shipped.', 'nibwp'),
             'plugin_available' => class_exists('\\Voxel\\Post') || wp_get_theme()->get_template() === 'voxel' || wp_get_theme()->get_stylesheet() === 'voxel',
             'enabled' => nibwp_is_integration_enabled('voxel'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2 7.5 3.75L12 11.7 4.5 7.95 12 4.2zM4 9.6l7 3.5v6.6l-7-3.5V9.6zm16 6.6-7 3.5v-6.6l7-3.5v6.6z"/></svg>',
@@ -421,7 +742,7 @@ function nibwp_get_integrations(): array
         ],
         'divi' => [
             'name' => 'Divi',
-            'description' => __('Control Divi (theme or Builder plugin) — per-post builder content (Divi 4 shortcode + Divi 5 serialized), theme options, the Global Color palette, the Divi Library, the Theme Builder, global module presets, and the Role Editor.', domain: 'nibwp'),
+            'description' => __('Control Divi (theme or Builder plugin) — per-post builder content (Divi 4 shortcode + Divi 5 serialized), theme options, the Global Color palette, the Divi Library, the Theme Builder, global module presets, and the Role Editor.', 'nibwp'),
             'plugin_available' => defined('ET_BUILDER_VERSION') || defined('ET_BUILDER_PLUGIN_VERSION') || function_exists('et_setup_theme') || in_array(strtolower((string) wp_get_theme()->get('Name')), ['divi', 'extra'], true) || in_array(strtolower((string) wp_get_theme()->get_template()), ['divi', 'extra'], true),
             'enabled' => nibwp_is_integration_enabled('divi'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 3h7.5c4.7 0 8.5 3.8 8.5 8.5v.5c0 4.7-3.8 8.5-8.5 8.5H3V3zm4 4v9.9h3.3c2.8 0 5-2.2 5-5v-.4c0-2.7-2.2-4.9-5-4.9H7z"/></svg>',
@@ -431,7 +752,7 @@ function nibwp_get_integrations(): array
         ],
         'fluentcommunity' => [
             'name' => 'FluentCommunity',
-            'description' => __('Run a FluentCommunity portal with AI — spaces, space groups and courses, members and roles, the feed, comments, reactions, and member profiles with gamification points.', domain: 'nibwp'),
+            'description' => __('Run a FluentCommunity portal with AI — spaces, space groups and courses, members and roles, the feed, comments, reactions, and member profiles with gamification points.', 'nibwp'),
             'plugin_available' => defined('FLUENT_COMMUNITY_PLUGIN_VERSION') || function_exists('fluentCommunityApp'),
             'enabled' => nibwp_is_integration_enabled('fluentcommunity'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>',
@@ -441,7 +762,7 @@ function nibwp_get_integrations(): array
         ],
         'fluentsmtp' => [
             'name' => 'FluentSMTP',
-            'description' => __('Configure how WordPress sends mail — set up a custom SMTP server or any API provider (SendGrid, Mailgun, SES, Postmark, Gmail…), route senders, send real test emails, and read the delivery log.', domain: 'nibwp'),
+            'description' => __('Configure how WordPress sends mail — set up a custom SMTP server or any API provider (SendGrid, Mailgun, SES, Postmark, Gmail…), route senders, send real test emails, and read the delivery log.', 'nibwp'),
             'plugin_available' => defined('FLUENTMAIL_PLUGIN_VERSION') || function_exists('fluentMailGetSettings'),
             'enabled' => nibwp_is_integration_enabled('fluentsmtp'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>',
@@ -451,7 +772,7 @@ function nibwp_get_integrations(): array
         ],
         'seopress' => [
             'name' => 'SEOPress',
-            'description' => __('Drive SEOPress with AI — per-post titles, meta, canonical, robots and target keywords; Open Graph + Twitter; and the global Titles, Social/Knowledge Graph, XML Sitemap, Advanced and feature-toggle settings, plus Pro redirections.', domain: 'nibwp'),
+            'description' => __('Drive SEOPress with AI — per-post titles, meta, canonical, robots and target keywords; Open Graph + Twitter; and the global Titles, Social/Knowledge Graph, XML Sitemap, Advanced and feature-toggle settings, plus Pro redirections.', 'nibwp'),
             'plugin_available' => defined('SEOPRESS_VERSION'),
             'enabled' => nibwp_is_integration_enabled('seopress'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.49 4.49 0 0 1 9.5 14z"/></svg>',
@@ -461,7 +782,7 @@ function nibwp_get_integrations(): array
         ],
         'slimseo' => [
             'name' => 'Slim SEO',
-            'description' => __('Control Slim SEO + Slim SEO Schema with AI — per-post title, description, canonical, robots and social images; the global features and social defaults; and per-post structured-data overrides.', domain: 'nibwp'),
+            'description' => __('Control Slim SEO + Slim SEO Schema with AI — per-post title, description, canonical, robots and social images; the global features and social defaults; and per-post structured-data overrides.', 'nibwp'),
             'plugin_available' => defined('SLIM_SEO_VER') || function_exists('slim_seo'),
             'enabled' => nibwp_is_integration_enabled('slimseo'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 4h18v2H3V4zm2 4h14v2H5V8zm-2 4h18v2H3v-2zm2 4h14v2H5v-2zm-2 4h18v2H3v-2z"/></svg>',
@@ -471,7 +792,7 @@ function nibwp_get_integrations(): array
         ],
         'surecart' => [
             'name' => 'SureCart',
-            'description' => __('Run a SureCart store with AI — products, prices, collections, coupons, customers, orders, the checkout forms + store pages, and a catalog of SureCart storefront blocks that the EtchWP & Bricks Pro skills use to design product pages, pricing tables and checkout.', domain: 'nibwp'),
+            'description' => __('Run a SureCart store with AI — products, prices, collections, coupons, customers, orders, the checkout forms + store pages, and a catalog of SureCart storefront blocks that the EtchWP & Bricks Pro skills use to design product pages, pricing tables and checkout.', 'nibwp'),
             'plugin_available' => class_exists('SureCart') || defined('SURECART_PLUGIN_FILE'),
             'enabled' => nibwp_is_integration_enabled('surecart'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 21 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>',
@@ -481,7 +802,7 @@ function nibwp_get_integrations(): array
         ],
         'givewp' => [
             'name' => 'GiveWP',
-            'description' => __('Manage donation forms, donations, donors, and fundraising statistics.', domain: 'nibwp'),
+            'description' => __('Manage donation forms, donations, donors, and fundraising statistics.', 'nibwp'),
             'plugin_available' => defined('GIVE_VERSION'),
             'enabled' => nibwp_is_integration_enabled('givewp'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
@@ -491,7 +812,7 @@ function nibwp_get_integrations(): array
         ],
         'redirection' => [
             'name' => 'Redirection',
-            'description' => __('Manage URL redirects (301/302/307), view and clear 404 error logs.', domain: 'nibwp'),
+            'description' => __('Manage URL redirects (301/302/307), view and clear 404 error logs.', 'nibwp'),
             'plugin_available' => class_exists('Red_Item'),
             'enabled' => nibwp_is_integration_enabled('redirection'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 15l-6 6-1.42-1.42L15.17 16H4V4h2v10h9.17l-3.59-3.58L13 9l6 6z"/></svg>',
@@ -501,7 +822,7 @@ function nibwp_get_integrations(): array
         ],
         'tablepress' => [
             'name' => 'TablePress',
-            'description' => __('Create, edit, and manage data tables with rows and columns.', domain: 'nibwp'),
+            'description' => __('Create, edit, and manage data tables with rows and columns.', 'nibwp'),
             'plugin_available' => class_exists('TablePress'),
             'enabled' => nibwp_is_integration_enabled('tablepress'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 3v18h18V3H3zm8 16H5v-6h6v6zm0-8H5V5h6v6zm8 8h-6v-6h6v6zm0-8h-6V5h6v6z"/></svg>',
@@ -511,7 +832,7 @@ function nibwp_get_integrations(): array
         ],
         'translatepress' => [
             'name' => 'TranslatePress',
-            'description' => __('Manage languages and translations for multilingual sites.', domain: 'nibwp'),
+            'description' => __('Manage languages and translations for multilingual sites.', 'nibwp'),
             'plugin_available' => defined('TRP_PLUGIN_VERSION'),
             'enabled' => nibwp_is_integration_enabled('translatepress'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>',
@@ -521,7 +842,7 @@ function nibwp_get_integrations(): array
         ],
         'wpml' => [
             'name' => 'WPML',
-            'description' => __('Manage languages, translations, and content duplication for multilingual WordPress.', domain: 'nibwp'),
+            'description' => __('Manage languages, translations, and content duplication for multilingual WordPress.', 'nibwp'),
             'plugin_available' => defined('ICL_SITEPRESS_VERSION'),
             'enabled' => nibwp_is_integration_enabled('wpml'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>',
@@ -534,7 +855,7 @@ function nibwp_get_integrations(): array
         // into `'automaticcss'` so users who toggled either one stay enabled.
         'automaticcss' => [
             'name' => 'Automatic.css',
-            'description' => __('Manage ACSS design tokens (colors, spacing, typography, sizing), CSS recipes, utility classes, and regenerate the stylesheet. The #1 utility framework for page builders.', domain: 'nibwp'),
+            'description' => __('Manage ACSS design tokens (colors, spacing, typography, sizing), CSS recipes, utility classes, and regenerate the stylesheet. The #1 utility framework for page builders.', 'nibwp'),
             'plugin_available' => defined('ACSS_PLUGIN_FILE'),
             'enabled' => nibwp_is_integration_enabled('automaticcss'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>',
@@ -544,7 +865,7 @@ function nibwp_get_integrations(): array
         ],
         'etchwp' => [
             'name' => 'EtchWP',
-            'description' => __('Manage blocks, custom fields, styles, fonts, assets, and preprocessor settings via the Etch unified dev environment.', domain: 'nibwp'),
+            'description' => __('Manage blocks, custom fields, styles, fonts, assets, and preprocessor settings via the Etch unified dev environment.', 'nibwp'),
             'plugin_available' => defined('ETCH_PLUGIN_FILE'),
             'enabled' => nibwp_is_integration_enabled('etchwp'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>',
@@ -553,60 +874,60 @@ function nibwp_get_integrations(): array
             'plugin_name' => 'EtchWP',
         ],
         'content-planner' => [
-            'name' => __('Content Planner', domain: 'nibwp'),
-            'description' => __('Schedule posts, editorial calendar, bulk scheduling with intervals, draft manager with priority and notes, reschedule future posts.', domain: 'nibwp'),
+            'name' => __('Content Planner', 'nibwp'),
+            'description' => __('Schedule posts, editorial calendar, bulk scheduling with intervals, draft manager with priority and notes, reschedule future posts.', 'nibwp'),
             'plugin_available' => true,
-            'enabled' => true,
+            'enabled' => nibwp_is_integration_enabled('content-planner'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/></svg>',
             'category' => 'built-in',
             'abilities' => ['content-schedule-post', 'content-list-scheduled', 'content-reschedule', 'content-calendar', 'content-bulk-schedule', 'content-draft-manager'],
             'plugin_name' => '',
         ],
         'content-fetcher' => [
-            'name' => __('Content Fetcher', domain: 'nibwp'),
-            'description' => __('Fetch content from URLs, parse RSS feeds, rewrite/transform text, import to drafts, bulk import from feeds, extract sitemap URLs.', domain: 'nibwp'),
+            'name' => __('Content Fetcher', 'nibwp'),
+            'description' => __('Fetch content from URLs, parse RSS feeds, rewrite/transform text, import to drafts, bulk import from feeds, extract sitemap URLs.', 'nibwp'),
             'plugin_available' => true,
-            'enabled' => true,
+            'enabled' => nibwp_is_integration_enabled('content-fetcher'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
             'category' => 'built-in',
             'abilities' => ['fetch-url-content', 'fetch-rss-feed', 'fetch-rewrite-content', 'fetch-to-draft', 'fetch-bulk-import', 'fetch-sitemap-urls'],
             'plugin_name' => '',
         ],
         'seo-advanced' => [
-            'name' => __('SEO Advanced', domain: 'nibwp'),
-            'description' => __('Image SEO audit & fix, JSON-LD schema generator, broken link checker, redirect manager, bulk meta generator, internal linking suggestions.', domain: 'nibwp'),
+            'name' => __('SEO Advanced', 'nibwp'),
+            'description' => __('Image SEO audit & fix, JSON-LD schema generator, broken link checker, redirect manager, bulk meta generator, internal linking suggestions.', 'nibwp'),
             'plugin_available' => true,
-            'enabled' => true,
+            'enabled' => nibwp_is_integration_enabled('seo-advanced'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>',
             'category' => 'seo',
             'abilities' => ['seo-image-optimize', 'seo-schema-markup', 'seo-broken-links', 'seo-redirect-manager', 'seo-meta-bulk-generate', 'seo-internal-linking'],
             'plugin_name' => '',
         ],
         'migration' => [
-            'name' => __('Migration Toolkit', domain: 'nibwp'),
-            'description' => __('Export/import posts, options, menus. Clone posts with meta. Search & replace URLs across the database with serialized data support.', domain: 'nibwp'),
+            'name' => __('Migration Toolkit', 'nibwp'),
+            'description' => __('Export/import posts, options, menus. Clone posts with meta. Search & replace URLs across the database with serialized data support.', 'nibwp'),
             'plugin_available' => true,
-            'enabled' => true,
+            'enabled' => nibwp_is_integration_enabled('migration'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
             'category' => 'built-in',
             'abilities' => ['migration-export-content', 'migration-import-content', 'migration-export-options', 'migration-import-options', 'migration-search-replace-urls', 'migration-clone-post', 'migration-export-menus', 'migration-import-menus'],
             'plugin_name' => '',
         ],
         'notifications' => [
-            'name' => __('Notifications & SMS', domain: 'nibwp'),
-            'description' => __('Send emails, SMS via Twilio, bulk messaging, webhooks, notification templates. Full 2-way SMS with WP Twilio Core integration.', domain: 'nibwp'),
+            'name' => __('Notifications & SMS', 'nibwp'),
+            'description' => __('Send emails, SMS via Twilio, bulk messaging, webhooks, notification templates. Full 2-way SMS with WP Twilio Core integration.', 'nibwp'),
             'plugin_available' => true,
-            'enabled' => true,
+            'enabled' => nibwp_is_integration_enabled('notifications'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>',
             'category' => 'built-in',
             'abilities' => ['notify-send-email', 'notify-send-sms', 'notify-bulk-email', 'notify-bulk-sms', 'notify-manage-templates', 'notify-configure-twilio', 'notify-send-wp-notification', 'notify-webhook'],
             'plugin_name' => '',
         ],
         'security' => [
-            'name' => __('Security & Maintenance', domain: 'nibwp'),
-            'description' => __('Malware scanner, core integrity checker, auto-repair, database cleanup, quarantine, file permissions, user audit, find & replace, health check, and password reset.', domain: 'nibwp'),
+            'name' => __('Security & Maintenance', 'nibwp'),
+            'description' => __('Malware scanner, core integrity checker, auto-repair, database cleanup, quarantine, file permissions, user audit, find & replace, health check, and password reset.', 'nibwp'),
             'plugin_available' => true,
-            'enabled' => true,
+            'enabled' => nibwp_is_integration_enabled('security'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>',
             'category' => 'security',
             'abilities' => ['security-verify-core', 'security-repair-core', 'security-scan-malware', 'security-quarantine-file', 'security-find-replace', 'security-scan-database', 'security-db-find-replace', 'security-audit-users', 'security-health-check', 'security-cleanup', 'security-file-permissions', 'security-change-passwords'],
@@ -614,7 +935,7 @@ function nibwp_get_integrations(): array
         ],
         'wp-job-manager' => [
             'name' => 'WP Job Manager',
-            'description' => __('Manage job listings — create, update, delete, search, and filter. Handle company info, taxonomies (types/categories), location, application contact, and featured/filled states.', domain: 'nibwp'),
+            'description' => __('Manage job listings — create, update, delete, search, and filter. Handle company info, taxonomies (types/categories), location, application contact, and featured/filled states.', 'nibwp'),
             'plugin_available' => defined('JOB_MANAGER_VERSION') || class_exists('WP_Job_Manager'),
             'enabled' => nibwp_is_integration_enabled('wp-job-manager'),
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>',
@@ -623,8 +944,8 @@ function nibwp_get_integrations(): array
             'plugin_name' => 'WP Job Manager',
         ],
         'memory' => [
-            'name' => __('Memory', domain: 'nibwp'),
-            'description' => __('Store and recall project context across AI sessions. Remembers conventions, decisions, patterns, and configuration.', domain: 'nibwp'),
+            'name' => __('Memory', 'nibwp'),
+            'description' => __('Store and recall project context across AI sessions. Remembers conventions, decisions, patterns, and configuration.', 'nibwp'),
             'plugin_available' => true,
             'enabled' => true,
             'icon' => '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
@@ -727,16 +1048,16 @@ add_action('rest_api_init', static function (): void {
 
             $integrations = nibwp_get_integrations();
             if (!array_key_exists($key, $integrations)) {
-                return new \WP_REST_Response(['ok' => false, 'message' => 'Unknown integration'], 404);
+                return new \WP_REST_Response(['ok' => false, 'message' => __('Unknown integration.', 'nibwp')], 404);
             }
             if ($key === 'memory') {
-                return new \WP_REST_Response(['ok' => false, 'message' => 'Memory is always on'], 422);
+                return new \WP_REST_Response(['ok' => false, 'message' => __('Memory is always on.', 'nibwp')], 422);
             }
 
             // Block toggling a Pro/locked integration without a license.
             $integration = $integrations[$key];
             if (!empty($integration['premium']) && !nibwp_is_pro() && !nibwp_has_entitlement('integration:' . $key)) {
-                return new \WP_REST_Response(['ok' => false, 'message' => 'This integration requires NIBWP Pro.'], 403);
+                return new \WP_REST_Response(['ok' => false, 'message' => __('This integration requires NIBWP Pro.', 'nibwp')], 403);
             }
 
             $state = nibwp_get_enabled_integrations();
@@ -822,24 +1143,30 @@ function nibwp_render_integrations_page(): void
     // Re-fetch after save so toggle states are current.
     $integrations = nibwp_get_integrations();
 
+    // Hidden entries are dropped once, here, rather than skipped at render
+    // time — the tab counts and the "x / y" search total are computed from
+    // this same array, and filtering only the card loop would have left every
+    // count one too high.
+    $integrations = array_filter($integrations, static fn(array $i): bool => empty($i['hidden']));
+
     $categories = [
-        'built-in' => __('Built-in', domain: 'nibwp'),
-        'security' => __('Security & Maintenance', domain: 'nibwp'),
-        'page-builders' => __('Page Builders', domain: 'nibwp'),
-        'design' => __('Design', domain: 'nibwp'),
-        'ecommerce' => __('E-Commerce', domain: 'nibwp'),
-        'forms' => __('Forms', domain: 'nibwp'),
-        'crm' => __('CRM & Marketing', domain: 'nibwp'),
-        'events' => __('Events', domain: 'nibwp'),
-        'community' => __('Community', domain: 'nibwp'),
-        'lms' => __('Learning (LMS)', domain: 'nibwp'),
-        'membership' => __('Membership', domain: 'nibwp'),
-        'donations' => __('Donations', domain: 'nibwp'),
-        'seo' => __('SEO', domain: 'nibwp'),
-        'multilingual' => __('Multilingual', domain: 'nibwp'),
-        'utilities' => __('Utilities', domain: 'nibwp'),
-        'custom-fields' => __('Custom Fields & Content Types', domain: 'nibwp'),
-        'jobs' => __('Jobs & Recruitment', domain: 'nibwp'),
+        'built-in' => __('Built-in', 'nibwp'),
+        'security' => __('Security & Maintenance', 'nibwp'),
+        'page-builders' => __('Page Builders', 'nibwp'),
+        'design' => __('Design', 'nibwp'),
+        'ecommerce' => __('E-Commerce', 'nibwp'),
+        'forms' => __('Forms', 'nibwp'),
+        'crm' => __('CRM & Marketing', 'nibwp'),
+        'events' => __('Events', 'nibwp'),
+        'community' => __('Community', 'nibwp'),
+        'lms' => __('Learning (LMS)', 'nibwp'),
+        'membership' => __('Membership', 'nibwp'),
+        'donations' => __('Donations', 'nibwp'),
+        'seo' => __('SEO', 'nibwp'),
+        'multilingual' => __('Multilingual', 'nibwp'),
+        'utilities' => __('Utilities', 'nibwp'),
+        'custom-fields' => __('Custom Fields & Content Types', 'nibwp'),
+        'jobs' => __('Jobs & Recruitment', 'nibwp'),
     ];
 
     $active_count = count(array_filter($integrations, static fn($i) => $i['plugin_available'] && $i['enabled']));
@@ -906,12 +1233,18 @@ function nibwp_render_integrations_page(): void
 
         <?php if ($bulk !== null): ?>
             <div class="notice notice-success is-dismissible"><p><?php
-                printf(
-                    esc_html__('%1$d integrations %2$s (%3$s).', 'nibwp'),
-                    (int) $bulk['count'],
-                    $bulk['mode'] === 'none' ? esc_html__('deactivated', 'nibwp') : esc_html__('activated', 'nibwp'),
-                    $bulk['mode'] === 'detected' ? esc_html__('detected only', 'nibwp') : esc_html__('all', 'nibwp'),
-                );
+                $nibwp_bulk_count = (int) $bulk['count'];
+                if ($bulk['mode'] === 'none') {
+                    /* translators: %d: number of integrations switched off */
+                    $nibwp_bulk_text = _n('%d integration deactivated (all).', '%d integrations deactivated (all).', $nibwp_bulk_count, 'nibwp');
+                } elseif ($bulk['mode'] === 'detected') {
+                    /* translators: %d: number of integrations switched on */
+                    $nibwp_bulk_text = _n('%d integration activated (detected only).', '%d integrations activated (detected only).', $nibwp_bulk_count, 'nibwp');
+                } else {
+                    /* translators: %d: number of integrations switched on */
+                    $nibwp_bulk_text = _n('%d integration activated (all).', '%d integrations activated (all).', $nibwp_bulk_count, 'nibwp');
+                }
+                echo esc_html(sprintf($nibwp_bulk_text, $nibwp_bulk_count));
             ?></p></div>
         <?php endif; ?>
 
@@ -920,11 +1253,12 @@ function nibwp_render_integrations_page(): void
                 $info = $integrations[$toggled] ?? null;
                 if ($info !== null) {
                     printf(
-                        esc_html__('%s integration %s.', domain: 'nibwp'),
-                        '<strong>' . esc_html($info['name']) . '</strong>',
                         $info['enabled']
-                            ? esc_html__('activated', domain: 'nibwp')
-                            : esc_html__('deactivated', domain: 'nibwp'),
+                            /* translators: %s: integration name */
+                            ? esc_html__('%s integration activated.', 'nibwp')
+                            /* translators: %s: integration name */
+                            : esc_html__('%s integration deactivated.', 'nibwp'),
+                        '<strong>' . esc_html($info['name']) . '</strong>',
                     );
                 }
             ?></p></div>
@@ -934,7 +1268,7 @@ function nibwp_render_integrations_page(): void
         <div class="nw-int-tabs-wrap" id="nw-int-tabs-wrap">
             <div class="nw-int-tabs" id="nw-int-tabs">
                 <button type="button" class="nw-int-tab is-active" data-tab="all">
-                    <?php esc_html_e('All', domain: 'nibwp'); ?>
+                    <?php esc_html_e('All', 'nibwp'); ?>
                     <span class="nw-int-tab-count"><?php echo $total_count; ?></span>
                 </button>
                 <?php foreach ($categories as $cat_key => $cat_label):
@@ -947,8 +1281,8 @@ function nibwp_render_integrations_page(): void
                     </button>
                 <?php endforeach; ?>
                 <button type="button" class="nw-int-tab nw-int-tab-cta" id="nw-request-integration-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
-                    <?php esc_html_e('Need a custom Integration?', domain: 'nibwp'); ?>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-inline-end:4px;"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+                    <?php esc_html_e('Need a custom Integration?', 'nibwp'); ?>
                 </button>
             </div>
         </div>
@@ -957,7 +1291,7 @@ function nibwp_render_integrations_page(): void
         <div class="nw-req-modal" id="nw-req-modal" role="dialog" aria-hidden="true">
             <div class="nw-req-modal__backdrop" id="nw-req-modal-backdrop"></div>
             <div class="nw-req-modal__panel">
-                <button type="button" class="nw-req-modal__close" id="nw-req-modal-close" aria-label="<?php esc_attr_e('Close', domain: 'nibwp'); ?>">
+                <button type="button" class="nw-req-modal__close" id="nw-req-modal-close" aria-label="<?php esc_attr_e('Close', 'nibwp'); ?>">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
 
@@ -966,24 +1300,25 @@ function nibwp_render_integrations_page(): void
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
                     </div>
                     <div>
-                        <strong><?php esc_html_e('Request a Custom Skill or Integration', domain: 'nibwp'); ?></strong>
-                        <span><?php esc_html_e('Tell us what you need. We build new integrations every week.', domain: 'nibwp'); ?></span>
+                        <strong><?php esc_html_e('Request a Custom Skill or Integration', 'nibwp'); ?></strong>
+                        <span><?php esc_html_e('Tell us what you need. We build new integrations every week.', 'nibwp'); ?></span>
                     </div>
                 </div>
 
                 <!-- Step indicator -->
                 <div class="nw-req-steps">
-                    <div class="nw-req-step is-active" data-step="1"><span>1</span><?php esc_html_e('Type', domain: 'nibwp'); ?></div>
+                    <div class="nw-req-step is-active" data-step="1"><span>1</span><?php esc_html_e('Type', 'nibwp'); ?></div>
                     <div class="nw-req-step-divider"></div>
-                    <div class="nw-req-step" data-step="2"><span>2</span><?php esc_html_e('Details', domain: 'nibwp'); ?></div>
+                    <div class="nw-req-step" data-step="2"><span>2</span><?php esc_html_e('Details', 'nibwp'); ?></div>
                     <div class="nw-req-step-divider"></div>
-                    <div class="nw-req-step" data-step="3"><span>3</span><?php esc_html_e('Contact', domain: 'nibwp'); ?></div>
+                    <div class="nw-req-step" data-step="3"><span>3</span><?php esc_html_e('Contact', 'nibwp'); ?></div>
                 </div>
 
                 <form id="nw-req-form" class="nw-req-form">
+                    <?php wp_nonce_field('nibwp_request_integration', '_ajax_nonce'); ?>
                     <!-- STEP 1: Type selector -->
                     <div class="nw-req-pane is-active" data-pane="1">
-                        <div class="nw-req-pane__title"><?php esc_html_e('What do you need?', domain: 'nibwp'); ?></div>
+                        <div class="nw-req-pane__title"><?php esc_html_e('What do you need?', 'nibwp'); ?></div>
                         <div class="nw-req-options">
                             <label class="nw-req-option">
                                 <input type="radio" name="request_type" value="plugin-integration" required>
@@ -991,8 +1326,8 @@ function nibwp_render_integrations_page(): void
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4M4.9 4.9l2.8 2.8m8.6 8.6l2.8 2.8M4.9 19.1l2.8-2.8m8.6-8.6l2.8-2.8"/></svg>
                                 </div>
                                 <div class="nw-req-option__text">
-                                    <strong><?php esc_html_e('Plugin integration', domain: 'nibwp'); ?></strong>
-                                    <span><?php esc_html_e('Add AI tools for a specific WordPress plugin', domain: 'nibwp'); ?></span>
+                                    <strong><?php esc_html_e('Plugin integration', 'nibwp'); ?></strong>
+                                    <span><?php esc_html_e('Add AI tools for a specific WordPress plugin', 'nibwp'); ?></span>
                                 </div>
                             </label>
                             <label class="nw-req-option">
@@ -1001,8 +1336,8 @@ function nibwp_render_integrations_page(): void
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                                 </div>
                                 <div class="nw-req-option__text">
-                                    <strong><?php esc_html_e('Custom AI skill', domain: 'nibwp'); ?></strong>
-                                    <span><?php esc_html_e('A specific MCP tool for your workflow', domain: 'nibwp'); ?></span>
+                                    <strong><?php esc_html_e('Custom AI skill', 'nibwp'); ?></strong>
+                                    <span><?php esc_html_e('A specific MCP tool for your workflow', 'nibwp'); ?></span>
                                 </div>
                             </label>
                             <label class="nw-req-option">
@@ -1011,8 +1346,8 @@ function nibwp_render_integrations_page(): void
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
                                 </div>
                                 <div class="nw-req-option__text">
-                                    <strong><?php esc_html_e('Third-party API', domain: 'nibwp'); ?></strong>
-                                    <span><?php esc_html_e('Connect external services (Stripe, Slack, etc.)', domain: 'nibwp'); ?></span>
+                                    <strong><?php esc_html_e('Third-party API', 'nibwp'); ?></strong>
+                                    <span><?php esc_html_e('Connect external services (Stripe, Slack, etc.)', 'nibwp'); ?></span>
                                 </div>
                             </label>
                             <label class="nw-req-option">
@@ -1021,8 +1356,8 @@ function nibwp_render_integrations_page(): void
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                                 </div>
                                 <div class="nw-req-option__text">
-                                    <strong><?php esc_html_e('Something else', domain: 'nibwp'); ?></strong>
-                                    <span><?php esc_html_e('Tell us more in the next step', domain: 'nibwp'); ?></span>
+                                    <strong><?php esc_html_e('Something else', 'nibwp'); ?></strong>
+                                    <span><?php esc_html_e('Tell us more in the next step', 'nibwp'); ?></span>
                                 </div>
                             </label>
                         </div>
@@ -1030,44 +1365,44 @@ function nibwp_render_integrations_page(): void
 
                     <!-- STEP 2: Details -->
                     <div class="nw-req-pane" data-pane="2">
-                        <div class="nw-req-pane__title"><?php esc_html_e('Tell us more', domain: 'nibwp'); ?></div>
+                        <div class="nw-req-pane__title"><?php esc_html_e('Tell us more', 'nibwp'); ?></div>
                         <div class="nw-req-field">
-                            <label for="nw-req-name-plugin"><?php esc_html_e('Plugin / Service name', domain: 'nibwp'); ?></label>
-                            <input type="text" id="nw-req-name-plugin" name="plugin_name" placeholder="e.g. Easy Affiliate, Stripe API, custom CRM">
+                            <label for="nw-req-name-plugin"><?php esc_html_e('Plugin / Service name', 'nibwp'); ?></label>
+                            <input type="text" id="nw-req-name-plugin" name="plugin_name" placeholder="<?php esc_attr_e('e.g. Easy Affiliate, Stripe API, custom CRM', 'nibwp'); ?>">
                         </div>
                         <div class="nw-req-field">
-                            <label for="nw-req-url"><?php esc_html_e('Plugin or API URL', domain: 'nibwp'); ?> <span class="nw-req-optional"><?php esc_html_e('optional', domain: 'nibwp'); ?></span></label>
+                            <label for="nw-req-url"><?php esc_html_e('Plugin or API URL', 'nibwp'); ?> <span class="nw-req-optional"><?php esc_html_e('optional', 'nibwp'); ?></span></label>
                             <input type="url" id="nw-req-url" name="plugin_url" placeholder="https://...">
                         </div>
                         <div class="nw-req-field">
-                            <label for="nw-req-desc"><?php esc_html_e('What should AI agents be able to do?', domain: 'nibwp'); ?></label>
-                            <textarea id="nw-req-desc" name="description" rows="4" placeholder="<?php esc_attr_e('e.g. List products, create orders, update inventory, send notifications...', domain: 'nibwp'); ?>" required></textarea>
+                            <label for="nw-req-desc"><?php esc_html_e('What should AI agents be able to do?', 'nibwp'); ?></label>
+                            <textarea id="nw-req-desc" name="description" rows="4" placeholder="<?php esc_attr_e('e.g. List products, create orders, update inventory, send notifications...', 'nibwp'); ?>" required></textarea>
                         </div>
                         <div class="nw-req-field">
-                            <label><?php esc_html_e('Priority', domain: 'nibwp'); ?></label>
+                            <label><?php esc_html_e('Priority', 'nibwp'); ?></label>
                             <div class="nw-req-priority">
-                                <label><input type="radio" name="priority" value="low"><span><?php esc_html_e('Nice to have', domain: 'nibwp'); ?></span></label>
-                                <label><input type="radio" name="priority" value="medium" checked><span><?php esc_html_e('Important', domain: 'nibwp'); ?></span></label>
-                                <label><input type="radio" name="priority" value="high"><span><?php esc_html_e('Urgent', domain: 'nibwp'); ?></span></label>
+                                <label><input type="radio" name="priority" value="low"><span><?php esc_html_e('Nice to have', 'nibwp'); ?></span></label>
+                                <label><input type="radio" name="priority" value="medium" checked><span><?php esc_html_e('Important', 'nibwp'); ?></span></label>
+                                <label><input type="radio" name="priority" value="high"><span><?php esc_html_e('Urgent', 'nibwp'); ?></span></label>
                             </div>
                         </div>
                     </div>
 
                     <!-- STEP 3: Contact -->
                     <div class="nw-req-pane" data-pane="3">
-                        <div class="nw-req-pane__title"><?php esc_html_e('How can we reach you?', domain: 'nibwp'); ?></div>
+                        <div class="nw-req-pane__title"><?php esc_html_e('How can we reach you?', 'nibwp'); ?></div>
                         <div class="nw-req-field">
-                            <label for="nw-req-name"><?php esc_html_e('Your name', domain: 'nibwp'); ?></label>
+                            <label for="nw-req-name"><?php esc_html_e('Your name', 'nibwp'); ?></label>
                             <input type="text" id="nw-req-name" name="user_name" value="<?php echo esc_attr(wp_get_current_user()->display_name); ?>" required>
                         </div>
                         <div class="nw-req-field">
-                            <label for="nw-req-email"><?php esc_html_e('Email address', domain: 'nibwp'); ?></label>
+                            <label for="nw-req-email"><?php esc_html_e('Email address', 'nibwp'); ?></label>
                             <input type="email" id="nw-req-email" name="user_email" value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>" required>
                         </div>
                         <div class="nw-req-field">
                             <label class="nw-req-checkbox-row">
                                 <input type="checkbox" name="newsletter" value="1" checked>
-                                <span><?php esc_html_e('Notify me when this integration is built', domain: 'nibwp'); ?></span>
+                                <span><?php esc_html_e('Notify me when this integration is built', 'nibwp'); ?></span>
                             </label>
                         </div>
                     </div>
@@ -1077,22 +1412,24 @@ function nibwp_render_integrations_page(): void
                         <div class="nw-req-success-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         </div>
-                        <strong><?php esc_html_e('Request sent!', domain: 'nibwp'); ?></strong>
-                        <p><?php esc_html_e('We received your request. Our team reviews every submission and prioritizes new builds based on community demand.', domain: 'nibwp'); ?></p>
-                        <p style="font-size:12px;color:var(--nw-text-muted);"><?php esc_html_e("You'll hear from us within 2 business days.", domain: 'nibwp'); ?></p>
+                        <strong><?php esc_html_e('Request sent!', 'nibwp'); ?></strong>
+                        <p><?php esc_html_e('We received your request. Our team reviews every submission and prioritizes new builds based on community demand.', 'nibwp'); ?></p>
+                        <p style="font-size:12px;color:var(--nw-text-muted);"><?php esc_html_e("You'll hear from us within 2 business days.", 'nibwp'); ?></p>
                     </div>
 
                     <!-- Footer with buttons -->
                     <div class="nw-req-foot">
-                        <button type="button" class="nw-req-btn nw-req-btn-secondary" id="nw-req-back" disabled><?php esc_html_e('Back', domain: 'nibwp'); ?></button>
-                        <button type="button" class="nw-req-btn nw-req-btn-primary" id="nw-req-next"><?php esc_html_e('Next', domain: 'nibwp'); ?>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        <button type="button" class="nw-req-btn nw-req-btn-secondary" id="nw-req-back" disabled><?php esc_html_e('Back', 'nibwp'); ?></button>
+                        <button type="button" class="nw-req-btn nw-req-btn-primary" id="nw-req-next"><?php esc_html_e('Next', 'nibwp'); ?>
+                            <svg class="nw-rtl-flip" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </button>
                         <button type="submit" class="nw-req-btn nw-req-btn-primary" id="nw-req-submit" style="display:none;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                            <?php esc_html_e('Send Request', domain: 'nibwp'); ?>
+                            <?php esc_html_e('Send Request', 'nibwp'); ?>
                         </button>
                     </div>
+
+                    <p class="nw-req-error" id="nw-req-error" role="alert" style="display:none;"></p>
                 </form>
             </div>
         </div>
@@ -1109,7 +1446,7 @@ function nibwp_render_integrations_page(): void
         <div class="nw-req-modal" id="nw-fig-modal" role="dialog" aria-hidden="true">
             <div class="nw-req-modal__backdrop" id="nw-fig-modal-backdrop"></div>
             <div class="nw-req-modal__panel">
-                <button type="button" class="nw-req-modal__close" id="nw-fig-modal-close" aria-label="<?php esc_attr_e('Close', domain: 'nibwp'); ?>">
+                <button type="button" class="nw-req-modal__close" id="nw-fig-modal-close" aria-label="<?php esc_attr_e('Close', 'nibwp'); ?>">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
 
@@ -1134,7 +1471,7 @@ function nibwp_render_integrations_page(): void
                         flex-wrap: wrap; margin-top: 12px;
                     }
                     #nw-fig-modal .nw-fig-actions form { margin: 0; }
-                    #nw-fig-modal .nw-req-btn { margin-left: 0; border-radius: 8px; }
+                    #nw-fig-modal .nw-req-btn { margin-inline-start: 0; border-radius: 8px; }
                     #nw-fig-modal a.nw-req-btn,
                     #nw-fig-modal a.nw-req-btn:hover,
                     #nw-fig-modal a.nw-req-btn:focus,
@@ -1158,7 +1495,7 @@ function nibwp_render_integrations_page(): void
                         color: #fff;
                     }
                     #nw-fig-modal .nw-fig-mask {
-                        display: inline-block; margin-left: 8px; padding: 1px 6px;
+                        display: inline-block; margin-inline-start: 8px; padding: 1px 6px;
                         border-radius: 5px; background: var(--nw-surface-2, #f6f7f9);
                         border: 1px solid var(--nw-border, #e2e4e7);
                         font-size: 11.5px; letter-spacing: .04em;
@@ -1176,7 +1513,7 @@ function nibwp_render_integrations_page(): void
                         display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
                         border: 1px solid var(--nw-border, #e2e4e7); border-radius: 999px;
                         background: var(--nw-surface, #fff); color: var(--nw-text-2, #3c434a);
-                        font-size: 12.5px; font-weight: 600; padding: 7px 14px 7px 8px;
+                        font-size: 12.5px; font-weight: 600; padding-block: 7px; padding-inline: 8px 14px;
                         transition: border-color .15s, box-shadow .15s, background .15s;
                     }
                     #nw-fig-modal .nw-fig-tab:hover { border-color: #f0b25a; }
@@ -1209,15 +1546,15 @@ function nibwp_render_integrations_page(): void
                     #nw-fig-modal .nw-fig-method__head strong { font-size: 14px; }
                     #nw-fig-modal .nw-fig-method__head .nw-fig-tag {
                         font-size: 10.5px; font-weight: 600; color: #b45309; background: #fff7ed;
-                        border: 1px solid #fed7aa; border-radius: 999px; padding: 1px 8px; margin-left: 2px;
+                        border: 1px solid #fed7aa; border-radius: 999px; padding: 1px 8px; margin-inline-start: 2px;
                     }
-                    #nw-fig-modal .nw-fig-steps { margin: 8px 0 12px; padding: 0 0 0 4px; list-style: none; counter-reset: figstep; }
+                    #nw-fig-modal .nw-fig-steps { margin: 8px 0 12px; padding: 0; padding-inline-start: 4px; list-style: none; counter-reset: figstep; }
                     #nw-fig-modal .nw-fig-steps li {
-                        counter-increment: figstep; position: relative; padding: 3px 0 3px 30px;
+                        counter-increment: figstep; position: relative; padding-block: 3px; padding-inline: 30px 0;
                         font-size: 12.5px; color: var(--nw-text-2, #3c434a); line-height: 1.55;
                     }
                     #nw-fig-modal .nw-fig-steps li::before {
-                        content: counter(figstep); position: absolute; left: 0; top: 4px;
+                        content: counter(figstep); position: absolute; inset-inline-start: 0; top: 4px;
                         width: 19px; height: 19px; border-radius: 50%; font-size: 11px; font-weight: 700;
                         display: grid; place-items: center; color: #b45309;
                         background: #fff7ed; border: 1px solid #fed7aa;
@@ -1245,7 +1582,12 @@ function nibwp_render_integrations_page(): void
                             <div class="nw-fig-method">
                                 <div class="nw-fig-method__head">
                                     <span class="nw-fig-method__num" style="background:linear-gradient(135deg,#22c55e,#15803d);">✓</span>
-                                    <strong><?php esc_html_e('Connected', 'nibwp'); ?><?php echo $fig_handle !== '' ? ' — ' . esc_html($fig_handle) : ''; ?></strong>
+                                    <strong><?php
+                                        echo $fig_handle !== ''
+                                            /* translators: %s: Figma account handle */
+                                            ? esc_html(sprintf(__('Connected — %s', 'nibwp'), $fig_handle))
+                                            : esc_html__('Connected', 'nibwp');
+                                    ?></strong>
                                     <?php $fig_mask = function_exists('nibwp_figma_token_mask') ? nibwp_figma_token_mask() : ''; ?>
                                     <?php if ($fig_mask !== ''): ?>
                                         <code class="nw-fig-mask"><?php echo esc_html($fig_mask); ?></code>
@@ -1436,6 +1778,16 @@ function nibwp_render_integrations_page(): void
         <div class="nibwp-integration-grid" id="nw-int-grid">
             <?php foreach ($integrations as $key => $integration): ?>
                 <?php
+                // Hidden entries stay in the catalogue and keep working — they
+                // are simply not offered as a card. The universal forms tool is
+                // the only one: every plugin it covers now has a dedicated
+                // integration, so showing both invites an agent to pick the
+                // shallower one.
+                if (!empty($integration['hidden'])) {
+                    continue;
+                }
+                ?>
+                <?php
                 $is_available = $integration['plugin_available'];
                 $is_enabled = $integration['enabled'];
                 $is_active = $is_available && $is_enabled;
@@ -1508,21 +1860,37 @@ function nibwp_render_integrations_page(): void
                                 <span class="nibwp-integration-badge is-active"><?php esc_html_e('Active', 'nibwp'); ?></span>
                             <?php endif; ?>
                             <?php if ($badge_state === 'ready'): ?>
-                                <span class="nibwp-integration-badge is-ready"><?php esc_html_e('Ready — not activated', 'nibwp'); ?></span>
+                                <?php
+                                // Names the plugin on purpose. "Ready — not
+                                // activated" sat next to a plugin's own name and
+                                // read as though THAT plugin were switched off,
+                                // which is exactly backwards: it is detected, and
+                                // it is our integration that is not on yet.
+                                ?>
+                                <span class="nibwp-integration-badge is-ready"><?php
+                                    /* translators: %s: third-party plugin name */
+                                    printf(esc_html__('%s detected — switch on to use', 'nibwp'), esc_html($integration['plugin_name']));
+                                ?></span>
                             <?php endif; ?>
                             <?php if ($badge_state === 'missing'): ?>
-                                <span class="nibwp-integration-badge is-missing"><?php printf(esc_html__('%s not detected', 'nibwp'), esc_html($integration['plugin_name'])); ?></span>
+                                <span class="nibwp-integration-badge is-missing"><?php
+                                    /* translators: %s: third-party plugin name */
+                                    printf(esc_html__('%s not detected', 'nibwp'), esc_html($integration['plugin_name']));
+                                ?></span>
                             <?php endif; ?>
                             <?php if ($badge_state === 'inactive'): ?>
-                                <span class="nibwp-integration-badge is-inactive"><?php printf(esc_html__('%s not installed', 'nibwp'), esc_html($integration['plugin_name'])); ?></span>
+                                <span class="nibwp-integration-badge is-inactive"><?php
+                                    /* translators: %s: third-party plugin name */
+                                    printf(esc_html__('%s not installed', 'nibwp'), esc_html($integration['plugin_name']));
+                                ?></span>
                             <?php endif; ?>
                             <?php if ($badge_state === 'cloud_on'): ?>
                                 <span class="nibwp-integration-badge is-active"><?php esc_html_e('Connected', 'nibwp'); ?></span>
-                                <a href="#" class="nw-fig-connect-open" style="margin-left:8px;font-size:12px;font-weight:600;text-decoration:none;"><?php esc_html_e('Manage', 'nibwp'); ?></a>
+                                <a href="#" class="nw-fig-connect-open" style="margin-inline-start:8px;font-size:12px;font-weight:600;text-decoration:none;"><?php esc_html_e('Manage', 'nibwp'); ?></a>
                             <?php endif; ?>
                             <?php if ($badge_state === 'cloud_off'): ?>
                                 <span class="nibwp-integration-badge is-inactive"><?php esc_html_e('Not connected', 'nibwp'); ?></span>
-                                <a href="#" class="nw-fig-connect-open" style="margin-left:8px;font-size:12px;font-weight:600;text-decoration:none;"><?php esc_html_e('Connect →', 'nibwp'); ?></a>
+                                <a href="#" class="nw-fig-connect-open" style="margin-inline-start:8px;font-size:12px;font-weight:600;text-decoration:none;"><?php esc_html_e('Connect', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">→</span></a>
                             <?php endif; ?>
                         </div>
                         <?php if (!$is_locked && !$is_memory): ?>
@@ -1534,8 +1902,8 @@ function nibwp_render_integrations_page(): void
                                     <button type="submit" name="nibwp_integration_toggle"
                                             class="nibwp-toggle-btn <?php echo $is_enabled ? 'is-on' : 'is-off'; ?>"
                                             title="<?php echo $is_enabled
-                                                ? esc_attr__('Deactivate', domain: 'nibwp')
-                                                : esc_attr__('Activate', domain: 'nibwp'); ?>"
+                                                ? esc_attr__('Deactivate', 'nibwp')
+                                                : esc_attr__('Activate', 'nibwp'); ?>"
                                     >
                                         <span class="nibwp-toggle-track">
                                             <span class="nibwp-toggle-thumb"></span>
@@ -1547,10 +1915,16 @@ function nibwp_render_integrations_page(): void
                     </div>
                     <p class="nibwp-integration-desc"><?php echo esc_html($integration['description']); ?></p>
                     <div class="nibwp-integration-footer">
+                        <?php
+                        // Operations, not ability names — one hub ability can carry
+                        // thirty-odd actions, and counting names called that "1".
+                        $nibwp_ops = nibwp_integration_operation_count((array) $integration['abilities']);
+                        ?>
                         <span class="nibwp-ability-count">
                             <?php printf(
-                                esc_html(_n('%d AI ability', '%d AI abilities', count($integration['abilities']), domain: 'nibwp')),
-                                count($integration['abilities']),
+                                /* translators: %d: number of operations the integration offers */
+                                esc_html(_n('%d AI action', '%d AI actions', $nibwp_ops, 'nibwp')),
+                                $nibwp_ops,
                             ); ?>
                         </span>
                         <?php if (!$is_memory): ?>
@@ -1572,20 +1946,33 @@ function nibwp_render_integrations_page(): void
     <script>
     window.nibwpInt = {
         restRoot: '<?php echo esc_js(rest_url('nibwp/v1/')); ?>',
-        nonce: '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>',
-        labels: {
-            activate:   '<?php echo esc_js(__('Activate', 'nibwp')); ?>',
-            deactivate: '<?php echo esc_js(__('Deactivate', 'nibwp')); ?>',
-            bulkAll:      '<?php echo esc_js(__('Activating all integrations…', 'nibwp')); ?>',
-            bulkDetected: '<?php echo esc_js(__('Activating detected integrations…', 'nibwp')); ?>',
-            bulkNone:     '<?php echo esc_js(__('Deactivating all integrations…', 'nibwp')); ?>'
-        },
-        badgeLabels: {
-            always: '<?php echo esc_js(__('Always on', 'nibwp')); ?>',
-            active: '<?php echo esc_js(__('Active', 'nibwp')); ?>',
-            ready:  '<?php echo esc_js(__('Ready — not activated', 'nibwp')); ?>'
-        }
+        nonce: '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>'
     };
+    // Every word the scripts below put on screen. The badge strings carry a %s
+    // for the plugin name — the JS fills it in the same way the PHP badge does,
+    // so the two cannot drift apart.
+    var nibwpIntegrationsI18n = <?php echo wp_json_encode([
+        'activate'       => __('Activate', 'nibwp'),
+        'deactivate'     => __('Deactivate', 'nibwp'),
+        'bulk_all'       => __('Activating all integrations…', 'nibwp'),
+        'bulk_detected'  => __('Activating detected integrations…', 'nibwp'),
+        'bulk_none'      => __('Deactivating all integrations…', 'nibwp'),
+        'toggle_failed'  => __('Could not change this integration. Nothing was saved.', 'nibwp'),
+        'toggle_offline' => __('Could not reach the site. The integration was not changed.', 'nibwp'),
+        'badge_always'   => __('Always on', 'nibwp'),
+        'badge_active'   => __('Active', 'nibwp'),
+        /* translators: %s: third-party plugin name */
+        'badge_ready'    => __('%s detected — switch on to use', 'nibwp'),
+        /* translators: %s: third-party plugin name */
+        'badge_missing'  => __('%s not detected', 'nibwp'),
+        /* translators: %s: third-party plugin name */
+        'badge_inactive' => __('%s not installed', 'nibwp'),
+        'request_done'   => __('Done', 'nibwp'),
+        'request_choose' => __('Please choose what you need.', 'nibwp'),
+        'request_sending' => __('Sending…', 'nibwp'),
+        'request_failed' => __('That did not send. Please try again.', 'nibwp'),
+        'request_offline' => __('That did not send — the site could not be reached.', 'nibwp'),
+    ]); ?>;
     </script>
     <script>
     (function(){
@@ -1698,25 +2085,58 @@ function nibwp_render_integrations_page(): void
         }
 
         /* ── AJAX toggle — intercept form submit, swap state without reload ── */
+
+        /* Pending / error feedback.
+           The request is usually fast, but "usually" is why the control felt
+           dead: on anything slower than instant there was no sign a click had
+           registered at all. */
+        function setPending(btn, card, on){
+            if (btn) {
+                btn.classList.toggle('is-pending', !!on);
+                /* Left clickable but ignored while pending — a disabled button
+                   loses focus, which drops a keyboard user out of the grid. */
+                btn.setAttribute('aria-busy', on ? 'true' : 'false');
+            }
+            if (card) card.classList.toggle('is-busy', !!on);
+        }
+
+        function clearCardError(card){
+            if (!card) return;
+            var existing = card.querySelector('.nibwp-toggle-error');
+            if (existing) existing.remove();
+        }
+
+        function showCardError(card, message){
+            if (!card) return;
+            clearCardError(card);
+            var el = document.createElement('span');
+            el.className = 'nibwp-toggle-error';
+            el.setAttribute('role', 'status');
+            el.textContent = message;
+            card.appendChild(el);
+            /* Cleared on the next attempt rather than on a timer — an error
+               that vanishes on its own is one the user may never have read. */
+        }
+
         function badgeHtmlFor(card){
             var available = card.getAttribute('data-available') === '1';
             var enabled   = card.getAttribute('data-enabled')   === '1';
             var pluginName = card.getAttribute('data-plugin-name') || '';
             var key = card.getAttribute('data-key');
-            var labels = window.nibwpInt.badgeLabels || {};
+            var i18n = nibwpIntegrationsI18n;
             if (key === 'memory') {
-                return '<span class="nibwp-integration-badge is-always">' + (labels.always || 'Always on') + '</span>';
+                return '<span class="nibwp-integration-badge is-always">' + i18n.badge_always + '</span>';
             }
             if (available && enabled) {
-                return '<span class="nibwp-integration-badge is-active">' + (labels.active || 'Active') + '</span>';
+                return '<span class="nibwp-integration-badge is-active">' + i18n.badge_active + '</span>';
             }
             if (available && !enabled) {
-                return '<span class="nibwp-integration-badge is-ready">' + (labels.ready || 'Ready — not activated') + '</span>';
+                return '<span class="nibwp-integration-badge is-ready">' + i18n.badge_ready.replace('%s', pluginName) + '</span>';
             }
             if (!available && enabled) {
-                return '<span class="nibwp-integration-badge is-missing">' + (pluginName + ' not detected') + '</span>';
+                return '<span class="nibwp-integration-badge is-missing">' + i18n.badge_missing.replace('%s', pluginName) + '</span>';
             }
-            return '<span class="nibwp-integration-badge is-inactive">' + (pluginName + ' not installed') + '</span>';
+            return '<span class="nibwp-integration-badge is-inactive">' + i18n.badge_inactive.replace('%s', pluginName) + '</span>';
         }
         function applyCardState(card, data){
             card.setAttribute('data-enabled', data.enabled ? '1' : '0');
@@ -1736,7 +2156,7 @@ function nibwp_render_integrations_page(): void
                 btn.classList.toggle('is-on', !!data.enabled);
                 btn.classList.toggle('is-off', !data.enabled);
                 btn.disabled = false;
-                btn.title = data.enabled ? (window.nibwpInt.labels.deactivate || 'Deactivate') : (window.nibwpInt.labels.activate || 'Activate');
+                btn.title = data.enabled ? nibwpIntegrationsI18n.deactivate : nibwpIntegrationsI18n.activate;
                 /* Flip the hidden state field so a fallback form submit (no-JS) toggles correctly. */
                 var stateField = btn.closest('form') && btn.closest('form').querySelector('input[name="nibwp_integration_state"]');
                 if (stateField) stateField.value = data.enabled ? '0' : '1';
@@ -1752,6 +2172,10 @@ function nibwp_render_integrations_page(): void
 
         var grid = document.getElementById('nw-int-grid');
         if (grid) {
+            /* Declared here as well as in the bulk block below: the two scopes
+               are separate, and the toggle handler referencing the bulk one
+               would throw a ReferenceError on the first failed request. */
+            var L = nibwpIntegrationsI18n;
             grid.addEventListener('submit', function(e){
                 var form = e.target;
                 if (!form.matches('.nibwp-integration-toggle form')) return;
@@ -1762,7 +2186,15 @@ function nibwp_render_integrations_page(): void
                 var btn = form.querySelector('.nibwp-toggle-btn');
                 var key = card.getAttribute('data-key');
                 var enabled = !(card.getAttribute('data-enabled') === '1');
-                if (btn) btn.disabled = true;
+
+                /* Ignore a second click while one is already in flight —
+                   otherwise two requests race and the last response wins,
+                   which can leave the card showing the opposite of what the
+                   user asked for. */
+                if (btn && btn.classList.contains('is-pending')) return;
+
+                setPending(btn, card, true);
+                clearCardError(card);
                 fetch(window.nibwpInt.restRoot + 'integrations/toggle', {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -1774,20 +2206,26 @@ function nibwp_render_integrations_page(): void
                 })
                 .then(function(r){ return r.json().catch(function(){ return { ok: false }; }); })
                 .then(function(data){
+                    setPending(btn, card, false);
                     if (!data || !data.ok) {
-                        if (btn) btn.disabled = false;
-                        if (data && data.message) {
-                            console.warn('NIBWP toggle:', data.message);
-                        }
+                        /* Surfaced on the card, not just in the console. A
+                           refusal the user cannot see is indistinguishable
+                           from a toggle that silently does nothing. */
+                        showCardError(card, (data && data.message) || L.toggle_failed);
                         return;
                     }
                     applyCardState(card, data);
+                    if (btn) {
+                        btn.classList.add('just-changed');
+                        setTimeout(function(){ btn.classList.remove('just-changed'); }, 600);
+                    }
                     if (stateActive && typeof data.active_count === 'number') {
                         stateActive.textContent = data.active_count;
                     }
                 })
                 .catch(function(err){
-                    if (btn) btn.disabled = false;
+                    setPending(btn, card, false);
+                    showCardError(card, L.toggle_offline);
                     console.warn('NIBWP toggle failed:', err);
                 });
             });
@@ -1798,14 +2236,14 @@ function nibwp_render_integrations_page(): void
         if (bulkForm) {
             var overlay = document.getElementById('nw-bulk-overlay');
             var overlayText = document.getElementById('nw-bulk-overlay-text');
-            var L = window.nibwpInt.labels || {};
+            var L = nibwpIntegrationsI18n;
             bulkForm.addEventListener('submit', function(e){
                 e.preventDefault();
                 var mode = (e.submitter && e.submitter.value) || 'detected';
                 var bbtns = bulkForm.querySelectorAll('button');
                 bbtns.forEach(function(b){ b.disabled = true; });
                 if (overlay) {
-                    if (overlayText) overlayText.textContent = mode === 'none' ? (L.bulkNone || 'Deactivating…') : (mode === 'detected' ? (L.bulkDetected || 'Activating…') : (L.bulkAll || 'Activating…'));
+                    if (overlayText) overlayText.textContent = mode === 'none' ? L.bulk_none : (mode === 'detected' ? L.bulk_detected : L.bulk_all);
                     overlay.hidden = false;
                 }
                 fetch(window.nibwpInt.restRoot + 'integrations/bulk', {
@@ -1842,8 +2280,11 @@ function nibwp_render_integrations_page(): void
 
         function updateShadows(){
             var max = tabsContainer.scrollWidth - tabsContainer.clientWidth;
-            wrap.classList.toggle('has-scroll-left', tabsContainer.scrollLeft > 2);
-            wrap.classList.toggle('has-scroll-right', tabsContainer.scrollLeft < max - 2);
+            // Right to left, scrollLeft runs from 0 at the start down to -max at
+            // the end, and the RTL stylesheet swaps the fades, so the distance
+            // from the start is what both classes need.
+            wrap.classList.toggle('has-scroll-left', Math.abs(tabsContainer.scrollLeft) > 2);
+            wrap.classList.toggle('has-scroll-right', Math.abs(tabsContainer.scrollLeft) < max - 2);
         }
 
         function animateScroll(){
@@ -1961,7 +2402,7 @@ function nibwp_render_integrations_page(): void
                 doneBtn.type = 'button';
                 doneBtn.id = 'nw-req-done';
                 doneBtn.className = 'nw-req-btn nw-req-btn-primary';
-                doneBtn.textContent = 'Done';
+                doneBtn.textContent = nibwpIntegrationsI18n.request_done;
                 doneBtn.addEventListener('click', closeModal);
                 submitBtn.parentNode.appendChild(doneBtn);
             }
@@ -1975,7 +2416,7 @@ function nibwp_render_integrations_page(): void
             }
             if(n === 1){
                 var picked = pane.querySelector('input[name="request_type"]:checked');
-                if(!picked){ alert('Please choose what you need.'); return false; }
+                if(!picked){ alert(nibwpIntegrationsI18n.request_choose); return false; }
             }
             return true;
         }
@@ -1985,11 +2426,43 @@ function nibwp_render_integrations_page(): void
         document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && modal && modal.classList.contains('is-open')) closeModal(); });
         if(nextBtn) nextBtn.addEventListener('click', function(){ if(validateStep(currentStep)) showStep(currentStep + 1); });
         if(backBtn) backBtn.addEventListener('click', function(){ if(currentStep > 1) showStep(currentStep - 1); });
+        var errorBox = document.getElementById('nw-req-error');
+
+        function showError(message){
+            if(!errorBox) return;
+            errorBox.textContent = message;
+            errorBox.style.display = 'block';
+        }
+
         if(form) form.addEventListener('submit', function(e){
             e.preventDefault();
             if(!validateStep(currentStep)) return;
-            /* In a real implementation, send to admin-ajax.php — for now just show success */
-            showSuccess();
+            if(errorBox) errorBox.style.display = 'none';
+
+            var payload = new FormData(form);
+            payload.append('action', 'nibwp_request_integration');
+
+            var label = submitBtn ? submitBtn.innerHTML : '';
+            if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = nibwpIntegrationsI18n.request_sending; }
+
+            function restore(){
+                if(submitBtn){ submitBtn.disabled = false; submitBtn.innerHTML = label; }
+            }
+
+            fetch(ajaxurl, { method: 'POST', credentials: 'same-origin', body: payload })
+                .then(function(r){ return r.json().catch(function(){ return null; }); })
+                .then(function(data){
+                    /* Success is what the server said, not what the form did.
+                       This modal used to congratulate people on a request that
+                       was never sent anywhere. */
+                    if(data && data.success){ showSuccess(); return; }
+                    restore();
+                    showError((data && data.data && data.data.message) || nibwpIntegrationsI18n.request_failed);
+                })
+                .catch(function(){
+                    restore();
+                    showError(nibwpIntegrationsI18n.request_offline);
+                });
         });
     })();
     </script>

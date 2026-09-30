@@ -47,13 +47,19 @@ function nibwp_handle_skill_actions(): void
             // premium files are not yet on disk for this request. They will
             // be on the NEXT request once the upgrader's write completes.
             $msg  = 'activated';
-            $note = $result['message'] . ' Refresh this page to see premium features unlock.';
+            $note = sprintf(
+                /* translators: %s: message returned by the license server */
+                __('%s Refresh this page to see premium features unlock.', 'nibwp'),
+                $result['message']
+            );
         } elseif ($result['ok'] && $install_failed) {
             $msg  = 'activated_install_failed';
-            $note = $result['message']
-                . ' BUT auto-install of Pro files failed: '
-                . implode(' | ', $install_msgs)
-                . ' — upload the Pro zip manually via Plugins → Add New → Upload, or use the Reinstall Pro button on the License page.';
+            $note = sprintf(
+                /* translators: 1: message returned by the license server, 2: install errors, separated by " | " */
+                __('%1$s But the automatic install of the Pro files failed: %2$s — upload the Pro zip manually via Plugins → Add New → Upload, or use the Reinstall Pro button on the License page.', 'nibwp'),
+                $result['message'],
+                implode(' | ', $install_msgs)
+            );
         } else {
             $msg  = $result['ok'] ? 'activated' : 'activate_failed';
             $note = (string) $result['message'];
@@ -70,13 +76,13 @@ function nibwp_handle_skill_actions(): void
             if (nibwp_license_is_active_for_key((string) $k)) { $key = (string) $k; break; }
         }
         if ($key === '') {
-            wp_safe_redirect(admin_url('admin.php?page=nibwp-skills&nibwp_result=reinstall_failed&nibwp_msg=' . urlencode('No active license found. Activate one first.')));
+            wp_safe_redirect(admin_url('admin.php?page=nibwp-skills&nibwp_result=reinstall_failed&nibwp_msg=' . urlencode(__('No active license found. Activate one first.', 'nibwp'))));
             exit;
         }
         $check = nibwp_license_check($key, force: true);
         $raw   = $check['license']['raw'] ?? ($check['data'] ?? []);
         if (!is_array($raw) || empty($raw)) {
-            wp_safe_redirect(admin_url('admin.php?page=nibwp-skills&nibwp_result=reinstall_failed&nibwp_msg=' . urlencode('License server did not return install metadata; try Refresh first.')));
+            wp_safe_redirect(admin_url('admin.php?page=nibwp-skills&nibwp_result=reinstall_failed&nibwp_msg=' . urlencode(__('License server did not return install metadata; try Refresh first.', 'nibwp'))));
             exit;
         }
         $results = nibwp_maybe_install_packages($raw);
@@ -141,13 +147,13 @@ function nibwp_render_skills_page(): void
         </div>
 
         <?php if ($result_key === 'activated'): ?>
-            <div class="notice notice-success"><p><?php echo esc_html($result_msg !== '' ? $result_msg : 'License activated.'); ?></p></div>
+            <div class="notice notice-success"><p><?php echo esc_html($result_msg !== '' ? $result_msg : __('License activated.', 'nibwp')); ?></p></div>
         <?php elseif ($result_key === 'activate_failed'): ?>
-            <div class="notice notice-error"><p><?php echo esc_html($result_msg !== '' ? $result_msg : 'Activation failed.'); ?></p></div>
+            <div class="notice notice-error"><p><?php echo esc_html($result_msg !== '' ? $result_msg : __('Activation failed.', 'nibwp')); ?></p></div>
         <?php elseif ($result_key === 'deactivated'): ?>
-            <div class="notice notice-warning"><p><?php echo esc_html($result_msg !== '' ? $result_msg : 'License deactivated.'); ?></p></div>
+            <div class="notice notice-warning"><p><?php echo esc_html($result_msg !== '' ? $result_msg : __('License deactivated.', 'nibwp')); ?></p></div>
         <?php elseif ($result_key === 'skill_toggled'): ?>
-            <div class="notice notice-success"><p><?php esc_html_e('Skill updated.', domain: 'nibwp'); ?></p></div>
+            <div class="notice notice-success"><p><?php esc_html_e('Skill updated.', 'nibwp'); ?></p></div>
         <?php endif; ?>
 
         <!-- License Status Card -->
@@ -164,12 +170,12 @@ function nibwp_render_skills_page(): void
                 <div class="nw-license-card__sub"><?php echo esc_html($license_card['subtitle']); ?></div>
                 <?php if ($license_card['state'] === 'active'): ?>
                     <div class="nw-license-card__meta">
-                        <span><strong><?php esc_html_e('Key:', domain: 'nibwp'); ?></strong> <code><?php echo esc_html(substr((string) ($license['key'] ?? ''), 0, 8)); ?>••••••••</code></span>
+                        <span><strong><?php esc_html_e('Key:', 'nibwp'); ?></strong> <code><?php echo esc_html(substr((string) ($license['key'] ?? ''), 0, 8)); ?>••••••••</code></span>
                         <?php if (!empty($license['allowed_sites'])): ?>
-                            <span><strong><?php esc_html_e('Sites:', domain: 'nibwp'); ?></strong> <?php echo esc_html((string) $license['allowed_sites']); ?></span>
+                            <span><strong><?php esc_html_e('Sites:', 'nibwp'); ?></strong> <?php echo esc_html((string) $license['allowed_sites']); ?></span>
                         <?php endif; ?>
                         <?php if (!empty($license['domain'])): ?>
-                            <span><strong><?php esc_html_e('Domain:', domain: 'nibwp'); ?></strong> <?php echo esc_html((string) $license['domain']); ?></span>
+                            <span><strong><?php esc_html_e('Domain:', 'nibwp'); ?></strong> <?php echo esc_html((string) $license['domain']); ?></span>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -179,8 +185,8 @@ function nibwp_render_skills_page(): void
                     <form method="post" style="margin:0;">
                         <?php wp_nonce_field('nibwp_license'); ?>
                         <button type="submit" name="nibwp_deactivate_license" class="button nibwp-btn-danger"
-                                onclick="return confirm('<?php esc_attr_e('Deactivate this license? Premium skills will lock.', domain: 'nibwp'); ?>');">
-                            <?php esc_html_e('Deactivate', domain: 'nibwp'); ?>
+                                onclick="return confirm(<?php echo esc_attr(wp_json_encode(__('Deactivate this license? Premium skills will lock.', 'nibwp'))); ?>);">
+                            <?php esc_html_e('Deactivate', 'nibwp'); ?>
                         </button>
                     </form>
                 <?php else: ?>
@@ -196,7 +202,7 @@ function nibwp_render_skills_page(): void
         // stuck on the Pricing CTA below.
         $premium_present = defined('NIBWP_HAS_PREMIUM_CODE') && NIBWP_HAS_PREMIUM_CODE;
         if ($license_card['state'] === 'active' && !$premium_present): ?>
-            <div class="notice notice-warning" style="margin:12px 0;padding:12px 16px;border-left-width:4px;">
+            <div class="notice notice-warning" style="margin:12px 0;padding:12px 16px;border-inline-start-width:4px;">
                 <p style="margin:0 0 8px;font-weight:600;">
                     <?php esc_html_e('License is active, but Pro plugin files are NOT installed on this site yet.', 'nibwp'); ?>
                 </p>
@@ -209,7 +215,7 @@ function nibwp_render_skills_page(): void
                         <?php esc_html_e('Reinstall Pro now', 'nibwp'); ?>
                     </button>
                 </form>
-                <span style="margin-left:8px;color:var(--nw-text-muted);">
+                <span style="margin-inline-start:8px;color:var(--nw-text-muted);">
                     <?php esc_html_e('If this fails too, download the Pro zip from your account on nibwp.com and upload it via Plugins → Add New → Upload.', 'nibwp'); ?>
                 </span>
             </div>
@@ -219,15 +225,15 @@ function nibwp_render_skills_page(): void
         <div id="nw-license-form-wrap" class="nw-license-form-wrap" hidden>
             <form method="post" class="nw-license-form">
                 <?php wp_nonce_field('nibwp_license'); ?>
-                <label for="nw-license-key"><?php esc_html_e('Enter your license key', domain: 'nibwp'); ?></label>
+                <label for="nw-license-key"><?php esc_html_e('Enter your license key', 'nibwp'); ?></label>
                 <div class="nw-license-form__row">
                     <input type="text" id="nw-license-key" name="license_key" placeholder="NOV-XXXX-XXXX-XXXX" autocomplete="off" required>
-                    <button type="submit" name="nibwp_activate_license" class="button button-primary"><?php esc_html_e('Activate', domain: 'nibwp'); ?></button>
+                    <button type="submit" name="nibwp_activate_license" class="button button-primary"><?php esc_html_e('Activate', 'nibwp'); ?></button>
                 </div>
                 <p class="description"><?php
                     printf(
                         /* translators: %1$s/%2$s = open/close <a> for skill license, %3$s/%4$s = open/close <a> for Bundle */
-                        esc_html__('No license yet? %1$sBuy a skill license%2$s (EtchWP / Bricks — image → component, Figma → EtchWP) or %3$sget the NIBWP Bundle%4$s to unlock every skill, current and future.', domain: 'nibwp'),
+                        esc_html__('No license yet? %1$sBuy a skill license%2$s (EtchWP / Bricks — image → component, Figma → EtchWP) or %3$sget the NIBWP Bundle%4$s to unlock every skill, current and future.', 'nibwp'),
                         '<a href="https://nibwp.com/pricing" target="_blank" rel="noopener">',
                         '</a>',
                         '<a href="https://nibwp.com/item/bundle" target="_blank" rel="noopener"><strong>',
@@ -264,7 +270,7 @@ function nibwp_render_skills_page(): void
             </div>
             <div class="nw-bundle-hero__cta">
                 <a class="button button-primary button-hero" href="https://nibwp.com/item/bundle" target="_blank" rel="noopener">
-                    <?php esc_html_e('Get the Bundle', 'nibwp'); ?> &rarr;
+                    <?php esc_html_e('Get the Bundle', 'nibwp'); ?> <span class="nw-rtl-flip" aria-hidden="true">&rarr;</span>
                 </a>
                 <a class="nw-bundle-hero__alt" href="https://nibwp.com/pricing" target="_blank" rel="noopener">
                     <?php esc_html_e('Compare all tiers', 'nibwp'); ?>
@@ -276,28 +282,28 @@ function nibwp_render_skills_page(): void
         <!-- Stats row -->
         <div class="nibwp-dashboard-stats" style="margin:20px 0;">
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Total skill packs', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Total skill packs', 'nibwp'); ?></div>
                 <div class="value"><?php echo esc_html((string) $stats['total']); ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Premium', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Premium', 'nibwp'); ?></div>
                 <div class="value" style="color:#d97706;"><?php echo esc_html((string) $stats['premium']); ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Active', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Active', 'nibwp'); ?></div>
                 <div class="value" id="nw-skill-active-count" style="color:var(--nw-ok);"><?php echo esc_html((string) $stats['active']); ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Locked', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Locked', 'nibwp'); ?></div>
                 <div class="value" style="color:var(--nw-text-muted);"><?php echo esc_html((string) $stats['locked']); ?></div>
             </div>
         </div>
 
         <!-- Skill grid -->
-        <h2 class="nibwp-section-title"><?php esc_html_e('Available Skill Packs', domain: 'nibwp'); ?></h2>
+        <h2 class="nibwp-section-title"><?php esc_html_e('Available Skill Packs', 'nibwp'); ?></h2>
         <?php if ($skills === []): ?>
             <div class="nibwp-empty-state">
-                <p><?php esc_html_e('No skill packs installed yet.', domain: 'nibwp'); ?></p>
+                <p><?php esc_html_e('No skill packs installed yet.', 'nibwp'); ?></p>
             </div>
         <?php else: ?>
             <?php
@@ -368,13 +374,23 @@ function nibwp_render_skills_page(): void
                     $enabled    = nibwp_skill_is_enabled($skill['id']);
                     $deps_met   = nibwp_skill_deps_met($skill);
                     $is_premium = !empty($skill['premium']);
-                    $skill_hay  = strtolower(implode(' ', array_filter([
+                    // The card shows the viewer's language; search both it and the
+                    // English, so a term from the docs still finds the pack.
+                    $skill_tagline  = nibwp_i18n_data((string) ($skill['tagline'] ?? ''));
+                    $skill_features = array_map(
+                        static fn($f): string => nibwp_i18n_data((string) $f),
+                        (array) ($skill['features'] ?? [])
+                    );
+                    $skill_hay  = mb_strtolower(implode(' ', array_filter([
                         (string) ($skill['id']          ?? ''),
                         (string) ($skill['name']        ?? ''),
                         (string) ($skill['tagline']     ?? ''),
+                        $skill_tagline,
                         (string) ($skill['description'] ?? ''),
+                        nibwp_i18n_data((string) ($skill['description'] ?? '')),
                         (string) ($skill['category']    ?? ''),
                         implode(' ', (array) ($skill['features'] ?? [])),
+                        implode(' ', $skill_features),
                         implode(' ', (array) ($skill['requires'] ?? [])),
                     ])));
                 ?>
@@ -386,7 +402,7 @@ function nibwp_render_skills_page(): void
                          data-ready="<?php echo $unlocked ? '1' : '0'; ?>"
                          data-search="<?php echo esc_attr($skill_hay); ?>">
                         <?php if ($is_premium): ?>
-                            <div class="nw-skill-card__premium-tag"><?php esc_html_e('PRO', domain: 'nibwp'); ?></div>
+                            <div class="nw-skill-card__premium-tag"><?php esc_html_e('PRO', 'nibwp'); ?></div>
                         <?php endif; ?>
 
                         <div class="nw-skill-card__head">
@@ -399,14 +415,14 @@ function nibwp_render_skills_page(): void
                             </div>
                             <div class="nw-skill-card__title">
                                 <strong><?php echo esc_html((string) $skill['name']); ?></strong>
-                                <span><?php echo esc_html((string) ($skill['tagline'] ?? '')); ?></span>
+                                <span><?php echo esc_html($skill_tagline); ?></span>
                             </div>
                         </div>
 
                         <?php if (!empty($skill['features'])): ?>
                             <ul class="nw-skill-card__features">
-                                <?php foreach ((array) $skill['features'] as $feature): ?>
-                                    <li><?php echo esc_html((string) $feature); ?></li>
+                                <?php foreach ($skill_features as $feature): ?>
+                                    <li><?php echo esc_html($feature); ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         <?php endif; ?>
@@ -415,20 +431,23 @@ function nibwp_render_skills_page(): void
                             <div class="nw-skill-card__status">
                                 <?php if (!$unlocked): ?>
                                     <span class="nibwp-badge is-muted">
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-right:3px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                                        <?php esc_html_e('Locked', domain: 'nibwp'); ?>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-inline-end:3px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                                        <?php esc_html_e('Locked', 'nibwp'); ?>
                                     </span>
                                 <?php elseif ($enabled): ?>
                                     <span class="nibwp-badge is-ok">
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>
-                                        <?php esc_html_e('Active', domain: 'nibwp'); ?>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px;margin-inline-end:3px;"><polyline points="20 6 9 17 4 12"/></svg>
+                                        <?php esc_html_e('Active', 'nibwp'); ?>
                                     </span>
                                 <?php else: ?>
-                                    <span class="nibwp-badge is-brand"><?php esc_html_e('Ready', domain: 'nibwp'); ?></span>
+                                    <span class="nibwp-badge is-brand"><?php esc_html_e('Ready', 'nibwp'); ?></span>
                                 <?php endif; ?>
                                 <?php if (!$deps_met): ?>
                                     <span class="nibwp-badge is-warn">
-                                        <?php printf(esc_html__('Requires %s', domain: 'nibwp'), esc_html(implode(', ', (array) $skill['requires']))); ?>
+                                        <?php
+                                        /* translators: %s: comma-separated plugin names the skill needs */
+                                        printf(esc_html__('Requires %s', 'nibwp'), esc_html(implode(', ', (array) $skill['requires'])));
+                                        ?>
                                     </span>
                                 <?php endif; ?>
                             </div>
@@ -438,7 +457,10 @@ function nibwp_render_skills_page(): void
                                     <a href="https://nibwp.com/pro" target="_blank" rel="noopener" class="button button-primary">
                                         <?php
                                         $price = $skill['price'] ?? null;
-                                        echo esc_html(__('Buy', 'nibwp') . ($price ? ' — €' . $price : ''));
+                                        echo esc_html($price
+                                            /* translators: %s: price, e.g. "€49" */
+                                            ? sprintf(__('Buy — %s', 'nibwp'), '€' . $price)
+                                            : __('Buy', 'nibwp'));
                                         ?>
                                     </a>
                                 <?php elseif ($unlocked): ?>
@@ -533,7 +555,7 @@ function nibwp_render_skills_page(): void
            Reorders the grid in place, leaving the tab and the search alone.
            default = free packs first, then alphabetical, as rendered.
            active  = the ones already switched on float up.
-           ready   = everything this licence unlocks, before what it does not.
+           ready   = everything this license unlocks, before what it does not.
            az      = plain alphabetical, numeric-aware. */
         var sortSelect = document.getElementById('nw-skill-sort');
         var defaultOrder = Array.prototype.slice.call(cards);

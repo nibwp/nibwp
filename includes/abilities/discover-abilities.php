@@ -25,24 +25,22 @@ if (nibwp_has_ability('mcp-adapter/discover-abilities')) {
 }
 
 wp_register_ability('mcp-adapter/discover-abilities', [
-    'label' => __('Discover Abilities', domain: 'nibwp'),
-    'description' => __(
-        'Discover all available WordPress abilities in the system. Returns a list of all registered abilities with their basic information, plus NIBWP environment instructions.',
-        domain: 'nibwp',
-    ),
+    'label' => __('Discover Abilities', 'nibwp'),
+    'description' => 'Discover all available WordPress abilities in the system. Returns a list of all registered abilities with their basic information, plus NIBWP environment instructions.',
     'category' => 'mcp-adapter',
     'output_schema' => [
         'type' => 'object',
         'properties' => [
             'mandatory_routing' => [
                 'type' => 'array',
-                'description' => 'Typed routing contract per UNLOCKED skill — typed triggers regex, deterministic ability pipeline, forbidden_actions, preflight_required, and the preflight question definitions. On any user message matching a card\'s triggers, the agent MUST run that card\'s pipeline in order. Improvisation is not allowed. Read this BEFORE handling the user message. Empty array when no premium skills are unlocked.',
+                'description' => 'Routing contract per UNLOCKED skill. Decide with `use_when`, which says in plain language what the skill owns: if the user is asking for that work, the skill OWNS it and you MUST run its pipeline in order, however the request is phrased. `triggers` are regular expressions offered as a fast path only - they are NOT the boundary, and a request matching none of them can still belong to the skill. Improvisation is not allowed for work a skill owns. Read this BEFORE handling the user message. Empty array when no premium skills are unlocked.',
                 'items' => [
                     'type' => 'object',
                     'properties' => [
                         'skill_id'           => ['type' => 'string'],
                         'name'               => ['type' => 'string'],
                         'tagline'            => ['type' => 'string'],
+                        'use_when'           => ['type' => 'string', 'description' => 'Plain-language statement of what this skill owns. Route on this, not on the regexes.'],
                         'triggers'           => ['type' => 'array', 'items' => ['type' => 'string']],
                         'commands'           => ['type' => 'object'],
                         'pipeline'           => ['type' => 'array', 'items' => ['type' => 'object']],

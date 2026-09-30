@@ -14,7 +14,7 @@ declare(strict_types=1);
  */
 function nibwp_collect_public_abilities(): array
 {
-    $default_source = __('NIBWP', domain: 'nibwp');
+    $default_source = __('NIBWP', 'nibwp');
     $groups = [];
     foreach (wp_get_abilities() as $ability) {
         $name = $ability->get_name();
@@ -100,10 +100,10 @@ function nibwp_render_sandbox_page()
     }
 
     $result_message = match ($_GET['nibwp_result'] ?? null) {
-        'delete' => __('File deleted.', domain: 'nibwp'),
-        'disable' => __('File disabled.', domain: 'nibwp'),
-        'enable' => __('File enabled.', domain: 'nibwp'),
-        'exit_safe_mode' => __('Safe mode deactivated. Sandbox files will load on the next request.', domain: 'nibwp'),
+        'delete' => __('File deleted.', 'nibwp'),
+        'disable' => __('File disabled.', 'nibwp'),
+        'enable' => __('File enabled.', 'nibwp'),
+        'exit_safe_mode' => __('Safe mode deactivated. Sandbox files will load on the next request.', 'nibwp'),
         default => null,
     };
 
@@ -144,9 +144,10 @@ function nibwp_render_sandbox_page()
     <div class="wrap nibwp-wrap">
         <div class="nibwp-page-header">
             <div>
-                <h1><?php esc_html_e('Sandbox Files', domain: 'nibwp'); ?></h1>
+                <h1><?php esc_html_e('Sandbox Files', 'nibwp'); ?></h1>
                 <p class="nibwp-subtitle"><?php printf(
-                    esc_html__('AI-generated PHP files in %s. Loaded automatically on every request.', domain: 'nibwp'),
+                    /* translators: %s: sandbox directory path */
+                    esc_html__('AI-generated PHP files in %s. Loaded automatically on every request.', 'nibwp'),
                     '<code>wp-content/nibwp-sandbox/</code>',
                 ); ?></p>
             </div>
@@ -160,11 +161,11 @@ function nibwp_render_sandbox_page()
             <?php $crash = function_exists('nibwp_sandbox_crash_report') ? nibwp_sandbox_crash_report() : null; ?>
             <div class="notice notice-error">
                 <p>
-                    <strong><?php esc_html_e('Safe mode is active.', domain: 'nibwp'); ?></strong>
+                    <strong><?php esc_html_e('Safe mode is active.', 'nibwp'); ?></strong>
                     <?php if ($crash && $crash['is_external']): ?>
-                        <?php esc_html_e('A fatal error during startup suspended every sandbox file. The error came from outside the sandbox, so another plugin is the likely cause.', domain: 'nibwp'); ?>
+                        <?php esc_html_e('A fatal error during startup suspended every sandbox file. The error came from outside the sandbox, so another plugin is the likely cause.', 'nibwp'); ?>
                     <?php else: ?>
-                        <?php esc_html_e('A fatal error during startup suspended every sandbox file.', domain: 'nibwp'); ?>
+                        <?php esc_html_e('A fatal error during startup suspended every sandbox file.', 'nibwp'); ?>
                     <?php endif; ?>
                 </p>
                 <?php if ($crash && $crash['message'] !== ''): ?>
@@ -176,14 +177,14 @@ function nibwp_render_sandbox_page()
                     <p>
                         <small><?php printf(
                             /* translators: %s: sandbox file name */
-                            esc_html__('Loading at the time: %s', domain: 'nibwp'),
+                            esc_html__('Loading at the time: %s', 'nibwp'),
                             '<code>' . esc_html($crash['sandbox_file']) . '</code>',
                         ); ?></small>
                     </p>
                 <?php endif; ?>
                 <p>
                     <?php $exit_url = wp_nonce_url($base_url . '&action=exit_safe_mode&file=.crashed', 'nibwp_manage_file_.crashed'); ?>
-                    <a href="<?php echo esc_url($exit_url); ?>" class="button button-primary"><?php esc_html_e('Exit Safe Mode', domain: 'nibwp'); ?></a>
+                    <a href="<?php echo esc_url($exit_url); ?>" class="button button-primary"><?php esc_html_e('Exit Safe Mode', 'nibwp'); ?></a>
                 </p>
             </div>
         <?php endif; ?>
@@ -191,19 +192,19 @@ function nibwp_render_sandbox_page()
         <!-- Stats -->
         <div class="nibwp-dashboard-stats" style="margin-bottom:20px;">
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Total Files', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Total Files', 'nibwp'); ?></div>
                 <div class="value"><?php echo count($file_data); ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Enabled', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Enabled', 'nibwp'); ?></div>
                 <div class="value" style="color:var(--nw-ok);"><?php echo $enabled_count; ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Disabled', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Disabled', 'nibwp'); ?></div>
                 <div class="value"><?php echo $disabled_count; ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Total Size', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Total Size', 'nibwp'); ?></div>
                 <div class="value"><?php echo esc_html(size_format($total_size)); ?></div>
             </div>
         </div>
@@ -213,14 +214,14 @@ function nibwp_render_sandbox_page()
                 <div class="nibwp-empty-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
                 </div>
-                <h3><?php esc_html_e('No sandbox files yet', domain: 'nibwp'); ?></h3>
-                <p><?php esc_html_e('AI agents will create PHP files here when they need persistent server-side code.', domain: 'nibwp'); ?></p>
+                <h3><?php esc_html_e('No sandbox files yet', 'nibwp'); ?></h3>
+                <p><?php esc_html_e('AI agents will create PHP files here when they need persistent server-side code.', 'nibwp'); ?></p>
             </div>
         <?php else: ?>
             <div class="nw-sandbox-list">
                 <?php foreach ($file_data as $fd):
                     $file = $fd['name'];
-                    $wp_date = $fd['mtime'] !== false ? wp_date($format, $fd['mtime']) : __('Unknown', domain: 'nibwp');
+                    $wp_date = $fd['mtime'] !== false ? wp_date($format, $fd['mtime']) : __('Unknown', 'nibwp');
                     $toggle_action = $fd['is_disabled'] ? 'enable' : 'disable';
                     $toggle_url = wp_nonce_url($base_url . '&action=' . $toggle_action . '&file=' . urlencode($file), 'nibwp_manage_file_' . $file);
                     $delete_url = wp_nonce_url($base_url . '&action=delete&file=' . urlencode($file), 'nibwp_manage_file_' . $file);
@@ -240,23 +241,27 @@ function nibwp_render_sandbox_page()
                             <div class="nw-sandbox-row__name">
                                 <code><?php echo esc_html($file); ?></code>
                                 <?php if ($fd['is_disabled']): ?>
-                                    <span class="nibwp-badge is-muted"><?php esc_html_e('Disabled', domain: 'nibwp'); ?></span>
+                                    <span class="nibwp-badge is-muted"><?php esc_html_e('Disabled', 'nibwp'); ?></span>
                                 <?php elseif ($is_crashed): ?>
-                                    <span class="nibwp-badge is-danger"><?php esc_html_e('Suspended', domain: 'nibwp'); ?></span>
+                                    <span class="nibwp-badge is-danger"><?php esc_html_e('Suspended', 'nibwp'); ?></span>
                                 <?php else: ?>
-                                    <span class="nibwp-badge is-ok"><?php esc_html_e('Active', domain: 'nibwp'); ?></span>
+                                    <span class="nibwp-badge is-ok"><?php esc_html_e('Active', 'nibwp'); ?></span>
                                 <?php endif; ?>
                             </div>
                             <div class="nw-sandbox-row__meta">
-                                <span title="<?php esc_attr_e('File size', domain: 'nibwp'); ?>">
+                                <span title="<?php esc_attr_e('File size', 'nibwp'); ?>">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                     <?php echo esc_html(size_format($fd['size'])); ?>
                                 </span>
-                                <span title="<?php esc_attr_e('Lines of code', domain: 'nibwp'); ?>">
+                                <span title="<?php esc_attr_e('Lines of code', 'nibwp'); ?>">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                                    <?php printf(esc_html__('%d lines', domain: 'nibwp'), $fd['lines']); ?>
+                                    <?php printf(
+                                        /* translators: %d: number of lines in the file */
+                                        esc_html(_n('%d line', '%d lines', (int) $fd['lines'], 'nibwp')),
+                                        (int) $fd['lines']
+                                    ); ?>
                                 </span>
-                                <span title="<?php esc_attr_e('Last modified', domain: 'nibwp'); ?>">
+                                <span title="<?php esc_attr_e('Last modified', 'nibwp'); ?>">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                     <?php echo esc_html($wp_date); ?>
                                 </span>
@@ -265,22 +270,22 @@ function nibwp_render_sandbox_page()
 
                         <!-- Actions -->
                         <div class="nw-sandbox-row__actions">
-                            <a href="<?php echo esc_url($toggle_url); ?>" class="nw-action-btn <?php echo $fd['is_disabled'] ? 'is-success' : ''; ?>" title="<?php echo $fd['is_disabled'] ? esc_attr__('Enable file', domain: 'nibwp') : esc_attr__('Disable file', domain: 'nibwp'); ?>">
+                            <a href="<?php echo esc_url($toggle_url); ?>" class="nw-action-btn <?php echo $fd['is_disabled'] ? 'is-success' : ''; ?>" title="<?php echo $fd['is_disabled'] ? esc_attr__('Enable file', 'nibwp') : esc_attr__('Disable file', 'nibwp'); ?>">
                                 <?php if ($fd['is_disabled']): ?>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span><?php esc_html_e('Enable', domain: 'nibwp'); ?></span>
+                                    <span><?php esc_html_e('Enable', 'nibwp'); ?></span>
                                 <?php else: ?>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                                    <span><?php esc_html_e('Disable', domain: 'nibwp'); ?></span>
+                                    <span><?php esc_html_e('Disable', 'nibwp'); ?></span>
                                 <?php endif; ?>
                             </a>
-                            <button type="button" class="nw-action-btn nw-sandbox-view" data-file="<?php echo esc_attr($file); ?>" title="<?php esc_attr_e('View file contents', domain: 'nibwp'); ?>">
+                            <button type="button" class="nw-action-btn nw-sandbox-view" data-file="<?php echo esc_attr($file); ?>" title="<?php esc_attr_e('View file contents', 'nibwp'); ?>">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                <span><?php esc_html_e('View', domain: 'nibwp'); ?></span>
+                                <span><?php esc_html_e('View', 'nibwp'); ?></span>
                             </button>
-                            <a href="#" class="nw-action-btn is-danger nw-confirm-delete" data-url="<?php echo esc_url($delete_url); ?>" data-name="<?php echo esc_attr($file); ?>" title="<?php esc_attr_e('Delete file permanently', domain: 'nibwp'); ?>">
+                            <a href="#" class="nw-action-btn is-danger nw-confirm-delete" data-url="<?php echo esc_url($delete_url); ?>" data-name="<?php echo esc_attr($file); ?>" title="<?php esc_attr_e('Delete file permanently', 'nibwp'); ?>">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                                <span><?php esc_html_e('Delete', domain: 'nibwp'); ?></span>
+                                <span><?php esc_html_e('Delete', 'nibwp'); ?></span>
                             </a>
                         </div>
                     </div>
@@ -311,7 +316,7 @@ function nibwp_render_sandbox_page()
             $contents = [];
             foreach ($file_data as $fd) {
                 $raw = file_get_contents($fd['path']);
-                $contents[$fd['name']] = $raw !== false ? $raw : '(Could not read file)';
+                $contents[$fd['name']] = $raw !== false ? $raw : __('(Could not read file)', 'nibwp');
             }
             echo wp_json_encode($contents);
         ?>;
@@ -348,7 +353,7 @@ function nibwp_render_settings_page()
         $total_abilities += count($abilities);
         $all_sources[$source] = count($abilities);
         foreach ($abilities as $ability) {
-            $cat = $ability['category'] ?: 'Other';
+            $cat = $ability['category'] ?: _x('Other', 'ability category', 'nibwp');
             $all_categories[$cat] = ($all_categories[$cat] ?? 0) + 1;
 
             // Get annotations from the registered ability for badges.
@@ -374,17 +379,18 @@ function nibwp_render_settings_page()
     <div class="wrap nibwp-wrap">
         <div class="nibwp-page-header">
             <div>
-                <h1><?php esc_html_e('AI Abilities', domain: 'nibwp'); ?></h1>
+                <h1><?php esc_html_e('AI Abilities', 'nibwp'); ?></h1>
                 <p class="nibwp-subtitle"><?php printf(
-                    esc_html__('%1$d tools across %2$d categories exposed to AI agents via MCP.', domain: 'nibwp'),
+                    /* translators: 1: number of tools, 2: number of categories */
+                    esc_html__('%1$d tools across %2$d categories exposed to AI agents via MCP.', 'nibwp'),
                     $total_abilities,
                     count($all_categories),
                 ); ?></p>
             </div>
             <div class="nibwp-page-actions">
-                <button type="button" class="button button-primary" id="nw-abilities-export" title="<?php esc_attr_e('Export tools list as JSON', domain: 'nibwp'); ?>">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-right:4px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    <?php esc_html_e('Export JSON', domain: 'nibwp'); ?>
+                <button type="button" class="button button-primary" id="nw-abilities-export" title="<?php esc_attr_e('Export tools list as JSON', 'nibwp'); ?>">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px; margin-inline-end:4px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <?php esc_html_e('Export JSON', 'nibwp'); ?>
                 </button>
             </div>
         </div>
@@ -392,54 +398,59 @@ function nibwp_render_settings_page()
         <!-- Stats row -->
         <div class="nibwp-dashboard-stats" style="margin-bottom:20px;">
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Total Tools', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Total Tools', 'nibwp'); ?></div>
                 <div class="value"><?php echo esc_html((string) $total_abilities); ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Read-Only', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Read-Only', 'nibwp'); ?></div>
                 <div class="value" style="color:var(--nw-ok);"><?php echo esc_html((string) $readonly_count); ?></div>
-                <div class="sub"><?php esc_html_e('Safe to run anytime', domain: 'nibwp'); ?></div>
+                <div class="sub"><?php esc_html_e('Safe to run anytime', 'nibwp'); ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Destructive', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Destructive', 'nibwp'); ?></div>
                 <div class="value" style="color:var(--nw-danger);"><?php echo esc_html((string) $destructive_count); ?></div>
-                <div class="sub"><?php esc_html_e('Require confirmation', domain: 'nibwp'); ?></div>
+                <div class="sub"><?php esc_html_e('Require confirmation', 'nibwp'); ?></div>
             </div>
             <div class="nibwp-stat-card">
-                <div class="label"><?php esc_html_e('Disabled', domain: 'nibwp'); ?></div>
+                <div class="label"><?php esc_html_e('Disabled', 'nibwp'); ?></div>
                 <div class="value"><?php echo esc_html((string) $disabled_count); ?></div>
-                <div class="sub"><a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-settings')); ?>"><?php esc_html_e('Manage in Settings', domain: 'nibwp'); ?></a></div>
+                <div class="sub"><a href="<?php echo esc_url(admin_url('admin.php?page=nibwp-settings')); ?>"><?php esc_html_e('Manage in Settings', 'nibwp'); ?></a></div>
             </div>
         </div>
 
         <!-- Filter bar -->
         <div style="display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
-            <input type="search" id="nw-abilities-search" placeholder="<?php esc_attr_e('Search tools...', domain: 'nibwp'); ?>" style="flex:1; min-width:200px; max-width:360px;" class="nibwp-search-input" />
+            <input type="search" id="nw-abilities-search" placeholder="<?php esc_attr_e('Search tools...', 'nibwp'); ?>" style="flex:1; min-width:200px; max-width:360px;" class="nibwp-search-input" />
             <select id="nw-abilities-category">
-                <option value=""><?php esc_html_e('All Categories', domain: 'nibwp'); ?></option>
+                <option value=""><?php esc_html_e('All Categories', 'nibwp'); ?></option>
                 <?php foreach ($all_categories as $cat => $count): ?>
                     <option value="<?php echo esc_attr(strtolower($cat)); ?>"><?php echo esc_html($cat); ?> (<?php echo $count; ?>)</option>
                 <?php endforeach; ?>
             </select>
             <select id="nw-abilities-source">
-                <option value=""><?php esc_html_e('All Sources', domain: 'nibwp'); ?></option>
+                <option value=""><?php esc_html_e('All Sources', 'nibwp'); ?></option>
                 <?php foreach ($all_sources as $src => $count): ?>
                     <option value="<?php echo esc_attr(strtolower($src)); ?>"><?php echo esc_html($src); ?> (<?php echo $count; ?>)</option>
                 <?php endforeach; ?>
             </select>
             <select id="nw-abilities-type">
-                <option value=""><?php esc_html_e('All Types', domain: 'nibwp'); ?></option>
-                <option value="readonly"><?php esc_html_e('Read-Only', domain: 'nibwp'); ?></option>
-                <option value="write"><?php esc_html_e('Write', domain: 'nibwp'); ?></option>
-                <option value="destructive"><?php esc_html_e('Destructive', domain: 'nibwp'); ?></option>
+                <option value=""><?php esc_html_e('All Types', 'nibwp'); ?></option>
+                <option value="readonly"><?php esc_html_e('Read-Only', 'nibwp'); ?></option>
+                <option value="write"><?php esc_html_e('Write', 'nibwp'); ?></option>
+                <option value="destructive"><?php esc_html_e('Destructive', 'nibwp'); ?></option>
             </select>
             <select id="nw-abilities-status">
-                <option value=""><?php esc_html_e('All Statuses', domain: 'nibwp'); ?></option>
-                <option value="enabled"><?php esc_html_e('Enabled', domain: 'nibwp'); ?></option>
-                <option value="disabled"><?php esc_html_e('Disabled', domain: 'nibwp'); ?></option>
+                <option value=""><?php esc_html_e('All Statuses', 'nibwp'); ?></option>
+                <option value="enabled"><?php esc_html_e('Enabled', 'nibwp'); ?></option>
+                <option value="disabled"><?php esc_html_e('Disabled', 'nibwp'); ?></option>
             </select>
-            <span id="nw-abilities-count" style="font-size:12px; color:var(--nw-text-muted); margin-left:auto;">
-                <?php printf(esc_html__('Showing %d of %d', domain: 'nibwp'), $total_abilities, $total_abilities); ?>
+            <span id="nw-abilities-count" style="font-size:12px; color:var(--nw-text-muted); margin-inline-start:auto;">
+                <?php printf(
+                    /* translators: 1: number of tools shown, 2: total number of tools */
+                    esc_html__('Showing %1$d of %2$d', 'nibwp'),
+                    $total_abilities,
+                    $total_abilities
+                ); ?>
             </span>
         </div>
 
@@ -448,11 +459,11 @@ function nibwp_render_settings_page()
         <table class="nibwp-abilities-table" id="nw-abilities-table">
             <thead>
                 <tr>
-                    <th style="width:300px;"><?php esc_html_e('Tool', domain: 'nibwp'); ?></th>
-                    <th style="width:160px;"><?php esc_html_e('Category', domain: 'nibwp'); ?></th>
-                    <th style="width:90px;"><?php esc_html_e('Type', domain: 'nibwp'); ?></th>
-                    <th style="width:110px;"><?php esc_html_e('Status', domain: 'nibwp'); ?></th>
-                    <th><?php esc_html_e('Description', domain: 'nibwp'); ?></th>
+                    <th style="width:300px;"><?php esc_html_e('Tool', 'nibwp'); ?></th>
+                    <th style="width:160px;"><?php esc_html_e('Category', 'nibwp'); ?></th>
+                    <th style="width:90px;"><?php esc_html_e('Type', 'nibwp'); ?></th>
+                    <th style="width:110px;"><?php esc_html_e('Status', 'nibwp'); ?></th>
+                    <th><?php esc_html_e('Description', 'nibwp'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -469,23 +480,23 @@ function nibwp_render_settings_page()
                         <td><span class="nibwp-badge is-brand" style="font-size:11.5px; padding:4px 10px;"><?php echo esc_html($ability['category']); ?></span></td>
                         <td>
                             <?php if ($ability['readonly']): ?>
-                                <span class="nibwp-badge is-ok" style="font-size:10px;"><?php esc_html_e('Read', domain: 'nibwp'); ?></span>
+                                <span class="nibwp-badge is-ok" style="font-size:10px;"><?php esc_html_e('Read', 'nibwp'); ?></span>
                             <?php elseif ($ability['destructive']): ?>
-                                <span class="nibwp-badge is-danger" style="font-size:10px;"><?php esc_html_e('Destructive', domain: 'nibwp'); ?></span>
+                                <span class="nibwp-badge is-danger" style="font-size:10px;"><?php esc_html_e('Destructive', 'nibwp'); ?></span>
                             <?php else: ?>
-                                <span class="nibwp-badge is-warn" style="font-size:10px;"><?php esc_html_e('Write', domain: 'nibwp'); ?></span>
+                                <span class="nibwp-badge is-warn" style="font-size:10px;"><?php esc_html_e('Write', 'nibwp'); ?></span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($ability['disabled']): ?>
                                 <span class="nibwp-badge is-muted" style="font-size:11px; padding:3px 10px;">
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                                    <?php esc_html_e('Disabled', domain: 'nibwp'); ?>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-inline-end:3px;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                                    <?php esc_html_e('Disabled', 'nibwp'); ?>
                                 </span>
                             <?php else: ?>
                                 <span class="nibwp-badge is-ok" style="font-size:11px; padding:3px 10px;">
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <?php esc_html_e('Enabled', domain: 'nibwp'); ?>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-inline-end:3px;"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <?php esc_html_e('Enabled', 'nibwp'); ?>
                                 </span>
                             <?php endif; ?>
                         </td>
@@ -506,6 +517,10 @@ function nibwp_render_settings_page()
         var rows = document.querySelectorAll('#nw-abilities-table tbody tr');
         var countEl = document.getElementById('nw-abilities-count');
         var total = rows.length;
+        var nibwpAbilitiesI18n = <?php echo wp_json_encode([
+            /* translators: 1: number of tools shown, 2: total number of tools */
+            'showing' => __('Showing %1$d of %2$d', 'nibwp'),
+        ]); ?>;
 
         function filter(){
             var q = (search.value||'').trim().toLowerCase();
@@ -539,7 +554,7 @@ function nibwp_render_settings_page()
                 if(show) visible++;
             });
 
-            countEl.textContent = 'Showing ' + visible + ' of ' + total;
+            countEl.textContent = nibwpAbilitiesI18n.showing.replace('%1$d', visible).replace('%2$d', total);
         }
 
         search.addEventListener('input', filter);

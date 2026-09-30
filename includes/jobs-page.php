@@ -277,7 +277,11 @@ function nibwp_jobs_render_job_row(array $j): void
                     '<span class="nw-pill %s">%s</span> <span class="nw-job-row__when">%s</span>',
                     esc_attr(nibwp_jobs_status_class($last['status'])),
                     esc_html(nibwp_jobs_status_label($last['status'])),
-                    esc_html(human_time_diff(strtotime($last['when'])) . ' ' . __('ago', 'nibwp'))
+                    esc_html(sprintf(
+                        /* translators: %s: human-readable time difference, e.g. "5 mins" */
+                        __('%s ago', 'nibwp'),
+                        human_time_diff(strtotime($last['when']))
+                    ))
                 );
             } else {
                 echo '<span class="nw-job-row__when">—</span>';
@@ -329,7 +333,10 @@ function nibwp_jobs_render_report(array $run): void
             <div class="nw-report__headmain">
                 <span class="nw-report__job"><?php echo esc_html((string) $run['job_name']); ?></span>
                 <?php if ($run['started']) : ?>
-                    <span class="nw-report__when"><?php echo esc_html(wp_date('M j, Y · g:i a', (int) $run['started'])); ?></span>
+                    <span class="nw-report__when"><?php
+                        /* translators: date and time format for when a run started, see https://www.php.net/manual/datetime.format.php */
+                        echo esc_html(wp_date(__('M j, Y · g:i a', 'nibwp'), (int) $run['started']));
+                    ?></span>
                 <?php endif; ?>
             </div>
             <?php if (empty($run['real'])) : ?>
@@ -347,7 +354,11 @@ function nibwp_jobs_render_report(array $run): void
             <div class="nw-report__sec">
                 <div class="nw-report__sec-label nw-report__sec-label--done">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    <?php printf(esc_html__('What NIBWP did (%d)', 'nibwp'), count((array) $report['items'])); ?>
+                    <?php printf(
+                        /* translators: %d: number of things the job did */
+                        esc_html__('What NIBWP did (%d)', 'nibwp'),
+                        count((array) $report['items'])
+                    ); ?>
                 </div>
                 <ul class="nw-report__list nw-report__list--done">
                     <?php foreach ((array) $report['items'] as $item) : ?>
@@ -360,7 +371,11 @@ function nibwp_jobs_render_report(array $run): void
             <div class="nw-report__flags">
                 <div class="nw-report__sec-label nw-report__sec-label--flag">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-                    <?php printf(esc_html__('Needs your attention (%d)', 'nibwp'), count((array) $report['flags'])); ?>
+                    <?php printf(
+                        /* translators: %d: number of findings that need the user */
+                        esc_html__('Needs your attention (%d)', 'nibwp'),
+                        count((array) $report['flags'])
+                    ); ?>
                 </div>
                 <ul class="nw-report__list nw-report__list--flag">
                     <?php foreach ((array) $report['flags'] as $flag) : ?>
@@ -401,12 +416,16 @@ function nibwp_jobs_render_tl_item(array $ev): void
         <div class="nw-tl-item__body">
             <div class="nw-tl-item__top">
                 <span class="nw-tl-item__action"><?php echo esc_html((string) ($ev['action'] ?? '')); ?></span>
-                <span class="nw-tl-item__when" data-ts="<?php echo esc_attr((string) $ts); ?>"><?php echo $ts ? esc_html(human_time_diff($ts) . ' ' . __('ago', 'nibwp')) : ''; ?></span>
+                <span class="nw-tl-item__when" data-ts="<?php echo esc_attr((string) $ts); ?>"><?php echo $ts ? esc_html(sprintf(
+                    /* translators: %s: human-readable time difference, e.g. "5 mins" */
+                    __('%s ago', 'nibwp'),
+                    human_time_diff($ts)
+                )) : ''; ?></span>
             </div>
             <div class="nw-tl-item__meta">
                 <span class="nw-tl-item__job"><?php echo esc_html((string) ($ev['job_name'] ?? '')); ?></span>
                 <?php if (!empty($ev['actor']) && $ev['actor'] !== 'system') : ?>
-                    <span class="nw-tl-item__actor nw-actor--<?php echo esc_attr((string) $ev['actor']); ?>"><?php echo esc_html((string) $ev['actor']); ?></span>
+                    <span class="nw-tl-item__actor nw-actor--<?php echo esc_attr((string) $ev['actor']); ?>"><?php echo esc_html(nibwp_jobs_actor_label((string) $ev['actor'])); ?></span>
                 <?php endif; ?>
             </div>
             <?php if (!empty($ev['detail'])) : ?>
@@ -445,7 +464,7 @@ function nibwp_jobs_render_howitworks(): void
         </div>
         <a class="nw-hiw__docs" href="https://www.nibwp.com/docs/jobs" target="_blank" rel="noopener">
             <?php esc_html_e('Read the Jobs guide', 'nibwp'); ?>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <svg class="nw-rtl-flip" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
     </div>
     <?php
@@ -469,8 +488,19 @@ function nibwp_jobs_status_label(string $s): string
     return [
         'queued' => __('Queued', 'nibwp'), 'running' => __('Running', 'nibwp'),
         'awaiting_approval' => __('Waiting on you', 'nibwp'), 'done' => __('Done', 'nibwp'),
-        'failed' => __('Failed', 'nibwp'),
+        'failed' => __('Failed', 'nibwp'), 'stopped' => __('Stopped', 'nibwp'),
+        'approved' => __('Approved', 'nibwp'), 'denied' => __('Denied', 'nibwp'),
     ][$s] ?? ucfirst($s);
+}
+
+/** Who took a timeline step, as a person reads it. The stored value stays the key. */
+function nibwp_jobs_actor_label(string $actor): string
+{
+    return [
+        'agent'  => _x('agent', 'who took a job step', 'nibwp'),
+        'you'    => _x('you', 'who took a job step', 'nibwp'),
+        'system' => _x('system', 'who took a job step', 'nibwp'),
+    ][$actor] ?? $actor;
 }
 
 function nibwp_jobs_status_class(string $s): string
@@ -534,10 +564,66 @@ function nibwp_jobs_inline_js(): void
 {
     $rest  = esc_js(rest_url('nibwp/v1/jobs/'));
     $nonce = esc_js(wp_create_nonce('wp_rest'));
+    $statuses = [];
+    foreach (['queued', 'running', 'awaiting_approval', 'done', 'failed', 'stopped', 'approved', 'denied'] as $s) {
+        $statuses[$s] = nibwp_jobs_status_label($s);
+    }
+    $i18n = [
+        'could_not_start'    => __('Could not start.', 'nibwp'),
+        'failed'             => __('Failed.', 'nibwp'),
+        'network_error'      => __('Network error.', 'nibwp'),
+        'job_started'        => __('Job started — see Reports.', 'nibwp'),
+        'started'            => __('Started — see Reports.', 'nibwp'),
+        'added'              => __('Added', 'nibwp'),
+        'added_to_jobs'      => __('Added to My Jobs.', 'nibwp'),
+        'active_click_pause' => __('Active — click to pause', 'nibwp'),
+        'paused_click_resume' => __('Paused — click to resume', 'nibwp'),
+        /* translators: %s: name of the job, already wrapped in <code> */
+        'delete_job_named'   => __('This will permanently delete %s and all its runs. This cannot be undone.', 'nibwp'),
+        'delete_job_unnamed' => __('This will permanently delete this job and all its runs. This cannot be undone.', 'nibwp'),
+        'delete_job'         => __('Delete job', 'nibwp'),
+        'job_deleted'        => __('Job deleted.', 'nibwp'),
+        'schedule_saved'     => __('Schedule saved.', 'nibwp'),
+        'approved'           => __('Approved.', 'nibwp'),
+        'denied'             => __('Denied.', 'nibwp'),
+        /* translators: %s: short time span, e.g. "5m" */
+        'ago'                => __('%s ago', 'nibwp'),
+        /* translators: %s: number of seconds, abbreviated as a time span, e.g. "30s" */
+        'unit_s'             => _x('%ss', 'abbreviated seconds', 'nibwp'),
+        /* translators: %s: number of minutes, abbreviated as a time span, e.g. "5m" */
+        'unit_m'             => _x('%sm', 'abbreviated minutes', 'nibwp'),
+        /* translators: %s: number of hours, abbreviated as a time span, e.g. "2h" */
+        'unit_h'             => _x('%sh', 'abbreviated hours', 'nibwp'),
+        /* translators: %s: number of days, abbreviated as a time span, e.g. "3d" */
+        'unit_d'             => _x('%sd', 'abbreviated days', 'nibwp'),
+        'loading_activity'   => __('Loading activity…', 'nibwp'),
+        'status'             => $statuses,
+        'step'               => __('Step', 'nibwp'),
+        'legend_done'        => __('Done / Approved', 'nibwp'),
+        'legend_failed'      => __('Denied / Failed', 'nibwp'),
+        'actor'              => [
+            'agent'  => nibwp_jobs_actor_label('agent'),
+            'you'    => nibwp_jobs_actor_label('you'),
+            'system' => nibwp_jobs_actor_label('system'),
+        ],
+        'no_activity'        => __('No activity yet.', 'nibwp'),
+        'no_activity_hint'   => __('Run a job — each step draws itself here as it happens.', 'nibwp'),
+        'run_activity'       => __('Run activity', 'nibwp'),
+        'could_not_load_run' => __('Could not load this run.', 'nibwp'),
+        'no_steps'           => __('No steps recorded yet.', 'nibwp'),
+        'run_stopped'        => __('Run stopped.', 'nibwp'),
+        'delete_run_confirm' => __('This will permanently delete this run and its timeline. This cannot be undone.', 'nibwp'),
+        'delete_run'         => __('Delete run', 'nibwp'),
+        'run_deleted'        => __('Run deleted.', 'nibwp'),
+    ];
     ?>
     <script>
     (function () {
         var REST = '<?php echo $rest; ?>', NONCE = '<?php echo $nonce; ?>';
+        var nibwpJobsI18n = <?php echo wp_json_encode($i18n); ?>;
+        var i18n = nibwpJobsI18n;
+        /* Fill the %s in a translated string. A function replacement, so a "$" in the value stays literal. */
+        function fill1(str, val) { return String(str).replace('%s', function () { return val; }); }
         var qs = function (s, r) { return (r || document).querySelector(s); };
         var qsa = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
@@ -588,7 +674,7 @@ function nibwp_jobs_inline_js(): void
         });
         function goTab(name) { var t = qs('.nw-int-tab[data-tab="' + name + '"]'); if (t) t.click(); }
 
-        /* ---- Job library search (same behaviour as the Skills page) ---- */
+        /* ---- Job library search (same behavior as the Skills page) ---- */
         (function () {
             var search = qs('#nw-jobs-search'), clear = qs('#nw-jobs-search-clear'), count = qs('#nw-jobs-search-count');
             if (!search) return;
@@ -636,17 +722,17 @@ function nibwp_jobs_inline_js(): void
             if (!brief) { ta.focus(); return; }
             busy(intentBtn, true);
             post('intent', { brief: brief }).then(function (res) {
-                if (!res.ok || !res.d.ok) { busy(intentBtn, false); toast(res.d.message || 'Could not start.', true); return; }
+                if (!res.ok || !res.d.ok) { busy(intentBtn, false); toast(res.d.message || i18n.could_not_start, true); return; }
                 // keep the spinner running through the reload — reads as "working on it"
                 ta.value = '';
-                toast('<?php echo esc_js(__('Job started — see Reports.', 'nibwp')); ?>');
+                toast(i18n.job_started);
                 goTab('reports');
                 setTimeout(function () { location.reload(); }, 800);
-            }).catch(function () { busy(intentBtn, false); toast('Network error.', true); });
+            }).catch(function () { busy(intentBtn, false); toast(i18n.network_error, true); });
         });
 
         /* ---- Catalog cards: Run now / Add (A) — fully AJAX, no reload ---- */
-        var ADDED_HTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <?php echo esc_js(__('Added', 'nibwp')); ?>';
+        var ADDED_HTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ' + esc(i18n.added);
         function bumpTab(name, by) {
             var c = qs('.nw-int-tab[data-tab="' + name + '"] .nw-int-tab-count');
             if (c) { c.textContent = (parseInt(c.textContent, 10) || 0) + (by || 1); c.hidden = false; }
@@ -665,12 +751,12 @@ function nibwp_jobs_inline_js(): void
                 var btn = e.currentTarget; busy(btn, true);
                 post('create', { catalog: cat, schedule: sched.value, run_now: 1 }).then(function (res) {
                     busy(btn, false);
-                    if (!res.ok || !res.d.ok) { toast(res.d.message || 'Failed.', true); return; }
+                    if (!res.ok || !res.d.ok) { toast(res.d.message || i18n.failed, true); return; }
                     markAdded(card);
                     card.classList.add('is-running');
                     bumpTab('reports', 1);
-                    toast('<?php echo esc_js(__('Job started — see Reports.', 'nibwp')); ?>');
-                }).catch(function () { busy(btn, false); toast('Network error.', true); });
+                    toast(i18n.job_started);
+                }).catch(function () { busy(btn, false); toast(i18n.network_error, true); });
             });
             addBtn.addEventListener('click', function (e) {
                 var btn = e.currentTarget;
@@ -678,10 +764,10 @@ function nibwp_jobs_inline_js(): void
                 busy(btn, true);
                 post('create', { catalog: cat, schedule: sched.value }).then(function (res) {
                     busy(btn, false);
-                    if (!res.ok || !res.d.ok) { toast(res.d.message || 'Failed.', true); return; }
+                    if (!res.ok || !res.d.ok) { toast(res.d.message || i18n.failed, true); return; }
                     markAdded(card);
-                    toast('<?php echo esc_js(__('Added to My Jobs.', 'nibwp')); ?>');
-                }).catch(function () { busy(btn, false); toast('Network error.', true); });
+                    toast(i18n.added_to_jobs);
+                }).catch(function () { busy(btn, false); toast(i18n.network_error, true); });
             });
         });
 
@@ -694,29 +780,29 @@ function nibwp_jobs_inline_js(): void
                 var b = e.target.closest('.nw-job-run'); busy(b, true);
                 post('run', { job_id: id }).then(function (res) {
                     busy(b, false);
-                    if (!res.ok || !res.d.ok) { toast(res.d.message || 'Failed.', true); return; }
-                    toast('<?php echo esc_js(__('Started — see Reports.', 'nibwp')); ?>');
-                }).catch(function () { busy(b, false); toast('Network error.', true); });
+                    if (!res.ok || !res.d.ok) { toast(res.d.message || i18n.failed, true); return; }
+                    toast(i18n.started);
+                }).catch(function () { busy(b, false); toast(i18n.network_error, true); });
             } else if (e.target.closest('.nw-job-toggle')) {
                 var t = e.target.closest('.nw-job-toggle');
                 post('toggle', { job_id: id }).then(function (res) {
-                    if (!res.ok || !res.d.ok) { toast('Failed.', true); return; }
+                    if (!res.ok || !res.d.ok) { toast(i18n.failed, true); return; }
                     var on = res.d.status !== 'paused';
                     t.classList.toggle('is-on', on);
                     row.classList.toggle('is-paused', !on);
-                    t.title = on ? '<?php echo esc_js(__('Active — click to pause', 'nibwp')); ?>' : '<?php echo esc_js(__('Paused — click to resume', 'nibwp')); ?>';
-                }).catch(function () { toast('Network error.', true); });
+                    t.title = on ? i18n.active_click_pause : i18n.paused_click_resume;
+                }).catch(function () { toast(i18n.network_error, true); });
             } else if (e.target.closest('.nw-job-del')) {
                 var db = e.target.closest('.nw-job-del');
                 var nm = (row.getAttribute('data-name') || '').replace(/</g, '&lt;');
-                jobConfirm('<?php echo esc_js(__('This will permanently delete', 'nibwp')); ?> ' + (nm ? '<code>' + nm + '</code>' : '<?php echo esc_js(__('this job', 'nibwp')); ?>') + ' <?php echo esc_js(__('and all its runs. This cannot be undone.', 'nibwp')); ?>', '<?php echo esc_js(__('Delete job', 'nibwp')); ?>', function () {
+                jobConfirm(nm ? fill1(i18n.delete_job_named, '<code>' + nm + '</code>') : i18n.delete_job_unnamed, i18n.delete_job, function () {
                     busy(db, true);
                     post('delete', { job_id: id }).then(function (res) {
-                        if (!res.ok || !res.d.ok) { busy(db, false); toast('Failed.', true); return; }
+                        if (!res.ok || !res.d.ok) { busy(db, false); toast(i18n.failed, true); return; }
                         row.style.transition = 'opacity .2s, transform .2s'; row.style.opacity = '0'; row.style.transform = 'scale(.97)';
                         setTimeout(function () { row.remove(); if (!qs('.nw-job-row', list)) location.reload(); }, 200);
-                        toast('<?php echo esc_js(__('Job deleted.', 'nibwp')); ?>');
-                    }).catch(function () { busy(db, false); toast('Network error.', true); });
+                        toast(i18n.job_deleted);
+                    }).catch(function () { busy(db, false); toast(i18n.network_error, true); });
                 });
             }
         });
@@ -724,8 +810,8 @@ function nibwp_jobs_inline_js(): void
             var sel = e.target.closest('.nw-job-row__sched-sel'); if (!sel) return;
             var row = e.target.closest('.nw-job-row'), id = parseInt(row.getAttribute('data-job'), 10);
             post('schedule', { job_id: id, schedule: sel.value }).then(function (res) {
-                if (res.ok && res.d.ok) toast('<?php echo esc_js(__('Schedule saved.', 'nibwp')); ?>'); else toast('Failed.', true);
-            }).catch(function () { toast('Network error.', true); });
+                if (res.ok && res.d.ok) toast(i18n.schedule_saved); else toast(i18n.failed, true);
+            }).catch(function () { toast(i18n.network_error, true); });
         });
 
         /* ---- Approvals: approve / deny (delegated) ---- */
@@ -739,7 +825,7 @@ function nibwp_jobs_inline_js(): void
             busy(b, true);
             post('approve', { run_id: runId, approval_id: apId, decision: decision }).then(function (res) {
                 busy(b, false);
-                if (!res.ok || !res.d.ok) { toast(res.d.message || 'Failed.', true); return; }
+                if (!res.ok || !res.d.ok) { toast(res.d.message || i18n.failed, true); return; }
                 card.style.transition = 'opacity .2s, transform .2s';
                 card.style.opacity = '0'; card.style.transform = 'scale(.97)';
                 setTimeout(function () {
@@ -748,8 +834,8 @@ function nibwp_jobs_inline_js(): void
                     if (badge) { var n = res.d.inbox || 0; badge.textContent = n; badge.hidden = n === 0; }
                     if (!qs('.nw-approval', inbox)) location.reload();
                 }, 200);
-                toast(decision === 'approve' ? '<?php echo esc_js(__('Approved.', 'nibwp')); ?>' : '<?php echo esc_js(__('Denied.', 'nibwp')); ?>');
-            }).catch(function () { busy(b, false); toast('Network error.', true); });
+                toast(decision === 'approve' ? i18n.approved : i18n.denied);
+            }).catch(function () { busy(b, false); toast(i18n.network_error, true); });
         });
 
         /* ---- GET helper + escaping ---- */
@@ -760,14 +846,15 @@ function nibwp_jobs_inline_js(): void
         function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
         function ago(ts) {
             var s = Math.max(1, Math.floor(Date.now() / 1000) - ts);
-            if (s < 60) return s + 's <?php echo esc_js(__('ago', 'nibwp')); ?>';
-            if (s < 3600) return Math.floor(s / 60) + 'm <?php echo esc_js(__('ago', 'nibwp')); ?>';
-            if (s < 86400) return Math.floor(s / 3600) + 'h <?php echo esc_js(__('ago', 'nibwp')); ?>';
-            return Math.floor(s / 86400) + 'd <?php echo esc_js(__('ago', 'nibwp')); ?>';
+            if (s < 60) return esc(fill1(i18n.ago, fill1(i18n.unit_s, s)));
+            if (s < 3600) return esc(fill1(i18n.ago, fill1(i18n.unit_m, Math.floor(s / 60))));
+            if (s < 86400) return esc(fill1(i18n.ago, fill1(i18n.unit_h, Math.floor(s / 3600))));
+            return esc(fill1(i18n.ago, fill1(i18n.unit_d, Math.floor(s / 86400))));
         }
+        function actorLabel(a) { return (i18n.actor && i18n.actor[a]) || a; }
         function tlItem(ev) {
             var actor = ev.actor && ev.actor !== 'system'
-                ? '<span class="nw-tl-item__actor nw-actor--' + esc(ev.actor) + '">' + esc(ev.actor) + '</span>' : '';
+                ? '<span class="nw-tl-item__actor nw-actor--' + esc(ev.actor) + '">' + esc(actorLabel(ev.actor)) + '</span>' : '';
             var detail = ev.detail ? '<div class="nw-tl-item__detail">' + esc(ev.detail) + '</div>' : '';
             return '<li class="nw-tl-item nw-tl--' + esc(ev.status || 'info') + ' is-new" data-run="' + (ev.run_id || 0) + '" role="button" tabindex="0">' +
                 '<span class="nw-tl-item__dot"></span><div class="nw-tl-item__body">' +
@@ -780,7 +867,7 @@ function nibwp_jobs_inline_js(): void
         /* ---- Live Gantt timeline ---- */
         var gMount = qs('#nw-jobs-gantt'), gInterval = null, gTick = 0;
         var gEvents = [], gSeen = {}, gLastTs = 0, gNowOffset = 0, gFirstIds = {}, gLoaded = false;
-        var GANTT_LOADING = '<div class="nw-gantt nw-gantt--loading"><span class="nw-spin"></span><span><?php echo esc_js(__('Loading activity…', 'nibwp')); ?></span></div>';
+        var GANTT_LOADING = '<div class="nw-gantt nw-gantt--loading"><span class="nw-spin"></span><span>' + esc(i18n.loading_activity) + '</span></div>';
         function evKey(ev) { return ev.run_id + '|' + ev.ts + '|' + ev.action; }
         function nowSec() { return Math.floor(Date.now() / 1000) + gNowOffset; }
         function niceStep(span) {
@@ -789,16 +876,16 @@ function nibwp_jobs_inline_js(): void
             for (var i = 0; i < steps.length; i++) { if (steps[i] >= target) return steps[i]; }
             return steps[steps.length - 1];
         }
-        function fmtT(s) { if (s < 60) return s + 's'; if (s < 3600) return Math.round(s / 60) + 'm'; if (s < 86400) return Math.round(s / 3600) + 'h'; return Math.round(s / 86400) + 'd'; }
-        var STATUS = { running: '<?php echo esc_js(__('Running', 'nibwp')); ?>', queued: '<?php echo esc_js(__('Queued', 'nibwp')); ?>', done: '<?php echo esc_js(__('Done', 'nibwp')); ?>', approved: '<?php echo esc_js(__('Approved', 'nibwp')); ?>', denied: '<?php echo esc_js(__('Denied', 'nibwp')); ?>', failed: '<?php echo esc_js(__('Failed', 'nibwp')); ?>', info: '<?php echo esc_js(__('Step', 'nibwp')); ?>' };
+        function fmtT(s) { if (s < 60) return fill1(i18n.unit_s, s); if (s < 3600) return fill1(i18n.unit_m, Math.round(s / 60)); if (s < 86400) return fill1(i18n.unit_h, Math.round(s / 3600)); return fill1(i18n.unit_d, Math.round(s / 86400)); }
+        var STATUS = { running: i18n.status.running, queued: i18n.status.queued, done: i18n.status.done, approved: i18n.status.approved, denied: i18n.status.denied, failed: i18n.status.failed, info: i18n.step };
 
         function renderGantt() {
             if (!gMount) return;
             if (!gEvents.length) {
                 gMount.innerHTML = gLoaded
                     ? '<div class="nw-gantt"><div class="nw-jobs-empty"><div class="nw-jobs-empty__ic"></div><h3>' +
-                        esc('<?php echo esc_js(__('No activity yet.', 'nibwp')); ?>') + '</h3><p>' +
-                        esc('<?php echo esc_js(__('Run a job — each step draws itself here as it happens.', 'nibwp')); ?>') + '</p></div></div>'
+                        esc(i18n.no_activity) + '</h3><p>' +
+                        esc(i18n.no_activity_hint) + '</p></div></div>'
                     : GANTT_LOADING;
                 return;
             }
@@ -821,15 +908,15 @@ function nibwp_jobs_inline_js(): void
             // ruler ticks
             var step = niceStep(span), ruler = '';
             for (var t = 0; t <= span + 0.5; t += step) {
-                ruler += '<div class="nw-gantt__tick" style="left:' + (t / span * 100) + '%"><span>' + fmtT(t) + '</span></div>';
+                ruler += '<div class="nw-gantt__tick" style="left:' + (t / span * 100) + '%"><span>' + esc(fmtT(t)) + '</span></div>';
             }
 
             var legend = '<div class="nw-gantt__legend">' +
-                '<span class="nw-gantt__lg"><i style="background:linear-gradient(90deg,var(--nw-brand),#60a5fa)"></i><?php echo esc_js(__('Running', 'nibwp')); ?></span>' +
-                '<span class="nw-gantt__lg"><i style="background:#9ca3af"></i><?php echo esc_js(__('Queued', 'nibwp')); ?></span>' +
-                '<span class="nw-gantt__lg"><i style="background:var(--nw-ok)"></i><?php echo esc_js(__('Done / Approved', 'nibwp')); ?></span>' +
-                '<span class="nw-gantt__lg"><i style="background:var(--nw-danger)"></i><?php echo esc_js(__('Denied / Failed', 'nibwp')); ?></span>' +
-                '<span class="nw-gantt__lg"><i style="background:#6366f1"></i><?php echo esc_js(__('Step', 'nibwp')); ?></span></div>';
+                '<span class="nw-gantt__lg"><i style="background:linear-gradient(90deg,var(--nw-brand),#60a5fa)"></i>' + esc(i18n.status.running) + '</span>' +
+                '<span class="nw-gantt__lg"><i style="background:#9ca3af"></i>' + esc(i18n.status.queued) + '</span>' +
+                '<span class="nw-gantt__lg"><i style="background:var(--nw-ok)"></i>' + esc(i18n.legend_done) + '</span>' +
+                '<span class="nw-gantt__lg"><i style="background:var(--nw-danger)"></i>' + esc(i18n.legend_failed) + '</span>' +
+                '<span class="nw-gantt__lg"><i style="background:#6366f1"></i>' + esc(i18n.step) + '</span></div>';
 
             var rulerRow = '<div class="nw-gantt__lane" style="cursor:default"><div class="nw-gantt__label" style="height:26px"></div><div class="nw-gantt__ruler">' + ruler + '</div></div>';
 
@@ -854,10 +941,10 @@ function nibwp_jobs_inline_js(): void
                     } else {
                         var w = Math.max(1.5, dur / span * 100);
                         var cls = running ? 'is-running' : 'is-' + esc(ev.status || 'info');
-                        seg = '<span class="nw-gantt__bar ' + cls + isNew + '" style="left:' + left + '%;width:' + w + '%" title="' + esc(ev.action) + ' — ' + fmtT(dur) + '">' + esc(ev.action) + '</span>';
+                        seg = '<span class="nw-gantt__bar ' + cls + isNew + '" style="left:' + left + '%;width:' + w + '%" title="' + esc(ev.action) + ' — ' + esc(fmtT(dur)) + '">' + esc(ev.action) + '</span>';
                     }
                     body += '<div class="nw-gantt__lane" data-run="' + rid + '" role="button" tabindex="0">' +
-                        '<div class="nw-gantt__label"><span class="nw-gantt__actor nw-actor--' + esc(actor) + '">' + esc(actor) + '</span>' +
+                        '<div class="nw-gantt__label"><span class="nw-gantt__actor nw-actor--' + esc(actor) + '">' + esc(actorLabel(actor)) + '</span>' +
                         '<span class="nw-gantt__label-txt">' + esc(ev.action) + '</span></div>' +
                         '<div class="nw-gantt__track">' + seg + '</div></div>';
                 });
@@ -901,21 +988,21 @@ function nibwp_jobs_inline_js(): void
 
         /* ---- Run detail modal (from timeline item or report card) ---- */
         function openRunModal(runId) {
-            openModal('<?php echo esc_js(__('Run activity', 'nibwp')); ?>', '<p class="nw-modal-loading"><span class="nw-spin"></span></p>');
+            openModal(i18n.run_activity, '<p class="nw-modal-loading"><span class="nw-spin"></span></p>');
             get('run/' + runId).then(function (d) {
-                if (!d || !d.ok || !d.run) { qs('#nw-jobs-modal-body').innerHTML = '<p>' + esc('<?php echo esc_js(__('Could not load this run.', 'nibwp')); ?>') + '</p>'; return; }
+                if (!d || !d.ok || !d.run) { qs('#nw-jobs-modal-body').innerHTML = '<p>' + esc(i18n.could_not_load_run) + '</p>'; return; }
                 var run = d.run, rep = run.report || {};
                 var html = '<div class="nw-modal-run"><div class="nw-modal-run__title">' + esc(run.job_name) +
                     ' <span class="nw-pill ' + statusClass(run.status) + '">' + esc(statusLabel(run.status)) + '</span></div>';
                 if (rep.summary) html += '<p class="nw-report__summary">' + esc(rep.summary) + '</p>';
                 var evs = (run.events || []).slice().reverse();
                 html += '<ol class="nw-tl nw-tl--modal">';
-                html += evs.length ? evs.map(tlItem).join('') : '<li class="nw-tl-empty">' + esc('<?php echo esc_js(__('No steps recorded yet.', 'nibwp')); ?>') + '</li>';
+                html += evs.length ? evs.map(tlItem).join('') : '<li class="nw-tl-empty">' + esc(i18n.no_steps) + '</li>';
                 html += '</ol></div>';
                 qs('#nw-jobs-modal-body').innerHTML = html;
             }).catch(function () {});
         }
-        function statusLabel(s) { return ({ queued: 'Queued', running: 'Running', awaiting_approval: 'Waiting on you', done: 'Done', failed: 'Failed', approved: 'Approved', denied: 'Denied' })[s] || s; }
+        function statusLabel(s) { return i18n.status[s] || s; }
         function statusClass(s) { return s === 'done' || s === 'approved' ? 'nw-pill--ok' : (s === 'failed' || s === 'denied' ? 'nw-pill--danger' : (s === 'awaiting_approval' ? 'nw-pill--warn' : 'nw-pill--muted')); }
 
         document.addEventListener('click', function (e) {
@@ -933,20 +1020,20 @@ function nibwp_jobs_inline_js(): void
                 var sb = e.target.closest('.nw-run-stop'); busy(sb, true);
                 post('run/pause', { run_id: rid }).then(function (res) {
                     busy(sb, false);
-                    if (!res.ok || !res.d.ok) { toast('Failed.', true); return; }
-                    toast('<?php echo esc_js(__('Run stopped.', 'nibwp')); ?>');
+                    if (!res.ok || !res.d.ok) { toast(i18n.failed, true); return; }
+                    toast(i18n.run_stopped);
                     setTimeout(function () { location.reload(); }, 500);
-                }).catch(function () { busy(sb, false); toast('Network error.', true); });
+                }).catch(function () { busy(sb, false); toast(i18n.network_error, true); });
             } else if (e.target.closest('.nw-run-del')) {
                 var xb = e.target.closest('.nw-run-del');
-                jobConfirm('<?php echo esc_js(__('This will permanently delete this run and its timeline. This cannot be undone.', 'nibwp')); ?>', '<?php echo esc_js(__('Delete run', 'nibwp')); ?>', function () {
+                jobConfirm(esc(i18n.delete_run_confirm), i18n.delete_run, function () {
                     busy(xb, true);
                     post('run/delete', { run_id: rid }).then(function (res) {
-                        if (!res.ok || !res.d.ok) { busy(xb, false); toast('Failed.', true); return; }
+                        if (!res.ok || !res.d.ok) { busy(xb, false); toast(i18n.failed, true); return; }
                         card.style.transition = 'opacity .2s, transform .2s'; card.style.opacity = '0'; card.style.transform = 'scale(.97)';
                         setTimeout(function () { card.remove(); if (!qs('.nw-report', reports)) location.reload(); }, 200);
-                        toast('<?php echo esc_js(__('Run deleted.', 'nibwp')); ?>');
-                    }).catch(function () { busy(xb, false); toast('Network error.', true); });
+                        toast(i18n.run_deleted);
+                    }).catch(function () { busy(xb, false); toast(i18n.network_error, true); });
                 });
             }
         });

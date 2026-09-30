@@ -94,8 +94,9 @@
 .nw-plan__cta:hover { background: var(--nw-acc); color: #fff !important; }
 .nw-plan__cta.is-featured { background: var(--nw-gold); color: #1d2327; border-color: var(--nw-gold); }
 .nw-plan__cta.is-featured:hover { background: #e6a934; border-color: #e6a934; color: #1d2327; }
-.nw-plan__cta svg { transition: transform .12s; }
-.nw-plan__cta:hover svg { transform: translateX(2px); }
+/* The CTA arrow means "onward", so it faces the reading direction. */
+.nw-plan__cta svg { transition: transform .12s; transform: none /*rtl:translateX(0) scaleX(-1)*/; }
+.nw-plan__cta:hover svg { transform: translateX(2px) /*rtl:translateX(-2px) scaleX(-1)*/; }
 .nw-plan__foot { margin: 10px 0 0; font-size: 11px; text-align: center; color: var(--nw-mute); letter-spacing: .02em; }
 .nw-plan.is-featured .nw-plan__foot { color: #9b9ba3; }
 

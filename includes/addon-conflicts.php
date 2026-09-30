@@ -124,10 +124,12 @@ function nibwp_render_redundant_addon_notice(): void
     wp_admin_notice(
         sprintf(
             /* translators: %s: comma-separated add-on names. */
-            esc_html__(
-                'NibWP switched off a duplicate add-on: %s. Your licence already includes it in the main plugin, and running both copies at once can take the site down. Nothing was lost — the skill is still available under NibWP → Skills. You can delete the duplicate from your Plugins screen.',
+            esc_html(_n(
+                'NibWP switched off a duplicate add-on: %s. Your license already includes it in the main plugin, and running both copies at once can take the site down. Nothing was lost — the skill is still available under NibWP → Skills. You can delete the duplicate from your Plugins screen.',
+                'NibWP switched off duplicate add-ons: %s. Your license already includes them in the main plugin, and running both copies at once can take the site down. Nothing was lost — the skills are still available under NibWP → Skills. You can delete the duplicates from your Plugins screen.',
+                count($deactivated),
                 'nibwp'
-            ),
+            )),
             '<strong>' . esc_html($names) . '</strong>'
         ),
         [

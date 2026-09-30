@@ -19,11 +19,8 @@ if (!defined('ABSPATH')) {
 }
 
 wp_register_ability('nibwp/read-audit-log', [
-    'label' => __('Read Audit Log', domain: 'nibwp'),
-    'description' => __(
-        'Returns this site\'s log of assistant tool calls, oldest first, with the arguments each was given. Use it to see what was actually done and in what order, or to capture a sequence of calls for replay elsewhere. Note that recorded arguments include whatever was passed — file contents and PHP source among them — so this reads as widely as the calls it describes.',
-        domain: 'nibwp',
-    ),
+    'label' => __('Read Audit Log', 'nibwp'),
+    'description' => 'Returns this site\'s log of assistant tool calls, oldest first, with the arguments each was given. Use it to see what was actually done and in what order, or to capture a sequence of calls for replay elsewhere. Note that recorded arguments include whatever was passed — file contents and PHP source among them — so this reads as widely as the calls it describes.',
     'category' => 'nibwp',
     'input_schema' => [
         'type' => 'object',
@@ -83,7 +80,7 @@ wp_register_ability('nibwp/read-audit-log', [
             ],
             'total' => ['type' => 'integer', 'description' => 'Entries returned after filtering.'],
             'since' => ['type' => 'string', 'description' => 'The resolved lower bound, in site-local time.'],
-            'site_url' => ['type' => 'string', 'description' => 'This site\'s address, so a caller can recognise its own URLs inside the arguments.'],
+            'site_url' => ['type' => 'string', 'description' => 'This site\'s address, so a caller can recognize its own URLs inside the arguments.'],
             'truncated' => ['type' => 'boolean', 'description' => 'Whether the limit cut the result short.'],
         ],
     ],

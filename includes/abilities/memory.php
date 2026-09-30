@@ -55,11 +55,8 @@ function nibwp_memory_find_index(array $memories, string $key): ?int
 // ---------------------------------------------------------------------------
 
 wp_register_ability('nibwp/memory-store', [
-    'label' => __('Memory Store', domain: 'nibwp'),
-    'description' => __(
-        'Store or update a memory entry. AI agents use this to persist project conventions, decisions, patterns, and context across sessions. Each entry is a key-value pair with optional tags.',
-        domain: 'nibwp',
-    ),
+    'label' => __('Memory Store', 'nibwp'),
+    'description' => 'Store or update a memory entry. AI agents use this to persist project conventions, decisions, patterns, and context across sessions. Each entry is a key-value pair with optional tags.',
     'category' => 'memory',
     'input_schema' => [
         'type' => 'object',
@@ -199,11 +196,8 @@ function nibwp_memory_store(array $input): array|WP_Error
 // ---------------------------------------------------------------------------
 
 wp_register_ability('nibwp/memory-recall', [
-    'label' => __('Memory Recall', domain: 'nibwp'),
-    'description' => __(
-        'Recall one or more stored memory entries. Filter by key, tags, or search term. Returns all entries when no filters are provided.',
-        domain: 'nibwp',
-    ),
+    'label' => __('Memory Recall', 'nibwp'),
+    'description' => 'Recall one or more stored memory entries. Filter by key, tags, or search term. Returns all entries when no filters are provided.',
     'category' => 'memory',
     'input_schema' => [
         'type' => 'object',
@@ -320,11 +314,8 @@ function nibwp_memory_recall(array $input): array|WP_Error
 // ---------------------------------------------------------------------------
 
 wp_register_ability('nibwp/memory-delete', [
-    'label' => __('Memory Delete', domain: 'nibwp'),
-    'description' => __(
-        'Delete one or all memory entries. Provide a key to delete a specific entry, or set clear_all to true to remove everything.',
-        domain: 'nibwp',
-    ),
+    'label' => __('Memory Delete', 'nibwp'),
+    'description' => 'Delete one or all memory entries. Provide a key to delete a specific entry, or set clear_all to true to remove everything.',
     'category' => 'memory',
     'input_schema' => [
         'type' => 'object',
@@ -414,11 +405,8 @@ function nibwp_memory_delete(array $input): array|WP_Error
 // ---------------------------------------------------------------------------
 
 wp_register_ability('nibwp/memory-list-keys', [
-    'label' => __('Memory List Keys', domain: 'nibwp'),
-    'description' => __(
-        'Quick overview of all stored memory keys with their tags and last updated timestamp. Does not return full values.',
-        domain: 'nibwp',
-    ),
+    'label' => __('Memory List Keys', 'nibwp'),
+    'description' => 'Quick overview of all stored memory keys with their tags and last updated timestamp. Does not return full values.',
     'category' => 'memory',
     'input_schema' => [
         'type' => 'object',

@@ -20,7 +20,7 @@ return [
     'tagline'        => 'Convert HTML, URLs, images, screenshots, or Figma frames into validated EtchWP components',
     'description'    => 'Paste raw HTML, drop a screenshot, share a URL, or attach a Figma frame — the agent rebuilds it as a clean, brand-consistent EtchWP component. Loop detection turns repeated cards into CPT + ACF + Etch loop blocks automatically. The validator rejects clamp() font-size, hardcoded colors, raw <style> tags, and missing brand prefixes before anything persists.',
     'vendor'         => 'NIBWP',
-    'version'        => '1.1.3',
+    'version'        => '1.1.5',
     'category'       => 'page-builders',
     'premium'        => true,
     'price'          => 49,
@@ -58,21 +58,34 @@ return [
         'abilities/html-to-component.php',
         'abilities/figma-to-component.php',
         'abilities/refine-component.php',
+        'abilities/repair.php',
         'abilities/surecart-page.php',
+        'abilities/audit.php',
         'abilities/feedback.php',
     ],
-    'instructions_file' => 'etchedy-authoring/SKILL.md',
+    'instructions_file' => 'authoring/SKILL.md',
     'icon' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>',
 
     // ─── v2 routing contract (consumed by nibwp_skills_skill_cards) ───────
     // Trigger regex set. Discover emits these so the agent can pattern-match
     // user prose deterministically instead of substring-hunting in a tagline.
+    // What this skill OWNS, in the words a model can reason about. The
+    // regexes below are a fast path; this sentence is the boundary.
+    'use_when' => 'The user wants anything built, rebuilt, styled or restyled in Etch / EtchWP on this site - a hero, section, page, component, template or layout - from a description, an image, a URL, HTML or a Figma frame. Owns it however it is phrased, including "a hero with columns and a heading on etch and acss" or "we use etch here, can you do a hero". Do NOT hand-write Etch blocks, post meta or the etch_styles option yourself.',
+
     'triggers' => [
         '/(?i)\b(?:convert|etchify|rebuild|port|turn|make)\b[^.\n]{0,40}\b(?:etch|etchwp|etchedy)\b/',
         '/(?i)\b(?:etch|etchwp|etchedy)\b[^.\n]{0,40}\b(?:component|section|page|block|element)\b/',
         '/(?i)\b(?:html|url|page|file|image|screenshot|figma|sketch)\b[^.\n]{0,40}\b(?:to|into|as)\b[^.\n]{0,20}\b(?:etch|etchwp)\b/',
         '/(?i)\b(?:etchify|etch this|html to etch)\b/',
         '/(?i)\b(?:create|build|generate)\b[^.\n]{0,20}\betch[^.\n]{0,30}\b(?:page|section|component|element)\b/',
+        // Order-agnostic build intent. The patterns above all require the
+        // builder's name BEFORE the thing being built, so the most natural way
+        // anyone phrases it — "create a hero section with X" — matched nothing,
+        // the skill never loaded, and the agent improvised a tree with no
+        // classes and no styles. That is what a customer reported.
+        '/(?i)\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b[^.\n]{0,80}\b(?:etch|etchwp|etchedy)\b/',
+        '/(?i)\b(?:etch|etchwp|etchedy)\b[^.\n]{0,80}\b(?:create|build|make|design|add|generate|produce|craft|redesign|rebuild|style|restyle)\b/',
     ],
     // Slash-command map. MCP clients with command palettes expose these
     // directly; chat agents trigger them on a "/etchify ..." user message.
@@ -101,7 +114,7 @@ return [
             [
                 'ability'       => 'nibwp/design-direction',
                 'args_template' => ['purpose' => '{what the user asked for, in their words}'],
-                'why'           => 'Decide how this site should look before building: colour roles with contrast already checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if the Design Skills skill is switched off.',
+                'why'           => 'Decide how this site should look before building: color roles with contrast already checked, type, spacing rhythm, layout sequence, and the generic defaults to refuse. Skip only if the Design Skills skill is switched off.',
             ],
             [
                 'ability'        => 'nibwp/skill-preflight',
@@ -163,6 +176,10 @@ return [
             'type'       => 'integer|new',
             'required'   => true,
             'cache_key'  => 'etchwp_target_post_id',
+            // Where this build goes is true of this build only. Remembered, it
+            // was offered to the next task as a settled answer, and the
+            // persister overrides the payload's target with it.
+            'cache'      => false,
         ],
         [
             'key'        => 'push_mode',
@@ -171,6 +188,7 @@ return [
             'type'       => 'enum',
             'required'   => true,
             'cache_key'  => 'etchwp_push_mode',
+            'cache'      => false,
         ],
         [
             'key'           => 'new_page_title',

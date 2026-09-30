@@ -118,7 +118,7 @@ if (!function_exists('nibwp_premium_integrations')) {
     {
         return [
             // Page builders & frameworks.
-            'elementor', 'bricks', 'builderius', 'etchwp', 'automaticcss',
+            'elementor', 'bricks', 'builderius', 'etchwp', 'automaticcss', 'breakdance',
             // Design tools.
             'figma',
             // Custom fields & content types.
@@ -130,7 +130,7 @@ if (!function_exists('nibwp_premium_integrations')) {
             // Directory / classifieds.
             'directorist',
             // Forms.
-            'forms',
+            'forms', 'wsform', 'cf7', 'gravityforms', 'fluentform', 'wpforms', 'jetformbuilder', 'formidable', 'forminator', 'happyforms', 'ninjaforms', 'bitform',
             // Membership / LMS.
             'learndash', 'lifterlms', 'memberpress', 'tutorlms',
             // Community / events.
@@ -138,7 +138,7 @@ if (!function_exists('nibwp_premium_integrations')) {
             // Donations.
             'givewp',
             // Utilities.
-            'redirection', 'tablepress', 'translatepress', 'wpml',
+            'redirection', 'tablepress', 'translatepress', 'wpml', 'weglot',
             // SEO.
             'seo', 'seopress', 'slimseo',
             // Recruitment.
